@@ -1,0 +1,247 @@
+/*
+.bs4-order-tracking {
+margin-bottom:30px;
+overflow:auto;
+color:#878788;
+padding-left:0px;
+margin-top:30px; 
+}
+
+.bs4-order-tracking li {
+list-style-type:none;
+font-size:13px;
+width:25%;
+float:left;
+position:relative;
+font-weight:400;
+color:#878788;
+text-align:center; 
+
+}
+
+.bs4-order-tracking li:first-child:before {
+margin-left:15px !important;
+padding-left:11px !important;
+text-align:left !important
+}
+
+.bs4-order-tracking li:last-child:before {
+margin-right:5px !important;
+padding-right:11px !important;
+text-align:right !important
+}
+
+.bs4-order-tracking li >div {
+color:#fff;
+width:29px;
+text-align:center;
+line-height:29px;
+display:block;
+font-size:12px;
+background:#878788;
+border-radius:50%;
+margin:auto;
+
+}
+
+.bs4-order-tracking li:after {
+content: ' ';
+width:150%;
+height:2px;
+background:#878788;
+position:absolute;
+left:0%;
+right:0%;
+top:15px;
+z-index:-1
+}
+
+.bs4-order-tracking li:first-child:after {
+left:50%
+}
+
+.bs4-order-tracking li:last-child:after {
+left:0%!important;
+width:0% !important
+}
+
+.bs4-order-tracking li.active {
+font-weight:bold;
+color:#dc3545
+}
+
+.bs4-order-tracking li.active >div {
+background:#dc3545
+}
+
+.bs4-order-tracking li.active:after {
+background:#dc3545
+}
+
+.card-timeline {
+background-color:#fff;
+z-index:0
+} 
+
+ol {
+  list-style-type: none;
+}
+
+li {
+  position: relative;
+  margin: 0;
+  padding-bottom: 1em;
+  padding-left: 20px;
+}
+
+li:before {
+  content: '';
+  background-color: #c00;
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  left: 6px;
+  width: 3px;
+}
+
+li:after {
+  content: '';
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' aria-hidden='true' viewBox='0 0 32 32' focusable='false'%3E%3Ccircle stroke='none' fill='%23c00' cx='16' cy='16' r='10'%3E%3C/circle%3E%3C/svg%3E");
+  position: absolute;
+  left: 0;
+  height: 15px;
+  width: 15px;
+} */
+
+.container-timeline {
+   width: 50%;
+   padding: 50px 0;
+   margin: 50px auto;
+   position: relative;
+   overflow: auto;
+   border:2px dotted gray;
+   
+}
+
+.container-timeline:before {
+   content: '';
+   position: absolute;
+   top: 0px;
+   left: 50%;
+   margin-left: -5px;
+   width: 2px;
+   height: 100%;
+   /*background: #CCD1D9;*/
+   background: gray;
+   z-index: 1;
+   border:6px solid gray;
+}
+
+.timeline-block {
+   width: -webkit-calc(50% + 8px);
+   width: -moz-calc(50% + 8px);
+   width: calc(50% + 8px);
+   display: -webkit-box;
+   display: -webkit-flex;
+   display: -moz-box;
+   display: flex;
+   -webkit-box-pack: justify;
+   -webkit-justify-content: space-between;
+   -moz-box-pack: justify;
+   justify-content: space-between;
+   clear: both;
+  
+}
+
+.timeline-block-right {
+   float: right;
+   
+}
+
+.timeline-block-left {
+   float: left;
+   direction: rtl;
+
+   
+}
+
+.marker {
+   width: 40px;
+   height: 40px;
+   border-radius: 50%;
+   border: 1px solid #F5F7FA;
+   background: #C42931;
+   margin-top: 10px;
+   z-index: 9999;
+  text-align:center;
+      position: relative;
+  left:4px;
+}
+
+.marker.active{
+  width: 40px;
+  height: 40px;
+  background:#5bd040;
+  left: 0px; 
+}
+.timeline-content {
+   width: 95%;
+   padding: 0 15px;
+   color: #666;
+   border: 2px solid green;
+   border-radius: 20px;
+    
+}
+ 
+i.fa.fa-truck.active {
+ display:block !important;
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    margin: auto;
+    height: 50%;
+  color:#fff;
+}
+
+.timeline-content h3 {
+   margin-top: 8px;
+   margin-bottom: 5px;
+   font-size: 20px;
+   font-weight: 500
+}
+
+.timeline-content span {
+   font-size: 15px;
+   color: #a4a4a4;
+}
+
+.timeline-content p {
+   font-size: 14px;
+   line-height: 1.5em;
+   word-spacing: 1px;
+   color: #888;
+}
+
+
+
+   .container-timeline:before {
+      left: 19px;
+      width: 2px;
+   }
+   .timeline-block {
+      width: 100%;
+      margin-bottom: 30px;
+      
+   }
+   .timeline-block-right {
+      float: none;
+   }
+
+   .timeline-block-left {
+      float: none;
+      direction: ltr;
+      
+   }
+
