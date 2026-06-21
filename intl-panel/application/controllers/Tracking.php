@@ -44,3 +44,4 @@ class Tracking extends CI_Controller {
         $this->load->view('tracking/public_view', $data);
     }
 }
+

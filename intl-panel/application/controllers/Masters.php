@@ -231,6 +231,7 @@ class Masters extends CI_Controller {
     // --- SHIPPING RATES ---
     public function rates() {
         $data['page_title'] = 'Shipping Rates Matrix';
+         $data['countries'] = $this->Master_model->get_countries();
         $data['rates'] = $this->Master_model->get_rates();
         $data['view_path'] = 'masters/rates_list';
         $this->load->view('templates/dashboard_layout', $data);
