@@ -6,6 +6,7 @@
       <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-paper-plane-o"></i> Consignment AWB: <strong><?php echo $shipment->awb_number; ?></strong></h3>
         <div class="pull-right">
+          <a href="<?php echo site_url('shipments'); ?>" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Back to List</a>
           <?php if($this->session->userdata('role_id') != 4): ?>
             <a href="<?php echo site_url('shipments/edit/' . $shipment->id); ?>" class="btn btn-warning btn-sm"><i class="fa fa-pencil"></i> Edit Booking</a>
             <a href="<?php echo site_url('shipments/send-login/' . $shipment->id); ?>" class="btn btn-info btn-sm"><i class="fa fa-envelope"></i> Send Login Details</a>
