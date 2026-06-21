@@ -11,6 +11,22 @@
       </div>
       
       <div class="box-body table-responsive">
+        <?php if($this->session->userdata('role_id') != 4 && !empty($customers)): ?>
+          <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-4">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="control-label">Filter by Customer (Exporter):</label>
+                <select id="customerFilter" class="form-control input-sm">
+                  <option value="">All Customers</option>
+                  <?php foreach($customers as $cust): ?>
+                    <option value="<?php echo htmlspecialchars($cust->name); ?>"><?php echo $cust->name; ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <table class="table table-bordered table-striped dataTable">
           <thead>
             <tr>
@@ -33,7 +49,7 @@
                 <td><?php echo date('d M Y', strtotime($s->booking_date)); ?></td>
                 <td><?php echo $s->origin_country_name; ?> <i class="fa fa-arrow-right text-muted"></i> <?php echo $s->dest_country_name; ?></td>
                 <td><?php echo $s->courier_partner_name; ?> (<?php echo $s->service_type; ?>)</td>
-                <td><?php echo $s->customer_profile_name; ?></td>
+                <td data-search="<?php echo htmlspecialchars($s->customer_profile_name); ?>"><?php echo $s->customer_profile_name; ?></td>
                 <td><?php echo $s->chargeable_weight; ?> kg</td>
                 <td>₹<?php echo number_format($s->estimated_charges, 2); ?></td>
                 <td>
@@ -54,9 +70,10 @@
                   <?php endif; ?>
                 </td>
                 <td>
-                  <a href="<?php echo site_url('shipments/view/' . $s->id); ?>" class="btn btn-primary btn-xs"><i class="fa fa-eye"></i> View Summary</a>
+                  <a href="<?php echo site_url('shipments/view/' . $s->id); ?>" class="btn btn-primary btn-xs"><i class="fa fa-eye"></i> View</a>
                   <?php if($this->session->userdata('role_id') != 4): ?>
                     <a href="<?php echo site_url('shipments/edit/' . $s->id); ?>" class="btn btn-warning btn-xs"><i class="fa fa-pencil"></i> Edit</a>
+                    <a href="<?php echo site_url('shipments/delete/' . $s->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this shipment?');"><i class="fa fa-trash"></i> Delete</a>
                   <?php endif; ?>
                   
                   <?php if($this->session->userdata('role_id') == 4 && $s->verification_status == 'Pending'): ?>
@@ -71,3 +88,15 @@
     </div>
   </div>
 </div>
+
+<script>
+  $(document).ready(function() {
+    // Custom Datatables Filter for Customer (Exporter Profile)
+    $('#customerFilter').on('change', function() {
+      var val = $(this).val();
+      var table = $('.dataTable').DataTable();
+      // Column 4 is Exporter Profile. We perform an exact regex search.
+      table.column(4).search(val ? '^' + $.fn.dataTable.util.escapeRegex(val) + '$' : '', true, false).draw();
+    });
+  });
+</script>

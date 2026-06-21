@@ -14,15 +14,13 @@ class Notification_model extends CI_Model {
      */
     private function _send_notification($user_id, $contact, $subject, $message, $type, $attachment_path = NULL) {
         // If SMTP/SMS/WhatsApp is disabled, we do NOT log/send.
-        // Let's fetch settings
-        $settings = $this->Master_model->get_app_settings();
         
         $enabled = FALSE;
-        if ($type == 'Email' && isset($settings['smtp_enabled']) && $settings['smtp_enabled'] == '1') {
+        if ($type == 'Email' && SMTP_ENABLED == '1') {
             $enabled = TRUE;
-        } elseif ($type == 'SMS' && isset($settings['sms_enabled']) && $settings['sms_enabled'] == '1') {
+        } elseif ($type == 'SMS' && SMS_ENABLED == '1') {
             $enabled = TRUE;
-        } elseif ($type == 'WhatsApp' && isset($settings['whatsapp_enabled']) && $settings['whatsapp_enabled'] == '1') {
+        } elseif ($type == 'WhatsApp' && WHATSAPP_ENABLED == '1') {
             $enabled = TRUE;
         }
 
@@ -37,16 +35,16 @@ class Notification_model extends CI_Model {
             // Actual email dispatch via CodeIgniter email library
             $this->load->library('email');
             
-            // Setup dynamic configuration
+            // Setup dynamic configuration from constants
             $config = array();
             $config['protocol'] = 'smtp';
-            $config['smtp_host'] = isset($settings['smtp_host']) ? trim($settings['smtp_host']) : '';
-            $config['smtp_port'] = isset($settings['smtp_port']) ? intval(trim($settings['smtp_port'])) : 25;
-            $config['smtp_user'] = isset($settings['smtp_user']) ? trim($settings['smtp_user']) : '';
-            $config['smtp_pass'] = isset($settings['smtp_pass']) ? trim($settings['smtp_pass']) : '';
+            $config['smtp_host'] = trim(SMTP_HOST);
+            $config['smtp_port'] = intval(trim(SMTP_PORT));
+            $config['smtp_user'] = trim(SMTP_USER);
+            $config['smtp_pass'] = trim(SMTP_PASS);
             
             // Set encryption
-            $crypto = isset($settings['smtp_crypto']) ? trim($settings['smtp_crypto']) : '';
+            $crypto = trim(SMTP_CRYPTO);
             if ($crypto == 'ssl' || $crypto == 'tls') {
                 $config['smtp_crypto'] = $crypto;
             } else {
@@ -63,10 +61,10 @@ class Notification_model extends CI_Model {
             $this->email->clear(TRUE);
             $this->email->initialize($config);
             
-            $reply_email = !empty($settings['company_email']) ? trim($settings['company_email']) : 'no-reply@couriersyndicate.com';
-            $reply_name = !empty($settings['company_name']) ? trim($settings['company_name']) : 'CourierSyndicate';
+            $reply_email = trim(COMPANY_EMAIL);
+            $reply_name = trim(COMPANY_NAME);
             
-            $from_email =   $config['smtp_user'];
+            $from_email = $config['smtp_user'];
             $from_name = 'No Reply | Courier Syndicate';
 
             $this->email->from($from_email, $from_name);
@@ -90,9 +88,9 @@ class Notification_model extends CI_Model {
                 $error_log = $this->email->print_debugger(array('headers', 'subject', 'body'));
             }
         } elseif ($type == 'SMS') {
-            $api_url = isset($settings['sms_api_url']) ? trim($settings['sms_api_url']) : '';
-            $api_key = isset($settings['sms_api_key']) ? trim($settings['sms_api_key']) : '';
-            $sender_id = isset($settings['sms_sender_id']) ? trim($settings['sms_sender_id']) : '';
+            $api_url = trim(SMS_API_URL);
+            $api_key = trim(SMS_API_KEY);
+            $sender_id = trim(SMS_SENDER_ID);
             
             if (!empty($api_url)) {
                 $ch = curl_init();
@@ -123,8 +121,8 @@ class Notification_model extends CI_Model {
                 $status = 'Sent';
             }
         } elseif ($type == 'WhatsApp') {
-            $api_url = isset($settings['whatsapp_api_url']) ? trim($settings['whatsapp_api_url']) : '';
-            $api_key = isset($settings['whatsapp_api_key']) ? trim($settings['whatsapp_api_key']) : '';
+            $api_url = trim(WHATSAPP_API_URL);
+            $api_key = trim(WHATSAPP_API_KEY);
             
             if (!empty($api_url)) {
                 $ch = curl_init();
@@ -235,7 +233,7 @@ class Notification_model extends CI_Model {
             $msg .= "Please log in to your customer portal profile at " . site_url('login') . " to sign and authorize this shipment.\n\n";
         }
 
-        $msg .= "Thank you,\nCourierSyndicate International Support";
+        $msg .= "Thank you,\n" . (defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate International') . " Support";
 
         // Dispatch notifications
         $this->_dispatch_all($customer->user_id, $customer->email, $customer->mobile, $subject, $msg, $pdf_path);
@@ -256,7 +254,7 @@ class Notification_model extends CI_Model {
         $msg = "Dear " . $shipment->sender_name . ",\n\n";
         $msg .= "Your OTP code for verifying shipment " . $shipment->awb_number . " is " . $otp . ".\n";
         $msg .= "Please enter this code in the customer portal release wizard to authorize the transit release process.\n\n";
-        $msg .= "Thank you,\nCourierSyndicate International";
+        $msg .= "Thank you,\n" . (defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate International');
 
         $this->_dispatch_all($customer->user_id, $customer->email, $customer->mobile, $subject, $msg);
         return TRUE;
@@ -292,7 +290,7 @@ class Notification_model extends CI_Model {
         $msg .= "Thank you. Your shipment " . $shipment->awb_number . " has been successfully signed, OTP verified, and cleared for transit release.\n";
         $msg .= "Verification Date: " . date('Y-m-d H:i:s') . "\n";
         $msg .= "The copy of your signed terms, conditions, declarations, and consignment receipt is attached.\n\n";
-        $msg .= "Thank you,\nCourierSyndicate International Support";
+        $msg .= "Thank you,\n" . (defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate International') . " Support";
 
         $this->_dispatch_all($customer->user_id, $customer->email, $customer->mobile, $subject, $msg, $pdf_path);
         return TRUE;
@@ -316,7 +314,7 @@ class Notification_model extends CI_Model {
         $msg .= "Remarks: " . $remarks . "\n";
         $msg .= "Update Time: " . date('Y-m-d H:i:s') . "\n\n";
         $msg .= "You can view detailed tracking history at: " . site_url('tracking?awb=' . $shipment->awb_number) . "\n\n";
-        $msg .= "Thank you,\nCourierSyndicate International";
+        $msg .= "Thank you,\n" . (defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate International');
 
         $this->_dispatch_all($customer->user_id, $customer->email, $customer->mobile, $subject, $msg);
         return TRUE;

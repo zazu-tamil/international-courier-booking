@@ -89,6 +89,10 @@
             <a href="<?php echo site_url('kyc-requests'); ?>"><i class="fa fa-id-card"></i> <span>KYC Requests</span></a>
           </li>
 
+          <li class="<?php echo ($this->uri->segment(1) == 'customers') ? 'active' : ''; ?>">
+            <a href="<?php echo site_url('customers'); ?>"><i class="fa fa-users"></i> <span>Customers</span></a>
+          </li>
+
           <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'restricted-items', 'app-settings', 'notification-logs')) ? 'active menu-open' : ''; ?>">
             <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
               <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
@@ -165,7 +169,7 @@
 
   <!-- Main Footer -->
   <footer class="main-footer text-center">
-    <strong>Copyright &copy; 2026 <a href="#">CourierSyndicate International</a>.</strong> All rights reserved.
+    <strong>Copyright &copy; 2026 <a href="#"><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></a>.</strong> All rights reserved.
   </footer>
 </div>
 
@@ -183,7 +187,7 @@
       'paging'      : true,
       'lengthChange': true,
       'searching'   : true,
-      'ordering'    : true,
+      'ordering'    : false,
       'info'        : true,
       'autoWidth'   : false,
       'responsive'  : true

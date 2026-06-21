@@ -293,4 +293,188 @@ class Customer extends CI_Controller {
             redirect('customer/verify/' . $shipment_id);
         }
     }
+
+    public function list() {
+        if ($this->session->userdata('role_id') == 4) {
+            redirect('dashboard');
+        }
+        $data['page_title'] = 'Manage Customers';
+        $data['customers'] = $this->Customer_model->get_customers();
+        $data['countries'] = $this->Master_model->get_countries();
+        $data['view_path'] = 'customer/customer_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function edit($id) {
+        if ($this->session->userdata('role_id') == 4) {
+            redirect('dashboard');
+        }
+        
+        $this->form_validation->set_rules('name', 'Customer Name', 'required');
+        $this->form_validation->set_rules('customer_type', 'Customer Type', 'required|in_list[individual,business]');
+        $this->form_validation->set_rules('mobile', 'Mobile Number', 'required');
+        $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
+        $this->form_validation->set_rules('address', 'Address', 'required');
+        $this->form_validation->set_rules('city', 'City', 'required');
+        $this->form_validation->set_rules('state', 'State', 'required');
+        $this->form_validation->set_rules('country_id', 'Country', 'required|numeric');
+        $this->form_validation->set_rules('zip_code', 'ZIP Code', 'required');
+        $this->form_validation->set_rules('credit_limit', 'Credit Limit', 'required|numeric');
+        $this->form_validation->set_rules('credit_days', 'Credit Days', 'required|integer');
+        $this->form_validation->set_rules('status', 'Status', 'required|in_list[Active,Inactive]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+            redirect('customers');
+        } else {
+            $post = $this->input->post(NULL, TRUE);
+            $customer_data = array(
+                'name' => $post['name'],
+                'company_name' => $post['company_name'] ? $post['company_name'] : NULL,
+                'customer_type' => $post['customer_type'],
+                'mobile' => $post['mobile'],
+                'email' => $post['email'],
+                'address' => $post['address'],
+                'city' => $post['city'],
+                'state' => $post['state'],
+                'country_id' => $post['country_id'],
+                'zip_code' => $post['zip_code'],
+                'credit_limit' => $post['credit_limit'],
+                'credit_days' => $post['credit_days'],
+                'status' => $post['status']
+            );
+            
+            if ($this->Customer_model->update_customer_full($id, $customer_data)) {
+                $this->session->set_flashdata('success', 'Customer profile updated successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to update customer profile.');
+            }
+            redirect('customers');
+        }
+    }
+
+    public function delete($id) {
+        if ($this->session->userdata('role_id') == 4) {
+            redirect('dashboard');
+        }
+
+        if ($this->Customer_model->delete_customer($id)) {
+            $this->session->set_flashdata('success', 'Customer profile soft deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete customer.');
+        }
+        redirect('customers');
+    }
+
+    public function manage_kyc_staff($customer_id) {
+        if ($this->session->userdata('role_id') == 4) {
+            redirect('dashboard');
+        }
+
+        $customer = $this->Customer_model->get_customers($customer_id);
+        if (!$customer) {
+            $this->session->set_flashdata('error', 'Customer profile not found.');
+            redirect('kyc-requests');
+        }
+
+        $this->form_validation->set_rules('passport_number', 'Passport Number', 'trim');
+        $this->form_validation->set_rules('aadhaar_number', 'Aadhaar Number', 'trim|numeric|exact_length[12]');
+        $this->form_validation->set_rules('gst_number', 'GST Number', 'trim');
+        $this->form_validation->set_rules('pan_number', 'PAN Number', 'trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $data['page_title'] = 'Manage KYC Documents for ' . $customer->name;
+            $data['customer'] = $customer;
+            $data['kyc'] = $this->Customer_model->get_kyc_details($customer_id);
+            $data['view_path'] = 'customer/kyc_manage_staff';
+            $this->load->view('templates/dashboard_layout', $data);
+        } else {
+            // File Uploads
+            $config['upload_path'] = './assets/kyc_documents/';
+            $config['allowed_types'] = 'gif|jpg|png|pdf|jpeg';
+            $config['max_size'] = 5120; // 5MB
+            
+            if (!is_dir($config['upload_path'])) {
+                mkdir($config['upload_path'], 0777, TRUE);
+            }
+
+            $this->load->library('upload', $config);
+            $this->upload->initialize($config);
+
+            $kyc = $this->Customer_model->get_kyc_details($customer_id);
+            
+            $id_proof_file = $kyc ? $kyc->id_proof_file : NULL;
+            $address_proof_file = $kyc ? $kyc->address_proof_file : NULL;
+
+            // Upload ID Proof
+            if (!empty($_FILES['id_proof']['name'])) {
+                if ($this->upload->do_upload('id_proof')) {
+                    $fileData = $this->upload->data();
+                    $id_proof_file = 'assets/kyc_documents/' . $fileData['file_name'];
+                } else {
+                    $this->session->set_flashdata('error', 'ID Proof Upload Error: ' . $this->upload->display_errors());
+                    redirect('kyc-requests/manage/' . $customer_id);
+                }
+            }
+
+            // Upload Address Proof
+            if (!empty($_FILES['address_proof']['name'])) {
+                if ($this->upload->do_upload('address_proof')) {
+                    $fileData = $this->upload->data();
+                    $address_proof_file = 'assets/kyc_documents/' . $fileData['file_name'];
+                } else {
+                    $this->session->set_flashdata('error', 'Address Proof Upload Error: ' . $this->upload->display_errors());
+                    redirect('kyc-requests/manage/' . $customer_id);
+                }
+            }
+
+            $post = $this->input->post(NULL, TRUE);
+            $kyc_data = array(
+                'passport_number' => $post['passport_number'] ? $post['passport_number'] : NULL,
+                'aadhaar_number' => $post['aadhaar_number'] ? $post['aadhaar_number'] : NULL,
+                'gst_number' => $post['gst_number'] ? $post['gst_number'] : NULL,
+                'pan_number' => $post['pan_number'] ? $post['pan_number'] : NULL,
+                'trade_license' => $post['trade_license'] ? $post['trade_license'] : NULL,
+                'company_registration_certificate' => $post['company_registration_certificate'] ? $post['company_registration_certificate'] : NULL,
+                'authorized_person' => $post['authorized_person'] ? $post['authorized_person'] : NULL,
+                'id_proof_file' => $id_proof_file,
+                'address_proof_file' => $address_proof_file,
+                'status' => 'pending' // Revert to pending on upload
+            );
+
+            if ($this->Customer_model->submit_kyc($customer_id, $kyc_data)) {
+                $this->session->set_flashdata('success', 'KYC Documents uploaded successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to update KYC documents.');
+            }
+            redirect('kyc-requests');
+        }
+    }
+
+    public function delete_kyc_staff($id) {
+        if ($this->session->userdata('role_id') == 4) {
+            redirect('dashboard');
+        }
+
+        $kyc = $this->db->get_where('customer_kyc', array('id' => $id))->row();
+        if (!$kyc) {
+            $this->session->set_flashdata('error', 'KYC record not found.');
+            redirect('kyc-requests');
+        }
+
+        // Unlink files if they exist
+        if ($kyc->id_proof_file && file_exists('./' . $kyc->id_proof_file)) {
+            unlink('./' . $kyc->id_proof_file);
+        }
+        if ($kyc->address_proof_file && file_exists('./' . $kyc->address_proof_file)) {
+            unlink('./' . $kyc->address_proof_file);
+        }
+
+        if ($this->Customer_model->delete_kyc($id)) {
+            $this->session->set_flashdata('success', 'Customer KYC record cleared/deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete KYC record.');
+        }
+        redirect('kyc-requests');
+    }
 }

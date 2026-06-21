@@ -5,8 +5,10 @@ class Shipment extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        if (!$this->session->userdata('logged_in')) {
-            redirect('login');
+        if ($this->router->fetch_method() !== 'barcode') {
+            if (!$this->session->userdata('logged_in')) {
+                redirect('login');
+            }
         }
         $this->load->model('Shipment_model');
         $this->load->model('Customer_model');
@@ -19,6 +21,8 @@ class Shipment extends CI_Controller {
         $customer_id = NULL;
         if ($this->session->userdata('role_id') == 4) {
             $customer_id = $this->session->userdata('customer_id');
+        } else {
+            $data['customers'] = $this->Customer_model->get_customers();
         }
 
         $data['page_title'] = 'Shipment Records';
@@ -439,6 +443,9 @@ class Shipment extends CI_Controller {
         $id = $this->input->post('shipment_id');
         $status = $this->input->post('status');
         $remarks = $this->input->post('remarks');
+        $date_time = $this->input->post('date_time');
+        
+        $formatted_date_time = $date_time ? date('Y-m-d H:i:s', strtotime($date_time)) : date('Y-m-d H:i:s');
 
         // Check if shipment is customer verified
         $shipment = $this->Shipment_model->get_shipments($id);
@@ -447,7 +454,7 @@ class Shipment extends CI_Controller {
             redirect('shipments/view/' . $id);
         }
 
-        if ($this->Shipment_model->add_tracking_stage($id, $status, $remarks)) {
+        if ($this->Shipment_model->add_tracking_stage($id, $status, $remarks, $formatted_date_time)) {
             $this->session->set_flashdata('success', 'Tracking stage updated successfully.');
         } else {
             $this->session->set_flashdata('error', 'Failed to update tracking stage.');
@@ -528,5 +535,53 @@ class Shipment extends CI_Controller {
         
         $data['items'] = $this->Shipment_model->get_items($id);
         $this->load->view('shipment/print_customs', $data);
+    }
+
+    public function print_awb($id) {
+        $data['shipment'] = $this->Shipment_model->get_shipments($id);
+        if (!$data['shipment']) show_404();
+        
+        $data['boxes'] = $this->Shipment_model->get_boxes($id);
+        $data['items'] = $this->Shipment_model->get_items($id);
+        
+        // Fetch accepted terms and conditions or current active terms
+        $this->db->select('t.*');
+        $this->db->from('terms_acceptance_log l');
+        $this->db->join('terms_conditions_master t', 't.id = l.terms_version_id');
+        $this->db->where('l.shipment_id', $id);
+        $data['accepted_terms'] = $this->db->get()->row();
+        
+        if (!$data['accepted_terms']) {
+            $data['accepted_terms'] = $this->Master_model->get_active_terms();
+        }
+
+        // Fetch signature
+        $this->db->select('*');
+        $this->db->from('customer_signatures');
+        $this->db->where('shipment_id', $id);
+        $data['signature'] = $this->db->get()->row();
+
+        $this->load->view('shipment/print_awb', $data);
+    }
+
+    public function delete($id) {
+        // Access Control (Only Super Admin and staff can delete shipments, i.e., not customer)
+        if ($this->session->userdata('role_id') == 4) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
+
+        $shipment = $this->Shipment_model->get_shipments($id);
+        if (!$shipment) {
+            $this->session->set_flashdata('error', 'Shipment not found.');
+            redirect('shipments');
+        }
+
+        if ($this->Shipment_model->delete_shipment($id)) {
+            $this->session->set_flashdata('success', 'Shipment soft deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete shipment.');
+        }
+        redirect('shipments');
     }
 }

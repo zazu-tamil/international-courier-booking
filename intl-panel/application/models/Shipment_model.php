@@ -58,6 +58,7 @@ class Shipment_model extends CI_Model {
             $this->db->where('shipment_master.id', $id);
             return $this->db->get()->row();
         }
+        $this->db->order_by('shipment_master.booking_date', 'DESC');
         $this->db->order_by('shipment_master.id', 'DESC');
         return $this->db->get()->result();
     }
@@ -216,7 +217,7 @@ class Shipment_model extends CI_Model {
         return $shipment_id;
     }
 
-    public function add_tracking_stage($shipment_id, $status, $remarks) {
+    public function add_tracking_stage($shipment_id, $status, $remarks, $date_time = NULL) {
         $user_id = $this->session->userdata('user_id') ? $this->session->userdata('user_id') : 1;
         $branch_id = $this->session->userdata('branch_id') ? $this->session->userdata('branch_id') : 1;
         
@@ -224,7 +225,7 @@ class Shipment_model extends CI_Model {
 
         $tracking_data = array(
             'shipment_id' => $shipment_id,
-            'date_time' => date('Y-m-d H:i:s'),
+            'date_time' => $date_time ? $date_time : date('Y-m-d H:i:s'),
             'location' => $branch_id ? $this->db->get_where('branches', array('id' => $branch_id))->row()->name : 'System Gateway',
             'remarks' => $remarks,
             'updated_by' => $user_id,
@@ -470,5 +471,12 @@ class Shipment_model extends CI_Model {
 
         $this->Audit_model->log_activity('Shipment Updated', 'ID: ' . $shipment_id);
         return TRUE;
+    }
+
+    public function delete_shipment($id) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('shipment_master', array('deleted_at' => date('Y-m-d H:i:s')));
+        $this->Audit_model->log_activity('Delete Shipment', 'Shipment ID: ' . $id);
+        return $result;
     }
 }

@@ -38,8 +38,10 @@
         <!-- Billing headers -->
         <div class="row" style="margin-bottom: 20px;">
           <div class="col-xs-6">
-            <h4><strong>CourierSyndicate International</strong></h4>
-            <p>101 Logistics Boulevard, Sector 5<br>HQ Origin branch Office<br>Email: billing@couriersyn.com</p>
+            <h4><strong><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></strong></h4>
+            <p>101 Logistics Boulevard, Sector 5<br>
+               <?php echo defined('COMPANY_ADDRESS') && COMPANY_ADDRESS ? nl2br(htmlspecialchars(COMPANY_ADDRESS)) : 'HQ Origin branch Office'; ?><br>
+               Email: <?php echo defined('COMPANY_EMAIL') && COMPANY_EMAIL ? htmlspecialchars(COMPANY_EMAIL) : 'billing@couriersyn.com'; ?></p>
           </div>
           <div class="col-xs-6 text-right">
             <h4><strong>STATEMENT OF ACCOUNT</strong></h4>

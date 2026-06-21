@@ -9,6 +9,20 @@
       </div>
       
       <div class="box-body table-responsive">
+        <div class="row" style="margin-bottom: 15px;">
+          <div class="col-md-4">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="control-label">Filter by Destination Country:</label>
+              <select id="destCountryFilter" class="form-control input-sm">
+                <option value="">All Countries</option>
+                <?php foreach($countries as $c): ?>
+                  <option value="<?php echo htmlspecialchars($c->country_name); ?>"><?php echo $c->country_name; ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+        </div>
+        
         <table class="table table-bordered table-striped dataTable">
           <thead>
             <tr>
@@ -26,7 +40,7 @@
           <tbody>
             <?php foreach($rates as $r): ?>
               <tr>
-                <td><strong><?php echo $r->origin_country; ?></strong> <i class="fa fa-long-arrow-right"></i> <strong><?php echo $r->destination_country; ?></strong></td>
+                <td data-search="origin:<?php echo htmlspecialchars($r->origin_country); ?> dest:<?php echo htmlspecialchars($r->destination_country); ?>"><strong><?php echo $r->origin_country; ?></strong> <i class="fa fa-long-arrow-right"></i> <strong><?php echo $r->destination_country; ?></strong></td>
                 <td><span class="label label-info"><?php echo $r->service_type; ?></span></td>
                 <td><code><?php echo number_format($r->weight_slab_start, 3); ?> kg</code> to <code><?php echo number_format($r->weight_slab_end, 3); ?> kg</code></td>
                 <td>₹<?php echo number_format($r->base_rate, 2); ?></td>
@@ -248,6 +262,13 @@
       $('#edit_fuel').val(fuel);
       $('#edit_handling').val(handling);
       $('#edit_insurance').val(insurance);
+    });
+
+    // Custom Datatables Filter for Destination Country
+    $('#destCountryFilter').on('change', function() {
+      var val = $(this).val();
+      var table = $('.dataTable').DataTable();
+      table.column(0).search(val ? 'dest:' + val : '').draw();
     });
   });
 </script>

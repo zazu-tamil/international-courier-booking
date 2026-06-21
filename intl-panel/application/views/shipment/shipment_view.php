@@ -16,6 +16,7 @@
           <a href="<?php echo site_url('shipments/print-label/' . $shipment->id); ?>" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-barcode"></i> Print Label</a>
           <a href="<?php echo site_url('shipments/print-invoice/' . $shipment->id); ?>" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-file-pdf-o text-red"></i> Commercial Invoice</a>
           <a href="<?php echo site_url('shipments/print-customs/' . $shipment->id); ?>" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-shield"></i> Customs Dec</a>
+          <a href="<?php echo site_url('shipments/print-awb/' . $shipment->id); ?>" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-print"></i> Print AWB</a>
         </div>
       </div>
       
@@ -319,6 +320,10 @@
                   <option value="Returned">Returned to Origin</option>
                   <option value="Exception">Exception (Delay/Alert)</option>
                 </select>
+              </div>
+              <div class="form-group">
+                <label>Date and Time of Update</label>
+                <input type="datetime-local" name="date_time" class="form-control input-sm" value="<?php echo date('Y-m-d\TH:i'); ?>" required>
               </div>
               <div class="form-group">
                 <label>Remarks / Location Details</label>

@@ -97,8 +97,11 @@
         <div style="font-size: 12px; margin-top: 5px; color: #666;">International Shipping Cargo Document</div>
       </td>
       <td style="text-align: right;">
-        <strong>CourierSyndicate International</strong><br>
-        <span style="font-size: 12px; color: #555;">HQ Origin branch Office<br>billing@couriersyn.com</span>
+        <strong><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></strong><br>
+        <span style="font-size: 12px; color: #555;">
+          <?php echo defined('COMPANY_ADDRESS') && COMPANY_ADDRESS ? nl2br(htmlspecialchars(COMPANY_ADDRESS)) : 'HQ Origin branch Office'; ?><br>
+          <?php echo defined('COMPANY_EMAIL') && COMPANY_EMAIL ? htmlspecialchars(COMPANY_EMAIL) : 'billing@couriersyn.com'; ?>
+        </span>
       </td>
     </tr>
   </table>

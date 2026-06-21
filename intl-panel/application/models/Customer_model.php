@@ -46,10 +46,11 @@ class Customer_model extends CI_Model {
     }
 
     public function get_all_kyc() {
-        $this->db->select('customer_kyc.*, customers.name as customer_name, customers.company_name, customers.customer_type');
-        $this->db->from('customer_kyc');
-        $this->db->join('customers', 'customers.id = customer_kyc.customer_id');
-        $this->db->order_by('customer_kyc.created_at', 'DESC');
+        $this->db->select('customer_kyc.*, customer_kyc.id as id, customers.id as customer_id, customers.name as customer_name, customers.company_name, customers.customer_type');
+        $this->db->from('customers');
+        $this->db->join('customer_kyc', 'customer_kyc.customer_id = customers.id', 'left');
+        $this->db->where('customers.deleted_at IS NULL');
+        $this->db->order_by('customers.id', 'DESC');
         return $this->db->get()->result();
     }
 
@@ -294,5 +295,57 @@ class Customer_model extends CI_Model {
 
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    public function update_customer_full($id, $customer_data) {
+        $customer = $this->get_customers($id);
+        if (!$customer) return FALSE;
+
+        $this->db->trans_start();
+        
+        // Update customer
+        $this->db->where('id', $id);
+        $this->db->update('customers', $customer_data);
+
+        // Update associated user if email changes
+        if ($customer->user_id && isset($customer_data['email'])) {
+            $this->db->where('id', $customer->user_id);
+            $this->db->update('users', array(
+                'email' => $customer_data['email'],
+                'username' => $customer_data['email'],
+                'status' => $customer_data['status']
+            ));
+        }
+
+        $this->db->trans_complete();
+        $this->Audit_model->log_activity('Update Customer', 'Customer ID: ' . $id);
+        return $this->db->trans_status();
+    }
+
+    public function delete_customer($id) {
+        $customer = $this->get_customers($id);
+        if ($customer) {
+            $this->db->trans_start();
+            // Soft delete customer
+            $this->db->where('id', $id);
+            $this->db->update('customers', array('deleted_at' => date('Y-m-d H:i:s'), 'status' => 'Inactive'));
+            
+            // Soft delete associated user
+            if ($customer->user_id) {
+                $this->db->where('id', $customer->user_id);
+                $this->db->update('users', array('deleted_at' => date('Y-m-d H:i:s'), 'status' => 'Inactive'));
+            }
+            $this->db->trans_complete();
+            $this->Audit_model->log_activity('Delete Customer', 'Customer ID: ' . $id);
+            return $this->db->trans_status();
+        }
+        return FALSE;
+    }
+
+    public function delete_kyc($id) {
+        $this->db->where('id', $id);
+        $result = $this->db->delete('customer_kyc');
+        $this->Audit_model->log_activity('Delete KYC Record', 'KYC ID: ' . $id);
+        return $result;
     }
 }

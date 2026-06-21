@@ -54,15 +54,18 @@ $route['notification-logs'] = 'masters/notification_logs';
 
 // Shipment Booking & Handling
 $route['shipment/calculator'] = 'shipment/calculator';
+$route['shipment/barcode/(:any)'] = 'shipment/barcode/$1';
 $route['shipments'] = 'shipment/list';
 $route['shipments/book'] = 'shipment/book';
 $route['shipments/edit/(:num)'] = 'shipment/edit/$1';
+$route['shipments/delete/(:num)'] = 'shipment/delete/$1';
 $route['shipments/view/(:num)'] = 'shipment/view/$1';
 $route['shipments/send-login/(:num)'] = 'shipment/send_login/$1';
 $route['shipments/tracking/(:num)'] = 'shipment/tracking/$1';
 $route['shipments/print-label/(:num)'] = 'shipment/print_label/$1';
 $route['shipments/print-invoice/(:num)'] = 'shipment/print_invoice/$1';
 $route['shipments/print-customs/(:num)'] = 'shipment/print_customs/$1';
+$route['shipments/print-awb/(:num)'] = 'shipment/print_awb/$1';
 $route['shipments/upload-doc/(:num)'] = 'shipment/upload_document/$1';
 
 // Customer Portal Verification & Files
@@ -76,6 +79,13 @@ $route['customer/statement'] = 'customer/statement';
 // KYC Management (Staff Only)
 $route['kyc-requests'] = 'customer/kyc_requests';
 $route['kyc-requests/review/(:num)'] = 'customer/kyc_review/$1';
+
+// Customer Management (Staff Only)
+$route['customers'] = 'customer/list';
+$route['customers/edit/(:num)'] = 'customer/edit/$1';
+$route['customers/delete/(:num)'] = 'customer/delete/$1';
+$route['kyc-requests/manage/(:num)'] = 'customer/manage_kyc_staff/$1';
+$route['kyc-requests/delete/(:num)'] = 'customer/delete_kyc_staff/$1';
 
 // Payments
 $route['payments/receive/(:num)'] = 'customer/receive_payment/$1';
