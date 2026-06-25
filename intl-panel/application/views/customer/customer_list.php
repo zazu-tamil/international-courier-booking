@@ -58,11 +58,13 @@
                           data-toggle="modal" data-target="#editCustomerModal">
                     <i class="fa fa-pencil"></i> Edit
                   </button>
-                  <a href="<?php echo site_url('customers/delete/' . $c->id); ?>" 
-                     class="btn btn-danger btn-xs" 
-                     onclick="return confirm('Are you sure you want to delete this customer profile? This will also disable their user login.');">
-                    <i class="fa fa-trash"></i> Delete
-                  </a>
+                  <?php if($this->session->userdata('role_id') == 1): ?>
+                    <a href="<?php echo site_url('customers/delete/' . $c->id); ?>" 
+                       class="btn btn-danger btn-xs" 
+                       onclick="return confirm('Are you sure you want to delete this customer profile? This will also disable their user login.');">
+                      <i class="fa fa-trash"></i> Delete
+                    </a>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>

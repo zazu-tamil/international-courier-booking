@@ -364,7 +364,9 @@ class Customer extends CI_Controller {
     }
 
     public function delete($id) {
-        if ($this->session->userdata('role_id') == 4) {
+        // Access Control (Only Super Admin can delete records)
+        if ($this->session->userdata('role_id') != 1) {
+            $this->session->set_flashdata('error', 'Access Denied. Only Super Admin can delete records.');
             redirect('dashboard');
         }
 
@@ -462,7 +464,9 @@ class Customer extends CI_Controller {
     }
 
     public function delete_kyc_staff($id) {
-        if ($this->session->userdata('role_id') == 4) {
+        // Access Control (Only Super Admin can delete records)
+        if ($this->session->userdata('role_id') != 1) {
+            $this->session->set_flashdata('error', 'Access Denied. Only Super Admin can delete records.');
             redirect('dashboard');
         }
 

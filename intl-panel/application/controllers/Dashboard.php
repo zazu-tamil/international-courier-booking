@@ -75,9 +75,11 @@ class Dashboard extends CI_Controller {
 
             // Pending Pickups
             if ($role_id == 3) {
-                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE created_by = " . intval($this->session->userdata('user_id')) . ")");
+                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE deleted_at IS NULL AND created_by = " . intval($this->session->userdata('user_id')) . ")");
             } elseif ($role_id == 2) {
-                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE branch_id = " . intval($this->session->userdata('branch_id')) . ")");
+                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE deleted_at IS NULL AND branch_id = " . intval($this->session->userdata('branch_id')) . ")");
+            } else {
+                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE deleted_at IS NULL)");
             }
             $this->db->where('status', 'Requested');
             $data['pending_pickups'] = $this->db->count_all_results('pickup_requests');
@@ -147,9 +149,9 @@ class Dashboard extends CI_Controller {
 
             // Active Customers
             if ($role_id == 3) {
-                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE created_by = " . intval($this->session->userdata('user_id')) . ")");
+                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE deleted_at IS NULL AND created_by = " . intval($this->session->userdata('user_id')) . ")");
             } elseif ($role_id == 2) {
-                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE branch_id = " . intval($this->session->userdata('branch_id')) . ")");
+                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE deleted_at IS NULL AND branch_id = " . intval($this->session->userdata('branch_id')) . ")");
             }
             $this->db->where('status', 'Active')->where('deleted_at IS NULL');
             $data['active_customers'] = $this->db->count_all_results('customers');
@@ -174,6 +176,7 @@ class Dashboard extends CI_Controller {
                 $data['pending_kyc'] = 0;
             } else {
                 $this->db->where('status', 'pending');
+                $this->db->where("customer_id IN (SELECT id FROM customers WHERE deleted_at IS NULL)");
                 $data['pending_kyc'] = $this->db->count_all_results('customer_kyc');
                 $data['total_bookings'] = 0;
             }

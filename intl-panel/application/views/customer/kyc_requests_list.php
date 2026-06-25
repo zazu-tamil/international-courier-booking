@@ -80,7 +80,9 @@
                 <td>
                   <?php if($k->id): ?>
                     <a href="<?php echo site_url('kyc-requests/review/' . $k->id); ?>" class="btn btn-primary btn-xs"><i class="fa fa-eye"></i> Review</a>
-                    <a href="<?php echo site_url('kyc-requests/delete/' . $k->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to clear/delete this customer\'s KYC records? This will delete the uploaded files.');"><i class="fa fa-trash"></i> Delete KYC</a>
+                    <?php if($this->session->userdata('role_id') == 1): ?>
+                      <a href="<?php echo site_url('kyc-requests/delete/' . $k->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to clear/delete this customer\'s KYC records? This will delete the uploaded files.');"><i class="fa fa-trash"></i> Delete KYC</a>
+                    <?php endif; ?>
                   <?php endif; ?>
                   <a href="<?php echo site_url('kyc-requests/manage/' . $k->customer_id); ?>" class="btn btn-warning btn-xs"><i class="fa fa-upload"></i> Add/Edit KYC</a>
                 </td>

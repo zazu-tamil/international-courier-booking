@@ -572,9 +572,9 @@ class Shipment extends CI_Controller {
     }
 
     public function delete($id) {
-        // Access Control (Only Super Admin and staff can delete shipments, i.e., not customer/franchise)
-        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
-            $this->session->set_flashdata('error', 'Access Denied.');
+        // Access Control (Only Super Admin can delete records)
+        if ($this->session->userdata('role_id') != 1) {
+            $this->session->set_flashdata('error', 'Access Denied. Only Super Admin can delete records.');
             redirect('dashboard');
         }
 

@@ -45,7 +45,10 @@ class Master_model extends CI_Model {
         $user_data['password'] = password_hash($user_data['password'], PASSWORD_BCRYPT);
         $user_data['status'] = 'Active';
         $user_data['created_at'] = date('Y-m-d H:i:s');
-        $this->db->insert('users', $user_data);
+        if (!$this->db->insert('users', $user_data)) {
+            log_message('error', 'Add Branch User failed: ' . print_r($this->db->error(), true));
+            return false;
+        }
         $id = $this->db->insert_id();
         $this->Audit_model->log_activity('Add Branch User', 'User: ' . $user_data['username'] . ' for Branch ID: ' . $user_data['branch_id']);
         return $id;
