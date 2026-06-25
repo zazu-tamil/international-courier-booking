@@ -84,8 +84,8 @@ class Masters extends CI_Controller {
     public function create_branch_user() {
         $this->form_validation->set_rules('branch_id', 'Branch', 'required|numeric');
         $this->form_validation->set_rules('role_id', 'Role', 'required|numeric');
-        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]|is_unique[users.username]');
-        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email|is_unique[users.email]');
+        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]|is_unique_active[users.username]');
+        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email|is_unique_active[users.email]');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
 
         if ($this->form_validation->run() === FALSE) {
@@ -121,7 +121,7 @@ class Masters extends CI_Controller {
     public function add_franchise() {
         $this->form_validation->set_rules('name', 'Franchise Name', 'required');
         $this->form_validation->set_rules('franchise_code', 'Franchise Code', 'required|is_unique[franchises.franchise_code]');
-        $this->form_validation->set_rules('email', 'Login Email', 'required|valid_email|is_unique[users.email]');
+        $this->form_validation->set_rules('email', 'Login Email', 'required|valid_email|is_unique_active[users.email]');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
         $this->form_validation->set_rules('deposit_amount', 'Deposit Amount', 'numeric');
         $this->form_validation->set_rules('revenue_sharing_percentage', 'Revenue Split', 'numeric');

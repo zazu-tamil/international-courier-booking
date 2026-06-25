@@ -99,7 +99,7 @@ class Api extends CI_Controller {
         $this->form_validation->set_rules('name', 'Name', 'required');
         $this->form_validation->set_rules('customer_type', 'Customer Type', 'required|in_list[individual,business]');
         $this->form_validation->set_rules('mobile', 'Mobile', 'required');
-        $this->form_validation->set_rules('email', 'Email', 'required|valid_email|is_unique[users.email]');
+        $this->form_validation->set_rules('email', 'Email', 'required|valid_email|is_unique_active[users.email]');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
         $this->form_validation->set_rules('address', 'Address', 'required');
         $this->form_validation->set_rules('city', 'City', 'required');

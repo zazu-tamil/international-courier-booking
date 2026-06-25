@@ -141,7 +141,7 @@ class Shipment extends CI_Controller {
         $this->form_validation->set_rules('courier_partner_id', 'Courier Partner', 'required');
 
         if ($this->input->post('create_customer_account') == '1') {
-            $this->form_validation->set_rules('sender_email', 'Sender Email Address', 'required|valid_email|is_unique[users.email]');
+            $this->form_validation->set_rules('sender_email', 'Sender Email Address', 'required|valid_email|is_unique_active[users.email]');
         } else {
             $this->form_validation->set_rules('customer_id', 'Customer Account', 'required');
         }
