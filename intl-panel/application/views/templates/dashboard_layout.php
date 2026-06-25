@@ -85,34 +85,39 @@
             <a href="<?php echo site_url('shipments'); ?>"><i class="fa fa-cubes"></i> <span>Shipment Bookings</span></a>
           </li>
 
-          <li class="<?php echo ($this->uri->segment(1) == 'kyc-requests') ? 'active' : ''; ?>">
-            <a href="<?php echo site_url('kyc-requests'); ?>"><i class="fa fa-id-card"></i> <span>KYC Requests</span></a>
-          </li>
+          <?php if ($this->session->userdata('role_id') != 3): // Hide for Franchise Users ?>
+            <li class="<?php echo ($this->uri->segment(1) == 'kyc-requests') ? 'active' : ''; ?>">
+              <a href="<?php echo site_url('kyc-requests'); ?>"><i class="fa fa-id-card"></i> <span>KYC Requests</span></a>
+            </li>
 
-          <li class="<?php echo ($this->uri->segment(1) == 'customers') ? 'active' : ''; ?>">
-            <a href="<?php echo site_url('customers'); ?>"><i class="fa fa-users"></i> <span>Customers</span></a>
-          </li>
+            <li class="<?php echo ($this->uri->segment(1) == 'customers') ? 'active' : ''; ?>">
+              <a href="<?php echo site_url('customers'); ?>"><i class="fa fa-users"></i> <span>Customers</span></a>
+            </li>
 
-          <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'restricted-items', 'app-settings', 'notification-logs')) ? 'active menu-open' : ''; ?>">
-            <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
-              <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
-            </a>
-            <ul class="treeview-menu">
-              <li class="<?php echo ($this->uri->segment(1) == 'branches') ? 'active' : ''; ?>"><a href="<?php echo site_url('branches'); ?>"><i class="fa fa-circle-o"></i> Branches</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'franchises') ? 'active' : ''; ?>"><a href="<?php echo site_url('franchises'); ?>"><i class="fa fa-circle-o"></i> Franchises</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'countries') ? 'active' : ''; ?>"><a href="<?php echo site_url('countries'); ?>"><i class="fa fa-circle-o"></i> Countries</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-circle-o"></i> Shipping Rates Matrix</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'restricted-items') ? 'active' : ''; ?>"><a href="<?php echo site_url('restricted-items'); ?>"><i class="fa fa-circle-o"></i> Restricted Items Warns</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'app-settings') ? 'active' : ''; ?>"><a href="<?php echo site_url('app-settings'); ?>"><i class="fa fa-circle-o"></i> App Settings</a></li>
-              <li class="<?php echo ($this->uri->segment(1) == 'notification-logs') ? 'active' : ''; ?>"><a href="<?php echo site_url('notification-logs'); ?>"><i class="fa fa-circle-o"></i> Notification Logs</a></li>
-            </ul>
-          </li>
+            <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'restricted-items', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
+              <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
+                <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+              </a>
+              <ul class="treeview-menu">
+                <li class="<?php echo ($this->uri->segment(1) == 'roles') ? 'active' : ''; ?>"><a href="<?php echo site_url('roles'); ?>"><i class="fa fa-circle-o"></i> Roles &amp; Permissions</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'branches') ? 'active' : ''; ?>"><a href="<?php echo site_url('branches'); ?>"><i class="fa fa-circle-o"></i> Branches</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'franchises') ? 'active' : ''; ?>"><a href="<?php echo site_url('franchises'); ?>"><i class="fa fa-circle-o"></i> Franchises</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'countries') ? 'active' : ''; ?>"><a href="<?php echo site_url('countries'); ?>"><i class="fa fa-circle-o"></i> Countries</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-circle-o"></i> Shipping Rates Matrix</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'restricted-items') ? 'active' : ''; ?>"><a href="<?php echo site_url('restricted-items'); ?>"><i class="fa fa-circle-o"></i> Restricted Items Warns</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'app-settings') ? 'active' : ''; ?>"><a href="<?php echo site_url('app-settings'); ?>"><i class="fa fa-circle-o"></i> App Settings</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'notification-logs') ? 'active' : ''; ?>"><a href="<?php echo site_url('notification-logs'); ?>"><i class="fa fa-circle-o"></i> Notification Logs</a></li>
+              </ul>
+            </li>
+            <?php endif; ?>
 
-          <li class="<?php echo ($this->uri->segment(1) == 'customer' && $this->uri->segment(2) == 'statement') ? 'active' : ''; ?>">
-            <a href="<?php echo site_url('customer/statement'); ?>"><i class="fa fa-file-text-o"></i> <span>Customer Statements</span></a>
-          </li>
+            <li class="<?php echo ($this->uri->segment(1) == 'customer' && $this->uri->segment(2) == 'statement') ? 'active' : ''; ?>">
+              <a href="<?php echo site_url('customer/statement'); ?>"><i class="fa fa-file-text-o"></i> <span>Customer Statements</span></a>
+            </li>
+          <?php endif; ?>
 
         <?php else: // Customer Menu ?>
           

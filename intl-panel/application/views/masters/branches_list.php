@@ -47,6 +47,12 @@
                           data-toggle="modal" data-target="#editBranchModal">
                     <i class="fa fa-pencil"></i> Edit
                   </button>
+                  <button class="btn btn-info btn-xs create-user-btn" 
+                          data-id="<?php echo $b->id; ?>"
+                          data-name="<?php echo htmlspecialchars($b->name); ?>"
+                          data-toggle="modal" data-target="#createBranchUserModal">
+                    <i class="fa fa-user-plus"></i> Create User
+                  </button>
                   <?php if($this->session->userdata('role_id') == 1): ?>
                     <a href="<?php echo site_url('branches/delete/' . $b->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this branch?');">
                       <i class="fa fa-trash"></i> Delete
@@ -160,6 +166,51 @@
   </div>
 </div>
 
+<!-- Create Branch User Modal -->
+<div class="modal fade" id="createBranchUserModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <?php echo form_open('branches/create-user'); ?>
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">×</button>
+          <h4 class="modal-title">Create User for <span id="branch_user_label" class="text-blue" style="font-weight: 600;"></span></h4>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="branch_id" id="branch_user_id">
+          
+          <div class="form-group">
+            <label>Username <span class="text-danger">*</span></label>
+            <input type="text" name="username" class="form-control" placeholder="Enter username (min. 4 characters)" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control" placeholder="user@couriersyn.com" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Password <span class="text-danger">*</span></label>
+            <input type="password" name="password" class="form-control" placeholder="Enter password (min. 6 characters)" required>
+          </div>
+
+          <div class="form-group">
+            <label>User Role <span class="text-danger">*</span></label>
+            <select name="role_id" class="form-control" required>
+              <?php foreach($roles as $role): ?>
+                <option value="<?php echo $role->id; ?>"><?php echo htmlspecialchars($role->name); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> Create User Account</button>
+        </div>
+      <?php echo form_close(); ?>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function() {
     $('.edit-branch-btn').click(function() {
@@ -180,6 +231,13 @@
       $('#edit_mobile').val(mobile);
       $('#edit_email').val(email);
       $('#edit_status').val(status);
+    });
+
+    $('.create-user-btn').click(function() {
+      var id = $(this).data('id');
+      var name = $(this).data('name');
+      $('#branch_user_id').val(id);
+      $('#branch_user_label').text(name);
     });
   });
 </script>

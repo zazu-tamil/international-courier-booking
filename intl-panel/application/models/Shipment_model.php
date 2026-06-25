@@ -50,6 +50,10 @@ class Shipment_model extends CI_Model {
         $this->db->join('customer_kyc ck', 'ck.customer_id = shipment_master.customer_id', 'left');
         $this->db->where('shipment_master.deleted_at IS NULL');
 
+        if ($this->session->userdata('role_id') == 3) {
+            $this->db->where('shipment_master.created_by', $this->session->userdata('user_id'));
+        }
+
         if ($customer_id) {
             $this->db->where('shipment_master.customer_id', $customer_id);
         }
@@ -80,6 +84,9 @@ class Shipment_model extends CI_Model {
         $this->db->join('customers cust', 'cust.id = shipment_master.customer_id');
         $this->db->join('customer_kyc ck', 'ck.customer_id = shipment_master.customer_id', 'left');
         $this->db->where('shipment_master.deleted_at IS NULL');
+        if ($this->session->userdata('role_id') == 3) {
+            $this->db->where('shipment_master.created_by', $this->session->userdata('user_id'));
+        }
         $this->db->where('shipment_master.awb_number', $awb_number);
         return $this->db->get()->row();
     }
@@ -178,7 +185,8 @@ class Shipment_model extends CI_Model {
                 'quantity' => $item['quantity'],
                 'unit_value' => $item['unit_value'],
                 'total_value' => $item['total_value'],
-                'country_of_origin_id' => $item['country_of_origin_id']
+                'country_of_origin_id' => $item['country_of_origin_id'],
+                'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
         }
@@ -433,7 +441,8 @@ class Shipment_model extends CI_Model {
                 'quantity' => $item['quantity'],
                 'unit_value' => $item['unit_value'],
                 'total_value' => $item['total_value'],
-                'country_of_origin_id' => $item['country_of_origin_id']
+                'country_of_origin_id' => $item['country_of_origin_id'],
+                'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
         }

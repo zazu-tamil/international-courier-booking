@@ -25,6 +25,7 @@
 
 <div class="row">
   <div class="col-xs-12">
+    <?php if ($customer && is_object($customer)): ?>
     <div class="box box-primary" id="printableStatementArea">
       <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-file-text-o"></i> Exporter Account Statement Ledger</h3>
@@ -121,6 +122,12 @@
         </div>
       </div>
     </div>
+    <?php else: ?>
+      <div class="alert alert-info">
+        <h4><i class="icon fa fa-info"></i> No Customer Selected</h4>
+        Please select a customer profile from the dropdown above to view their statement of accounts. If there are no customers available, you will need to create one first.
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -144,7 +151,7 @@
       }
 
       var csvString = csv.join("\n");
-      var filename = 'Statement_CUST-<?php echo str_pad($customer->id, 5, '0', STR_PAD_LEFT); ?>_' + new Date().toISOString().slice(0,10) + '.csv';
+      var filename = 'Statement_CUST-<?php echo ($customer && is_object($customer)) ? str_pad($customer->id, 5, '0', STR_PAD_LEFT) : '00000'; ?>_' + new Date().toISOString().slice(0,10) + '.csv';
       var link = document.createElement("a");
       var mimeType = 'text/csv;charset=utf-8';
       

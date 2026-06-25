@@ -8,9 +8,9 @@ class Masters extends CI_Controller {
         if (!$this->session->userdata('logged_in')) {
             redirect('login');
         }
-        // Access Control (Only Super Admin and relevant staff can view masters)
-        if ($this->session->userdata('role_id') == 4) {
-            $this->session->set_flashdata('error', 'Access Denied.');
+        // Access Control (Only Super Admin can view master settings)
+        if ($this->session->userdata('role_id') != 1) {
+            $this->session->set_flashdata('error', 'Access Denied. Only Super Admin can access Master Settings.');
             redirect('dashboard');
         }
         $this->load->model('Master_model');
@@ -21,6 +21,18 @@ class Masters extends CI_Controller {
     public function branches() {
         $data['page_title'] = 'Manage Branches';
         $data['branches'] = $this->Master_model->get_branches();
+        
+        // Fetch roles to display in the create user modal
+        $all_roles = $this->Master_model->get_roles();
+        $filtered_roles = array();
+        foreach ($all_roles as $r) {
+            // Exclude Super Admin (1), Franchise User (3), and Customer (4)
+            if ($r->id != 1 && $r->id != 3 && $r->id != 4) {
+                $filtered_roles[] = $r;
+            }
+        }
+        $data['roles'] = $filtered_roles;
+        
         $data['view_path'] = 'masters/branches_list';
         $this->load->view('templates/dashboard_layout', $data);
     }
@@ -66,6 +78,35 @@ class Masters extends CI_Controller {
         }
         $this->Master_model->delete_branch($id);
         $this->session->set_flashdata('success', 'Branch deleted.');
+        redirect('branches');
+    }
+
+    public function create_branch_user() {
+        $this->form_validation->set_rules('branch_id', 'Branch', 'required|numeric');
+        $this->form_validation->set_rules('role_id', 'Role', 'required|numeric');
+        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]|is_unique[users.username]');
+        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email|is_unique[users.email]');
+        $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $post = $this->input->post(NULL, TRUE);
+            
+            $user_data = array(
+                'username' => $post['username'],
+                'email' => $post['email'],
+                'password' => $post['password'],
+                'role_id' => $post['role_id'],
+                'branch_id' => $post['branch_id']
+            );
+            
+            if ($this->Master_model->add_branch_user($user_data)) {
+                $this->session->set_flashdata('success', 'Branch user created successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to create branch user.');
+            }
+        }
         redirect('branches');
     }
 
@@ -337,6 +378,86 @@ class Masters extends CI_Controller {
         $this->load->view('templates/dashboard_layout', $data);
     }
 
+    public function add_restricted_item() {
+        $this->form_validation->set_rules('country_id', 'Country', 'required|numeric');
+        $this->form_validation->set_rules('item', 'Restricted Item', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $country_id = $this->input->post('country_id');
+            $new_item = trim($this->input->post('item'));
+            
+            $country = $this->Master_model->get_countries($country_id);
+            if ($country) {
+                $current_items = trim($country->restricted_items);
+                if (empty($current_items)) {
+                    $updated_items = $new_item;
+                } else {
+                    // Check if item is already in the list
+                    $items_arr = array_map('trim', explode(',', $current_items));
+                    if (!in_array($new_item, $items_arr)) {
+                        $updated_items = $current_items . ', ' . $new_item;
+                    } else {
+                        $updated_items = $current_items;
+                    }
+                }
+                
+                $this->Master_model->update_country($country_id, array('restricted_items' => $updated_items));
+                $this->session->set_flashdata('success', 'Restricted item added successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Country not found.');
+            }
+        }
+        redirect('restricted-items');
+    }
+
+    public function edit_restricted_items($id) {
+        $this->form_validation->set_rules('restricted_items', 'Restricted Items', 'trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $items = $this->input->post('restricted_items');
+            // Clean up comma formatting: trim all items
+            if (!empty($items)) {
+                $items_arr = array_map('trim', explode(',', $items));
+                // Filter out empty items
+                $items_arr = array_filter($items_arr, function($value) { return $value !== ''; });
+                $cleaned_items = implode(', ', $items_arr);
+            } else {
+                $cleaned_items = NULL;
+            }
+            
+            $this->Master_model->update_country($id, array('restricted_items' => $cleaned_items));
+            $this->session->set_flashdata('success', 'Restricted items list updated successfully.');
+        }
+        redirect('restricted-items');
+    }
+
+    public function delete_restricted_item($country_id, $item_name) {
+        $item_to_delete = trim(urldecode($item_name));
+        $country = $this->Master_model->get_countries($country_id);
+        
+        if ($country) {
+            $current_items = trim($country->restricted_items);
+            if (!empty($current_items)) {
+                $items_arr = array_map('trim', explode(',', $current_items));
+                // Find and remove the item
+                $new_items_arr = array_filter($items_arr, function($value) use ($item_to_delete) {
+                    return strcasecmp($value, $item_to_delete) !== 0;
+                });
+                
+                $updated_items = !empty($new_items_arr) ? implode(', ', $new_items_arr) : NULL;
+                $this->Master_model->update_country($country_id, array('restricted_items' => $updated_items));
+                $this->session->set_flashdata('success', 'Restricted item deleted successfully.');
+            }
+        } else {
+            $this->session->set_flashdata('error', 'Country not found.');
+        }
+        redirect('restricted-items');
+    }
+
     // --- GENERAL APP SETTINGS ---
     public function app_settings() {
         $this->form_validation->set_rules('company_name', 'Company Name', 'required');
@@ -382,5 +503,95 @@ class Masters extends CI_Controller {
         
         $data['view_path'] = 'masters/notification_logs';
         $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    // --- ROLES & PERMISSIONS ---
+    public function roles() {
+        $data['page_title'] = 'Roles & Permissions';
+        $data['roles'] = $this->Master_model->get_roles();
+        $data['permissions'] = $this->Master_model->get_permissions();
+        
+        // Build an array of permission IDs per role
+        $data['role_permissions'] = array();
+        foreach ($data['roles'] as $role) {
+            $data['role_permissions'][$role->id] = $this->Master_model->get_role_permissions($role->id);
+        }
+        
+        $data['view_path'] = 'masters/roles_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function add_role() {
+        $this->form_validation->set_rules('name', 'Role Name', 'required|is_unique[roles.name]');
+        $this->form_validation->set_rules('description', 'Description', 'trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $post = $this->input->post(NULL, TRUE);
+            $role_data = array(
+                'name' => $post['name'],
+                'description' => $post['description']
+            );
+            $this->Master_model->add_role($role_data);
+            $this->session->set_flashdata('success', 'New role created successfully.');
+        }
+        redirect('roles');
+    }
+
+    public function edit_role($id) {
+        // Prevent editing default system roles (1 to 4)
+        if ($id <= 4) {
+            $this->session->set_flashdata('error', 'Default system roles cannot be modified.');
+            redirect('roles');
+        }
+
+        $this->form_validation->set_rules('name', 'Role Name', 'required');
+        $this->form_validation->set_rules('description', 'Description', 'trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $post = $this->input->post(NULL, TRUE);
+            $role_data = array(
+                'name' => $post['name'],
+                'description' => $post['description']
+            );
+            $this->Master_model->update_role($id, $role_data);
+            $this->session->set_flashdata('success', 'Role details updated successfully.');
+        }
+        redirect('roles');
+    }
+
+    public function delete_role($id) {
+        // Prevent deleting default system roles (1 to 4)
+        if ($id <= 4) {
+            $this->session->set_flashdata('error', 'Default system roles cannot be deleted.');
+            redirect('roles');
+        }
+
+        if ($this->Master_model->delete_role($id)) {
+            $this->session->set_flashdata('success', 'Role and its permission mappings deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete role.');
+        }
+        redirect('roles');
+    }
+
+    public function save_role_permissions() {
+        $role_id = $this->input->post('role_id');
+        $permission_ids = $this->input->post('permissions');
+        
+        if (empty($permission_ids)) {
+            $permission_ids = array();
+        }
+
+        if ($role_id) {
+            $this->Master_model->update_role_permissions($role_id, $permission_ids);
+            $this->session->set_flashdata('success', 'Permissions mapped to role successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Invalid role selection.');
+        }
+        redirect('roles');
     }
 }

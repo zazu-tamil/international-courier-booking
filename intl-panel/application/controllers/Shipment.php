@@ -71,7 +71,7 @@ class Shipment extends CI_Controller {
 
     public function send_login($id) {
         // Access Control (Only Super Admin, Branch Admin, and Branch Staff can trigger this)
-        if ($this->session->userdata('role_id') == 4) {
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
             $this->session->set_flashdata('error', 'Access Denied.');
             redirect('dashboard');
         }
@@ -256,7 +256,8 @@ class Shipment extends CI_Controller {
                         'quantity' => $post['item_qty'][$i],
                         'unit_value' => $post['item_value'][$i],
                         'total_value' => $post['item_total'][$i],
-                        'country_of_origin_id' => $post['item_origin'][$i]
+                        'country_of_origin_id' => $post['item_origin'][$i],
+                        'box_no' => isset($post['item_box_no'][$i]) ? $post['item_box_no'][$i] : 1
                     );
                 }
             }
@@ -286,9 +287,9 @@ class Shipment extends CI_Controller {
     }
 
     public function edit($id) {
-        // Customers are BLOCKED from editing shipment bookings
-        if ($this->session->userdata('role_id') == 4) {
-            $this->session->set_flashdata('error', 'Customers are not allowed to edit shipment bookings.');
+        // Customers and Franchise Users are BLOCKED from editing shipment bookings
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'You are not allowed to edit shipment bookings.');
             redirect('dashboard');
         }
 
@@ -403,7 +404,8 @@ class Shipment extends CI_Controller {
                         'quantity' => $post['item_qty'][$i],
                         'unit_value' => $post['item_value'][$i],
                         'total_value' => $post['item_total'][$i],
-                        'country_of_origin_id' => $post['item_origin'][$i]
+                        'country_of_origin_id' => $post['item_origin'][$i],
+                        'box_no' => isset($post['item_box_no'][$i]) ? $post['item_box_no'][$i] : 1
                     );
                 }
             }
@@ -436,7 +438,8 @@ class Shipment extends CI_Controller {
 
     // --- MANUAL TRACKING UPDATE (Staff Only) ---
     public function add_tracking_stage() {
-        if ($this->session->userdata('role_id') == 4) {
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'Access Denied.');
             redirect('dashboard');
         }
 
@@ -464,6 +467,10 @@ class Shipment extends CI_Controller {
 
     // --- DOCUMENT ATTACHMENTS ---
     public function upload_document($shipment_id) {
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
         $config['upload_path'] = './assets/shipment_documents/';
         $config['allowed_types'] = 'gif|jpg|png|pdf|jpeg';
         $config['max_size'] = 10240; // 10MB
@@ -565,8 +572,8 @@ class Shipment extends CI_Controller {
     }
 
     public function delete($id) {
-        // Access Control (Only Super Admin and staff can delete shipments, i.e., not customer)
-        if ($this->session->userdata('role_id') == 4) {
+        // Access Control (Only Super Admin and staff can delete shipments, i.e., not customer/franchise)
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
             $this->session->set_flashdata('error', 'Access Denied.');
             redirect('dashboard');
         }

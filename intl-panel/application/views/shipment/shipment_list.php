@@ -71,7 +71,7 @@
                 </td>
                 <td>
                   <a href="<?php echo site_url('shipments/view/' . $s->id); ?>" class="btn btn-primary btn-xs"><i class="fa fa-eye"></i> View</a>
-                  <?php if($this->session->userdata('role_id') != 4): ?>
+                  <?php if($this->session->userdata('role_id') != 4 && $this->session->userdata('role_id') != 3): ?>
                     <a href="<?php echo site_url('shipments/edit/' . $s->id); ?>" class="btn btn-warning btn-xs"><i class="fa fa-pencil"></i> Edit</a>
                     <a href="<?php echo site_url('shipments/delete/' . $s->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this shipment?');"><i class="fa fa-trash"></i> Delete</a>
                   <?php endif; ?>

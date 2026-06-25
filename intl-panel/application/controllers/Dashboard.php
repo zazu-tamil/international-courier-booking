@@ -52,60 +52,131 @@ class Dashboard extends CI_Controller {
         } else {
             // Admin/Staff Dashboard
             // Today's Bookings
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('booking_date', date('Y-m-d'));
             $this->db->where('deleted_at IS NULL');
             $data['today_bookings'] = $this->db->count_all_results('shipment_master');
 
             // Today's Revenue
             $this->db->select_sum('estimated_charges');
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('booking_date', date('Y-m-d'));
             $this->db->where('deleted_at IS NULL');
             $rev_q = $this->db->get('shipment_master')->row();
             $data['today_revenue'] = $rev_q ? (float)$rev_q->estimated_charges : 0.00;
 
             // Pending Pickups
+            if ($role_id == 3) {
+                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE created_by = " . intval($this->session->userdata('user_id')) . ")");
+            } elseif ($role_id == 2) {
+                $this->db->where("shipment_id IN (SELECT id FROM shipment_master WHERE branch_id = " . intval($this->session->userdata('branch_id')) . ")");
+            }
             $this->db->where('status', 'Requested');
             $data['pending_pickups'] = $this->db->count_all_results('pickup_requests');
 
             // Pending Customer Verification
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('verification_status', 'Pending');
             $this->db->where('deleted_at IS NULL');
             $data['pending_verification'] = $this->db->count_all_results('shipment_master');
 
             // Detailed verification status counts
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('declaration_status', 'Pending')->where('deleted_at IS NULL');
             $data['pending_declaration'] = $this->db->count_all_results('shipment_master');
 
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('terms_status', 'Pending')->where('deleted_at IS NULL');
             $data['pending_terms'] = $this->db->count_all_results('shipment_master');
 
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('otp_verification_status', 'Pending')->where('deleted_at IS NULL');
             $data['pending_otp'] = $this->db->count_all_results('shipment_master');
 
             // Ready For Dispatch
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('status', 'Ready For Dispatch')->where('deleted_at IS NULL');
             $data['ready_for_dispatch'] = $this->db->count_all_results('shipment_master');
 
             // In Transit
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where_not_in('status', array('Booking Created', 'Verification Pending', 'Ready For Dispatch', 'Delivered', 'Returned', 'Cancelled'));
             $this->db->where('deleted_at IS NULL');
             $data['in_transit'] = $this->db->count_all_results('shipment_master');
 
             // Delivered
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('status', 'Delivered')->where('deleted_at IS NULL');
             $data['delivered'] = $this->db->count_all_results('shipment_master');
 
             // Active Customers
+            if ($role_id == 3) {
+                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE created_by = " . intval($this->session->userdata('user_id')) . ")");
+            } elseif ($role_id == 2) {
+                $this->db->where("id IN (SELECT DISTINCT customer_id FROM shipment_master WHERE branch_id = " . intval($this->session->userdata('branch_id')) . ")");
+            }
             $this->db->where('status', 'Active')->where('deleted_at IS NULL');
             $data['active_customers'] = $this->db->count_all_results('customers');
 
             // Active Franchises
             $this->db->where('status', 'Active')->where('deleted_at IS NULL');
-            $data['active_franchises'] = $this->db->count_all_results('franchises');
+            if ($role_id == 3 || $role_id == 2) {
+                $data['active_franchises'] = 0;
+            } else {
+                $data['active_franchises'] = $this->db->count_all_results('franchises');
+            }
 
-            // Pending KYC
-            $this->db->where('status', 'pending');
-            $data['pending_kyc'] = $this->db->count_all_results('customer_kyc');
+            // Pending KYC & Total bookings
+            if ($role_id == 3 || $role_id == 2) {
+                if ($role_id == 3) {
+                    $this->db->where('created_by', $this->session->userdata('user_id'));
+                } else {
+                    $this->db->where('branch_id', $this->session->userdata('branch_id'));
+                }
+                $this->db->where('deleted_at IS NULL');
+                $data['total_bookings'] = $this->db->count_all_results('shipment_master');
+                $data['pending_kyc'] = 0;
+            } else {
+                $this->db->where('status', 'pending');
+                $data['pending_kyc'] = $this->db->count_all_results('customer_kyc');
+                $data['total_bookings'] = 0;
+            }
 
             // CHARTS COMPILING
 
@@ -118,6 +189,11 @@ class Dashboard extends CI_Controller {
                 
                 $this->db->select_sum('estimated_charges');
                 $this->db->like('booking_date', $m, 'after');
+                if ($role_id == 3) {
+                    $this->db->where('created_by', $this->session->userdata('user_id'));
+                } elseif ($role_id == 2) {
+                    $this->db->where('branch_id', $this->session->userdata('branch_id'));
+                }
                 $this->db->where('deleted_at IS NULL');
                 $q = $this->db->get('shipment_master')->row();
                 $revenues[] = $q ? (float)$q->estimated_charges : 0.00;
@@ -129,6 +205,11 @@ class Dashboard extends CI_Controller {
             $this->db->select('countries.country_name, COUNT(shipment_master.id) as count');
             $this->db->from('shipment_master');
             $this->db->join('countries', 'countries.id = shipment_master.destination_country_id');
+            if ($role_id == 3) {
+                $this->db->where('shipment_master.created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('shipment_master.branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('shipment_master.deleted_at IS NULL');
             $this->db->group_by('shipment_master.destination_country_id');
             $this->db->limit(5);
@@ -147,6 +228,11 @@ class Dashboard extends CI_Controller {
             $this->db->select('courier_partners.partner_name, COUNT(shipment_master.id) as count');
             $this->db->from('shipment_master');
             $this->db->join('courier_partners', 'courier_partners.id = shipment_master.courier_partner_id');
+            if ($role_id == 3) {
+                $this->db->where('shipment_master.created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('shipment_master.branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('shipment_master.deleted_at IS NULL');
             $this->db->group_by('shipment_master.courier_partner_id');
             $couriers_q = $this->db->get()->result();
@@ -161,6 +247,11 @@ class Dashboard extends CI_Controller {
             $data['chart_courier_counts'] = json_encode($courier_counts);
 
             // 4. Delivery Success Rate (Delivered vs Exception / Out for Delivery / etc.)
+            if ($role_id == 3) {
+                $this->db->where('created_by', $this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $this->db->where('branch_id', $this->session->userdata('branch_id'));
+            }
             $this->db->where('deleted_at IS NULL');
             $total_all = $this->db->count_all_results('shipment_master');
             $success_rate = $total_all > 0 ? round(($data['delivered'] / $total_all) * 100, 1) : 100;
@@ -168,7 +259,6 @@ class Dashboard extends CI_Controller {
 
             $data['view_path'] = 'dashboard/admin';
         }
-
         $this->load->view('templates/dashboard_layout', $data);
     }
 

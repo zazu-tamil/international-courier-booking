@@ -7,7 +7,7 @@
         <h3 class="box-title"><i class="fa fa-paper-plane-o"></i> Consignment AWB: <strong><?php echo $shipment->awb_number; ?></strong></h3>
         <div class="pull-right">
           <a href="<?php echo site_url('shipments'); ?>" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Back to List</a>
-          <?php if($this->session->userdata('role_id') != 4): ?>
+          <?php if($this->session->userdata('role_id') != 4 && $this->session->userdata('role_id') != 3): ?>
             <a href="<?php echo site_url('shipments/edit/' . $shipment->id); ?>" class="btn btn-warning btn-sm"><i class="fa fa-pencil"></i> Edit Booking</a>
             <a href="<?php echo site_url('shipments/send-login/' . $shipment->id); ?>" class="btn btn-info btn-sm"><i class="fa fa-envelope"></i> Send Login Details</a>
           <?php endif; ?>
@@ -85,6 +85,7 @@
               <th>Description</th>
               <th>HS Code</th>
               <th>Qty</th>
+              <th>Box No</th>
               <th>Unit Value</th>
               <th class="text-right">Total Declared</th>
             </tr>
@@ -95,12 +96,13 @@
                 <td><?php echo $item->item_description; ?></td>
                 <td><code><?php echo $item->hs_code; ?></code></td>
                 <td><?php echo $item->quantity; ?></td>
+                <td><?php echo isset($item->box_no) && $item->box_no ? $item->box_no : 1; ?></td>
                 <td>₹<?php echo number_format($item->unit_value, 2); ?></td>
                 <td class="text-right">₹<?php echo number_format($item->total_value, 2); ?></td>
               </tr>
             <?php endforeach; ?>
             <tr>
-              <td colspan="4" class="text-right"><strong>Total Declared Customs Value:</strong></td>
+              <td colspan="5" class="text-right"><strong>Total Declared Customs Value:</strong></td>
               <td class="text-right"><strong>₹<?php echo number_format($shipment->total_declared_value, 2); ?></strong></td>
             </tr>
           </tbody>
@@ -272,7 +274,7 @@
           <?php endforeach; ?>
         </ul>
 
-        <?php if($this->session->userdata('role_id') != 4): ?>
+        <?php if($this->session->userdata('role_id') != 4 && $this->session->userdata('role_id') != 3): ?>
           <hr>
           <!-- Upload form -->
           <?php echo form_open_multipart('shipments/upload-doc/' . $shipment->id); ?>
@@ -295,7 +297,7 @@
     </div>
 
     <!-- Manual Tracking Update (Staff Only) -->
-    <?php if($this->session->userdata('role_id') != 4): ?>
+    <?php if($this->session->userdata('role_id') != 4 && $this->session->userdata('role_id') != 3): ?>
       <div class="box box-warning">
         <div class="box-header with-border">
           <h3 class="box-title"><i class="fa fa-truck"></i> Update Transit movement</h3>

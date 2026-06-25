@@ -24,6 +24,7 @@ $route['branches'] = 'masters/branches';
 $route['branches/add'] = 'masters/add_branch';
 $route['branches/edit/(:num)'] = 'masters/edit_branch/$1';
 $route['branches/delete/(:num)'] = 'masters/delete_branch/$1';
+$route['branches/create-user'] = 'masters/create_branch_user';
 
 $route['franchises'] = 'masters/franchises';
 $route['franchises/add'] = 'masters/add_franchise';
@@ -49,8 +50,17 @@ $route['terms/add'] = 'masters/add_terms';
 $route['terms/edit/(:num)'] = 'masters/edit_terms/$1';
 
 $route['restricted-items'] = 'masters/restricted_items';
+$route['restricted-items/add'] = 'masters/add_restricted_item';
+$route['restricted-items/edit/(:num)'] = 'masters/edit_restricted_items/$1';
+$route['restricted-items/delete/(:num)/(:any)'] = 'masters/delete_restricted_item/$1/$2';
 $route['app-settings'] = 'masters/app_settings';
 $route['notification-logs'] = 'masters/notification_logs';
+
+$route['roles'] = 'masters/roles';
+$route['roles/add'] = 'masters/add_role';
+$route['roles/edit/(:num)'] = 'masters/edit_role/$1';
+$route['roles/delete/(:num)'] = 'masters/delete_role/$1';
+$route['roles/save-permissions'] = 'masters/save_role_permissions';
 
 // Shipment Booking & Handling
 $route['shipment/calculator'] = 'shipment/calculator';

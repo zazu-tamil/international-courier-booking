@@ -41,6 +41,16 @@ class Master_model extends CI_Model {
         return $result;
     }
 
+    public function add_branch_user($user_data) {
+        $user_data['password'] = password_hash($user_data['password'], PASSWORD_BCRYPT);
+        $user_data['status'] = 'Active';
+        $user_data['created_at'] = date('Y-m-d H:i:s');
+        $this->db->insert('users', $user_data);
+        $id = $this->db->insert_id();
+        $this->Audit_model->log_activity('Add Branch User', 'User: ' . $user_data['username'] . ' for Branch ID: ' . $user_data['branch_id']);
+        return $id;
+    }
+
     // --- FRANCHISES ---
     public function get_franchises($id = NULL) {
         $this->db->select('franchises.*, users.email as user_email');
@@ -289,5 +299,79 @@ class Master_model extends CI_Model {
         $this->db->trans_complete();
         $this->Audit_model->log_activity('Update App Settings', 'Updated app settings keys');
         return $this->db->trans_status();
+    }
+
+    // --- ROLES & PERMISSIONS ---
+    public function get_roles($id = NULL) {
+        if ($id) {
+            return $this->db->get_where('roles', array('id' => $id))->row();
+        }
+        return $this->db->get('roles')->result();
+    }
+
+    public function get_permissions() {
+        return $this->db->get('permissions')->result();
+    }
+
+    public function get_role_permissions($role_id) {
+        $this->db->select('permission_id');
+        $this->db->from('role_permissions');
+        $this->db->where('role_id', $role_id);
+        $query = $this->db->get()->result();
+        
+        $permissions = array();
+        foreach ($query as $row) {
+            $permissions[] = $row->permission_id;
+        }
+        return $permissions;
+    }
+
+    public function update_role_permissions($role_id, $permission_ids = array()) {
+        $this->db->trans_start();
+        
+        // Remove existing mapping
+        $this->db->where('role_id', $role_id);
+        $this->db->delete('role_permissions');
+        
+        // Insert new mapping
+        if (!empty($permission_ids)) {
+            foreach ($permission_ids as $perm_id) {
+                $this->db->insert('role_permissions', array(
+                    'role_id' => $role_id,
+                    'permission_id' => $perm_id
+                ));
+            }
+        }
+        
+        $this->db->trans_complete();
+        $this->Audit_model->log_activity('Update Role Permissions', 'Role ID: ' . $role_id);
+        return $this->db->trans_status();
+    }
+
+    public function add_role($data) {
+        $this->db->insert('roles', $data);
+        $id = $this->db->insert_id();
+        $this->Audit_model->log_activity('Add Role', 'Role: ' . $data['name']);
+        return $id;
+    }
+
+    public function update_role($id, $data) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('roles', $data);
+        $this->Audit_model->log_activity('Update Role', 'Role ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_role($id) {
+        $this->db->trans_start();
+        $this->db->where('role_id', $id);
+        $this->db->delete('role_permissions');
+        
+        $this->db->where('id', $id);
+        $result = $this->db->delete('roles');
+        
+        $this->db->trans_complete();
+        $this->Audit_model->log_activity('Delete Role', 'Role ID: ' . $id);
+        return $result;
     }
 }

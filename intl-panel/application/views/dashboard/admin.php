@@ -21,13 +21,31 @@
   </div>
 
   <div class="col-md-3 col-sm-6 col-xs-12">
-    <div class="info-box bg-yellow">
-      <span class="info-box-icon"><i class="fa fa-id-badge"></i></span>
-      <div class="info-box-content">
-        <span class="info-box-text">Pending KYC</span>
-        <span class="info-box-number"><?php echo $pending_kyc; ?></span>
+    <?php if ($this->session->userdata('role_id') == 3): ?>
+      <div class="info-box bg-yellow">
+        <span class="info-box-icon"><i class="fa fa-cubes"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">My Total Bookings</span>
+          <span class="info-box-number"><?php echo $total_bookings; ?></span>
+        </div>
       </div>
-    </div>
+    <?php elseif ($this->session->userdata('role_id') == 2): ?>
+      <div class="info-box bg-yellow">
+        <span class="info-box-icon"><i class="fa fa-cubes"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">Branch Total Bookings</span>
+          <span class="info-box-number"><?php echo $total_bookings; ?></span>
+        </div>
+      </div>
+    <?php else: ?>
+      <div class="info-box bg-yellow">
+        <span class="info-box-icon"><i class="fa fa-id-badge"></i></span>
+        <div class="info-box-content">
+          <span class="info-box-text">Pending KYC</span>
+          <span class="info-box-number"><?php echo $pending_kyc; ?></span>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 
   <div class="col-md-3 col-sm-6 col-xs-12">
@@ -76,7 +94,7 @@
     <div class="info-box">
       <span class="info-box-icon bg-orange"><i class="fa fa-users"></i></span>
       <div class="info-box-content">
-        <span class="info-box-text">Active Customers</span>
+        <span class="info-box-text"><?php echo ($this->session->userdata('role_id') == 3) ? 'My Active Customers' : (($this->session->userdata('role_id') == 2) ? 'Branch Active Customers' : 'Active Customers'); ?></span>
         <span class="info-box-number"><?php echo $active_customers; ?></span>
       </div>
     </div>

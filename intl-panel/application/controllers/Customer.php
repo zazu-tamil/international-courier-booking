@@ -8,6 +8,11 @@ class Customer extends CI_Controller {
         if (!$this->session->userdata('logged_in')) {
             redirect('login');
         }
+        // Access Control (Franchise Users cannot manage customers, KYC, wallets, or statements)
+        if ($this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
         $this->load->model('Customer_model');
         $this->load->model('Shipment_model');
         $this->load->model('Master_model');
@@ -188,9 +193,14 @@ class Customer extends CI_Controller {
             }
         }
 
-        $data['customer'] = $this->Customer_model->get_customers($customer_id);
+        if ($customer_id) {
+            $data['customer'] = $this->Customer_model->get_customers($customer_id);
+            $data['statement'] = $this->Customer_model->get_ledger_statement($customer_id);
+        } else {
+            $data['customer'] = NULL;
+            $data['statement'] = [];
+        }
         $data['customers'] = $this->Customer_model->get_customers(); // List for dropdown selection
-        $data['statement'] = $this->Customer_model->get_ledger_statement($customer_id);
 
         $data['page_title'] = 'Customer Statement of Accounts';
         $data['view_path'] = 'customer/statement_view';

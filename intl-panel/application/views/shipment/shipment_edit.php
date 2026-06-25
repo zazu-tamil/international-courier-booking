@@ -354,6 +354,7 @@
                     <th style="width: 150px;">Unit Value (₹)</th>
                     <th style="width: 150px;">Total Value (₹)</th>
                     <th>Country of Origin</th>
+                    <th style="width: 80px;">Box No</th>
                     <th style="width: 50px;">Action</th>
                   </tr>
                 </thead>
@@ -374,6 +375,7 @@
                             <?php endforeach; ?>
                           </select>
                         </td>
+                        <td><input type="number" name="item_box_no[]" class="form-control" value="<?php echo isset($item->box_no) && $item->box_no ? $item->box_no : 1; ?>" required min="1"></td>
                         <td><button type="button" class="btn btn-danger btn-sm delete-item-btn" <?php echo ($idx == 0) ? 'disabled' : ''; ?>><i class="fa fa-trash"></i></button></td>
                       </tr>
                     <?php endforeach; ?>
@@ -392,6 +394,7 @@
                           <?php endforeach; ?>
                         </select>
                       </td>
+                      <td><input type="number" name="item_box_no[]" class="form-control" value="1" required min="1"></td>
                       <td><button type="button" class="btn btn-danger btn-sm delete-item-btn" disabled><i class="fa fa-trash"></i></button></td>
                     </tr>
                   <?php endif; ?>
