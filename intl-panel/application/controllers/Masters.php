@@ -589,6 +589,57 @@ class Masters extends CI_Controller {
         redirect('restricted-items');
     }
 
+    // --- MOVEMENT STAGES ---
+    public function movement_stages() {
+        $data['page_title'] = 'Movement Status Stages';
+        $data['stages'] = $this->Master_model->get_movement_stages();
+        $data['view_path'] = 'masters/movement_stages_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function add_movement_stage() {
+        $this->form_validation->set_rules('stage_name', 'Stage Name', 'required|is_unique[movement_stages.stage_name]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'stage_name' => $this->input->post('stage_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->add_movement_stage($data);
+            $this->session->set_flashdata('success', 'Movement status stage added successfully.');
+        }
+        redirect('movement-stages');
+    }
+
+    public function edit_movement_stage($id) {
+        $original = $this->Master_model->get_movement_stages($id);
+        $is_unique = '';
+        if ($this->input->post('stage_name') != $original->stage_name) {
+            $is_unique = '|is_unique[movement_stages.stage_name]';
+        }
+        $this->form_validation->set_rules('stage_name', 'Stage Name', 'required' . $is_unique);
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'stage_name' => $this->input->post('stage_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->update_movement_stage($id, $data);
+            $this->session->set_flashdata('success', 'Movement status stage updated successfully.');
+        }
+        redirect('movement-stages');
+    }
+
+    public function delete_movement_stage($id) {
+        $this->Master_model->delete_movement_stage($id);
+        $this->session->set_flashdata('success', 'Movement status stage deleted successfully.');
+        redirect('movement-stages');
+    }
+
     // --- GENERAL APP SETTINGS ---
     public function app_settings() {
         $this->form_validation->set_rules('company_name', 'Company Name', 'required');
@@ -607,6 +658,29 @@ class Masters extends CI_Controller {
             foreach ($checkboxes as $cb) {
                 if (!isset($post[$cb])) {
                     $post[$cb] = '0';
+                }
+            }
+
+            // Handle company logo upload
+            if (!empty($_FILES['company_logo']['name'])) {
+                $config['upload_path'] = './assets/img/';
+                $config['allowed_types'] = 'gif|jpg|jpeg|png|svg';
+                $config['max_size'] = 2048; // 2MB max
+                $config['file_name'] = 'logo_' . time();
+                
+                if (!is_dir($config['upload_path'])) {
+                    mkdir($config['upload_path'], 0777, TRUE);
+                }
+
+                $this->load->library('upload', $config);
+
+                if ($this->upload->do_upload('company_logo')) {
+                    $uploadData = $this->upload->data();
+                    $post['company_logo'] = $uploadData['file_name'];
+                } else {
+                    $this->session->set_flashdata('error', $this->upload->display_errors());
+                    redirect('app-settings');
+                    return;
                 }
             }
 

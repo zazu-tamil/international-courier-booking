@@ -57,6 +57,9 @@ class Shipment extends CI_Controller {
         $this->db->where('shipment_id', $id);
         $data['invoice'] = $this->db->get()->row();
 
+        // Fetch dynamic movement stages for dropdown
+        $data['movement_stages'] = $this->Master_model->get_movement_stages();
+
         // Fetch signature
         $this->db->select('*');
         $this->db->from('customer_signatures');

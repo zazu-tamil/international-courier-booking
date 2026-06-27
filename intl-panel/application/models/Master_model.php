@@ -429,4 +429,37 @@ class Master_model extends CI_Model {
         $this->Audit_model->log_activity('Delete Role', 'Role ID: ' . $id);
         return $result;
     }
+
+    // --- MOVEMENT STAGES ---
+    public function get_movement_stages($id = NULL) {
+        $this->db->order_by('id', 'ASC');
+        if ($id) {
+            $this->db->where('id', $id);
+            return $this->db->get('movement_stages')->row();
+        }
+        return $this->db->get('movement_stages')->result();
+    }
+
+    public function add_movement_stage($data) {
+        $this->db->insert('movement_stages', $data);
+        $this->Audit_model->log_activity('Add Movement Stage', 'Stage Name: ' . $data['stage_name']);
+        return $this->db->insert_id();
+    }
+
+    public function update_movement_stage($id, $data) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('movement_stages', $data);
+        $this->Audit_model->log_activity('Update Movement Stage', 'Stage ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_movement_stage($id) {
+        $stage = $this->get_movement_stages($id);
+        $this->db->where('id', $id);
+        $result = $this->db->delete('movement_stages');
+        if ($stage) {
+            $this->Audit_model->log_activity('Delete Movement Stage', 'Stage Name: ' . $stage->stage_name);
+        }
+        return $result;
+    }
 }

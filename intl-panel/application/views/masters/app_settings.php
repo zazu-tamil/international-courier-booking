@@ -5,7 +5,7 @@
         <h3 class="box-title"><i class="fa fa-gears"></i> Application & Gateway Settings</h3>
       </div>
       
-      <?php echo form_open('app-settings', array('id' => 'settingsForm', 'class' => 'form-horizontal')); ?>
+      <?php echo form_open_multipart('app-settings', array('id' => 'settingsForm', 'class' => 'form-horizontal')); ?>
         <div class="box-body" style="padding: 20px;">
           
           <!-- Tab Navigation -->
@@ -26,6 +26,19 @@
                 <label class="col-sm-2 control-label">Company Name <span class="text-danger">*</span></label>
                 <div class="col-sm-8">
                   <input type="text" name="company_name" class="form-control" value="<?php echo htmlspecialchars(isset($settings['company_name']) ? $settings['company_name'] : ''); ?>" required>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="col-sm-2 control-label">Company Logo</label>
+                <div class="col-sm-8">
+                  <?php if(isset($settings['company_logo']) && !empty($settings['company_logo'])): ?>
+                    <div style="margin-bottom: 10px;">
+                      <img src="<?php echo base_url('assets/img/'.$settings['company_logo']); ?>" alt="Current Logo" style="max-height: 80px; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
+                    </div>
+                  <?php endif; ?>
+                  <input type="file" name="company_logo" class="form-control" accept="image/*">
+                  <small class="help-block">Upload a logo (JPG, PNG, GIF). Max size: 2MB.</small>
                 </div>
               </div>
               

@@ -136,14 +136,19 @@
   <!-- Header block -->
   <table class="header-table">
     <tr>
-      <td>
+      <td style="width: 33%; text-align: left;">
         <div class="document-title">Air Waybill (AWB)</div>
         <div style="margin-top: 5px;">
           <img src="<?php echo site_url('shipment/barcode/' . $shipment->awb_number); ?>" style="width: 180px; height: 38px;" alt="Barcode"><br>
           <span style="font-size: 8px; font-weight: bold; letter-spacing: 1px; display: block; margin-top: 2px;"><?php echo $shipment->awb_number; ?></span>
         </div>
       </td>
-      <td>
+      <td style="width: 34%; text-align: center;">
+        <?php if(defined('COMPANY_LOGO') && !empty(COMPANY_LOGO)): ?>
+          <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="Company Logo" style="max-height: 70px;">
+        <?php endif; ?>
+      </td>
+      <td style="width: 33%; text-align: right;">
         <div class="company-logo-text"><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></div>
         <div class="company-sub">
           <?php echo defined('COMPANY_ADDRESS') && COMPANY_ADDRESS ? nl2br(htmlspecialchars(COMPANY_ADDRESS)) : 'HQ Origin branch Office'; ?><br>

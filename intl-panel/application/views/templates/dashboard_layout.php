@@ -47,7 +47,13 @@
   <header class="main-header">
     <a href="<?php echo site_url('dashboard'); ?>" class="logo">
       <span class="logo-mini"><b>C</b>S</span>
-      <span class="logo-lg"><b>Courier</b>Syndicate</span>
+      <span class="logo-lg">
+        <?php if(defined('COMPANY_LOGO') && !empty(COMPANY_LOGO)): ?>
+          <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="Logo" style="max-height: 40px; margin-top: -5px;">
+        <?php else: ?>
+          <b><?php echo defined('COMPANY_NAME') && !empty(COMPANY_NAME) ? explode(' ', COMPANY_NAME)[0] : 'Courier'; ?></b><?php echo defined('COMPANY_NAME') && count(explode(' ', COMPANY_NAME)) > 1 ? explode(' ', COMPANY_NAME)[1] : 'Syndicate'; ?>
+        <?php endif; ?>
+      </span>
     </a>
     <nav class="navbar navbar-static-top" role="navigation">
       <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
@@ -95,7 +101,7 @@
             </li>
 
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
-            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'restricted-items', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'movement-stages', 'restricted-items', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
                 <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
               </a>
@@ -107,6 +113,7 @@
                 <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-circle-o"></i> Shipping Rates Matrix</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'movement-stages') ? 'active' : ''; ?>"><a href="<?php echo site_url('movement-stages'); ?>"><i class="fa fa-circle-o"></i> Movement Status Stages</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'restricted-items') ? 'active' : ''; ?>"><a href="<?php echo site_url('restricted-items'); ?>"><i class="fa fa-circle-o"></i> Restricted Items Warns</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'app-settings') ? 'active' : ''; ?>"><a href="<?php echo site_url('app-settings'); ?>"><i class="fa fa-circle-o"></i> App Settings</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'notification-logs') ? 'active' : ''; ?>"><a href="<?php echo site_url('notification-logs'); ?>"><i class="fa fa-circle-o"></i> Notification Logs</a></li>

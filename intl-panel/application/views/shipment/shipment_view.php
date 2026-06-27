@@ -313,15 +313,15 @@
               <div class="form-group">
                 <label>Movement Status Stage</label>
                 <select name="status" class="form-control input-sm" required>
-                  <option value="Received At Branch">Received At Branch</option>
-                  <option value="Received At Origin Hub">Received At Origin Hub</option>
-                  <option value="Customs Clearance">Customs Clearance</option>
-                  <option value="Departed Origin">Departed Origin</option>
-                  <option value="Arrived Destination">Arrived Destination</option>
-                  <option value="Out For Delivery">Out For Delivery</option>
-                  <option value="Delivered">Delivered (Completes booking)</option>
-                  <option value="Returned">Returned to Origin</option>
-                  <option value="Exception">Exception (Delay/Alert)</option>
+                  <option value="">Select Stage</option>
+                  <?php if(isset($movement_stages)): ?>
+                    <?php foreach($movement_stages as $stage): ?>
+                      <option value="<?php echo htmlspecialchars($stage->stage_name); ?>">
+                        <?php echo $stage->stage_name; ?> 
+                        <?php echo !empty($stage->description) ? '('.$stage->description.')' : ''; ?>
+                      </option>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
                 </select>
               </div>
               <div class="form-group">

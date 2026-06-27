@@ -56,6 +56,12 @@ $route['restricted-items'] = 'masters/restricted_items';
 $route['restricted-items/add'] = 'masters/add_restricted_item';
 $route['restricted-items/edit/(:num)'] = 'masters/edit_restricted_items/$1';
 $route['restricted-items/delete/(:num)/(:any)'] = 'masters/delete_restricted_item/$1/$2';
+
+$route['movement-stages'] = 'masters/movement_stages';
+$route['movement-stages/add'] = 'masters/add_movement_stage';
+$route['movement-stages/edit/(:num)'] = 'masters/edit_movement_stage/$1';
+$route['movement-stages/delete/(:num)'] = 'masters/delete_movement_stage/$1';
+
 $route['app-settings'] = 'masters/app_settings';
 $route['notification-logs'] = 'masters/notification_logs';
 

@@ -27,6 +27,7 @@ class AppSettingsHook {
             'company_email' => 'no-reply@couriersyndicate.com',
             'company_gst' => '',
             'company_mobile' => '',
+            'company_logo' => '',
             'smtp_enabled' => '0',
             'smtp_host' => '',
             'smtp_port' => '25',
