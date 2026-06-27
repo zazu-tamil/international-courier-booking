@@ -62,6 +62,11 @@ $route['movement-stages/add'] = 'masters/add_movement_stage';
 $route['movement-stages/edit/(:num)'] = 'masters/edit_movement_stage/$1';
 $route['movement-stages/delete/(:num)'] = 'masters/delete_movement_stage/$1';
 
+$route['service-types'] = 'masters/service_types';
+$route['service-types/add'] = 'masters/add_service_type';
+$route['service-types/edit/(:num)'] = 'masters/edit_service_type/$1';
+$route['service-types/delete/(:num)'] = 'masters/delete_service_type/$1';
+
 $route['app-settings'] = 'masters/app_settings';
 $route['notification-logs'] = 'masters/notification_logs';
 

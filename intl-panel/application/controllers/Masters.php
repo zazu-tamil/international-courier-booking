@@ -403,7 +403,8 @@ class Masters extends CI_Controller {
     // --- SHIPPING RATES ---
     public function rates() {
         $data['page_title'] = 'Shipping Rates Matrix';
-         $data['countries'] = $this->Master_model->get_countries();
+        $data['countries'] = $this->Master_model->get_countries();
+        $data['service_types'] = $this->Master_model->get_service_types();
         $data['rates'] = $this->Master_model->get_rates();
         $data['view_path'] = 'masters/rates_list';
         $this->load->view('templates/dashboard_layout', $data);
@@ -423,6 +424,7 @@ class Masters extends CI_Controller {
         if ($this->form_validation->run() === FALSE) {
             $data['page_title'] = 'Add New Shipping Rate Slab';
             $data['countries'] = $this->Master_model->get_countries();
+            $data['service_types'] = $this->Master_model->get_service_types();
             $data['view_path'] = 'masters/rate_add';
             $this->load->view('templates/dashboard_layout', $data);
         } else {
@@ -442,6 +444,7 @@ class Masters extends CI_Controller {
             $data['page_title'] = 'Edit Rate Slab';
             $data['rate'] = $this->Master_model->get_rates($id);
             $data['countries'] = $this->Master_model->get_countries();
+            $data['service_types'] = $this->Master_model->get_service_types();
             $data['view_path'] = 'masters/rate_edit';
             $this->load->view('templates/dashboard_layout', $data);
         } else {
@@ -638,6 +641,57 @@ class Masters extends CI_Controller {
         $this->Master_model->delete_movement_stage($id);
         $this->session->set_flashdata('success', 'Movement status stage deleted successfully.');
         redirect('movement-stages');
+    }
+
+    // --- SERVICE TYPES ---
+    public function service_types() {
+        $data['page_title'] = 'Service Types Master';
+        $data['service_types'] = $this->Master_model->get_service_types();
+        $data['view_path'] = 'masters/service_types_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function add_service_type() {
+        $this->form_validation->set_rules('service_name', 'Service Name', 'required|is_unique[service_types.service_name]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'service_name' => $this->input->post('service_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->add_service_type($data);
+            $this->session->set_flashdata('success', 'Service Type added successfully.');
+        }
+        redirect('service-types');
+    }
+
+    public function edit_service_type($id) {
+        $original = $this->Master_model->get_service_types($id);
+        $is_unique = '';
+        if ($this->input->post('service_name') != $original->service_name) {
+            $is_unique = '|is_unique[service_types.service_name]';
+        }
+        $this->form_validation->set_rules('service_name', 'Service Name', 'required' . $is_unique);
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'service_name' => $this->input->post('service_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->update_service_type($id, $data);
+            $this->session->set_flashdata('success', 'Service Type updated successfully.');
+        }
+        redirect('service-types');
+    }
+
+    public function delete_service_type($id) {
+        $this->Master_model->delete_service_type($id);
+        $this->session->set_flashdata('success', 'Service Type deleted successfully.');
+        redirect('service-types');
     }
 
     // --- GENERAL APP SETTINGS ---

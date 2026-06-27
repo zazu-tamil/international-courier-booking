@@ -462,4 +462,39 @@ class Master_model extends CI_Model {
         }
         return $result;
     }
+
+    // --- SERVICE TYPES ---
+    public function get_service_types($id = NULL) {
+        $this->db->select('*');
+        $this->db->from('service_types');
+        if ($id) {
+            $this->db->where('id', $id);
+            return $this->db->get()->row();
+        }
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function add_service_type($data) {
+        $result = $this->db->insert('service_types', $data);
+        $this->Audit_model->log_activity('Add Service Type', 'Service Name: ' . $data['service_name']);
+        return $result;
+    }
+
+    public function update_service_type($id, $data) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('service_types', $data);
+        $this->Audit_model->log_activity('Update Service Type', 'Service ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_service_type($id) {
+        $service = $this->get_service_types($id);
+        $this->db->where('id', $id);
+        $result = $this->db->delete('service_types');
+        if ($service) {
+            $this->Audit_model->log_activity('Delete Service Type', 'Service Name: ' . $service->service_name);
+        }
+        return $result;
+    }
 }

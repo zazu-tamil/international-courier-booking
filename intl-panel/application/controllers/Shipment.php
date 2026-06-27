@@ -154,7 +154,8 @@ class Shipment extends CI_Controller {
         if ($this->form_validation->run() === FALSE) {
             $data['page_title'] = 'Book New Shipment';
             $data['countries'] = $this->Master_model->get_countries();
-            $data['courier_partners'] = $this->Master_model->get_partners();
+            $data['courier_partners'] = $this->Master_model->get_courier_partners();
+            $data['service_types'] = $this->Master_model->get_service_types();
             
             if ($this->session->userdata('role_id') == 3) {
                 $data['customers'] = $this->Customer_model->get_franchise_customers($this->session->userdata('user_id'));
@@ -345,6 +346,7 @@ class Shipment extends CI_Controller {
             $data['items'] = $this->Shipment_model->get_items($id);
             $data['countries'] = $this->Master_model->get_countries();
             $data['partners'] = $this->Master_model->get_courier_partners();
+            $data['service_types'] = $this->Master_model->get_service_types();
             $data['customers'] = $this->Customer_model->get_customers();
             $data['view_path'] = 'shipment/shipment_edit';
             $this->load->view('templates/dashboard_layout', $data);

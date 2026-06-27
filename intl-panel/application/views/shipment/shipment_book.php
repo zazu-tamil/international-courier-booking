@@ -221,9 +221,10 @@
                 <div class="col-md-6 form-group">
                   <label>Service Type <span class="text-danger">*</span></label>
                   <select name="service_type" id="service_type" class="form-control" required>
-                    <option value="Express">Express</option>
-                    <option value="Economy">Economy</option>
-                    <option value="Saver">Saver</option>
+                    <option value="">Select Service</option>
+                    <?php foreach($service_types as $st): ?>
+                      <option value="<?php echo htmlspecialchars($st->service_name); ?>"><?php echo htmlspecialchars($st->service_name); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="col-md-6 form-group">
