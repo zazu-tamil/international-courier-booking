@@ -11,8 +11,9 @@ class Shipment_model extends CI_Model {
     }
 
     public function generate_awb_number() {
-        $year = date('Y');
-        $prefix = "CSYN-INT-" . $year . "-";
+        //$year = date('Y');
+        //$prefix = "CSYN-INT-" . $year . "-";
+        $prefix = "41";
         
         $this->db->select('awb_number');
         $this->db->from('shipment_master');
@@ -121,8 +122,19 @@ class Shipment_model extends CI_Model {
     public function book_shipment($data) {
         $this->db->trans_start();
 
-        // 1. Insert into shipment_master
-        $awb = $this->generate_awb_number();
+        // 1. Determine AWB
+        if (!empty($data['awb_number'])) {
+            $awb = $data['awb_number'];
+            $exists = $this->db->get_where('shipment_master', array('awb_number' => $awb))->num_rows();
+            if ($exists > 0) {
+                $this->db->trans_rollback();
+                return 'DUPLICATE_AWB';
+            }
+        } else {
+            $awb = $this->generate_awb_number();
+        }
+
+        // 2. Insert into shipment_master
         $master_data = array(
             'awb_number' => $awb,
             'booking_date' => $data['booking_date'],

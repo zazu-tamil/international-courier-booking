@@ -78,7 +78,7 @@
           <div class="form-group" style="margin-bottom: 0;">
             <label style="font-size: 15px; font-weight: 600; color: #444; margin-bottom: 10px;">Enter AWB Number or Customer Mobile Number:</label>
             <div class="input-group">
-              <input type="text" name="awb" class="form-control" placeholder="e.g. CSYN-INT-2026-000001" value="<?php echo htmlspecialchars($awb); ?>" required>
+              <input type="text" name="awb" class="form-control" placeholder="e.g. 41000001" value="<?php echo htmlspecialchars($awb); ?>" required>
               <span class="input-group-btn">
                 <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Track Cargo</button>
               </span>

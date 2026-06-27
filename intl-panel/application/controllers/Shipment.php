@@ -209,6 +209,7 @@ class Shipment extends CI_Controller {
 
             // Structure data for model
             $shipment_data = array(
+                'awb_number' => isset($post['awb_type']) && $post['awb_type'] == 'manual' ? trim($post['awb_number']) : '',
                 'booking_date' => $post['booking_date'],
                 'service_type' => $post['service_type'],
                 'shipment_type' => $post['shipment_type'],
@@ -289,7 +290,10 @@ class Shipment extends CI_Controller {
 
             $shipment_id = $this->Shipment_model->book_shipment($shipment_data);
 
-            if ($shipment_id) {
+            if ($shipment_id === 'DUPLICATE_AWB') {
+                $this->session->set_flashdata('error', 'The manual AWB number provided already exists in the system. Please try another one.');
+                redirect('shipments/book');
+            } elseif ($shipment_id) {
                 $this->load->model('Notification_model');
                 $this->Notification_model->send_shipment_created_notifications($shipment_id, (isset($password) ? $password : NULL));
 

@@ -157,15 +157,46 @@
               </div>
 
               <div class="row">
-                <div class="col-md-6 form-group">
-                  <label>AWB Number (Auto Generated)</label>
-                  <input type="text" class="form-control" placeholder="CSYN-INT-2026-XXXXXX" disabled style="background-color: #f7f9fa; font-weight: bold; color: #000;">
+                <div class="col-md-4 form-group">
+                  <label>AWB Generation <span class="text-danger">*</span></label>
+                  <select name="awb_type" id="awb_type" class="form-control" onchange="toggleAWBType()">
+                    <option value="auto">Auto Generated</option>
+                    <option value="manual">Manual Entry</option>
+                  </select>
                 </div>
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
+                  <label>AWB Number <span class="text-danger" id="awb_req_star" style="display:none;">*</span></label>
+                  <input type="text" name="awb_number" id="awb_number" class="form-control" placeholder="Auto Generated..." readonly style="background-color: #f7f9fa; font-weight: bold; color: #000;">
+                </div>
+                <div class="col-md-4 form-group">
                   <label>Booking Date <span class="text-danger">*</span></label>
                   <input type="date" name="booking_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
                 </div>
               </div>
+
+              <script>
+                function toggleAWBType() {
+                  var type = document.getElementById('awb_type').value;
+                  var input = document.getElementById('awb_number');
+                  var star = document.getElementById('awb_req_star');
+                  
+                  if (type === 'manual') {
+                    input.readOnly = false;
+                    input.required = true;
+                    input.placeholder = "Enter AWB Number";
+                    input.style.backgroundColor = "#fff";
+                    star.style.display = "inline";
+                    input.value = "";
+                  } else {
+                    input.readOnly = true;
+                    input.required = false;
+                    input.placeholder = "Auto Generated...";
+                    input.style.backgroundColor = "#f7f9fa";
+                    star.style.display = "none";
+                    input.value = "";
+                  }
+                }
+              </script>
 
               <div class="row">
                 <div class="col-md-6 form-group">
