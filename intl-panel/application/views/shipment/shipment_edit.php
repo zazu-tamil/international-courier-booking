@@ -38,19 +38,23 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
                   <label>Mobile Number <span class="text-danger">*</span></label>
                   <input type="text" name="sender_mobile" class="form-control" placeholder="Primary phone number" value="<?php echo htmlspecialchars($shipment->sender_mobile); ?>" required>
                 </div>
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
+                  <label>WhatsApp Number</label>
+                  <input type="text" name="sender_whatsapp" class="form-control" placeholder="WhatsApp number" value="<?php echo htmlspecialchars(isset($shipment->sender_whatsapp) ? $shipment->sender_whatsapp : ''); ?>">
+                </div>
+                <div class="col-md-4 form-group">
                   <label>Alternate Mobile</label>
                   <input type="text" name="sender_alt_mobile" class="form-control" placeholder="Secondary contact number" value="<?php echo htmlspecialchars($shipment->sender_alt_mobile); ?>">
                 </div>
               </div>
               <div class="row">
                 <div class="col-md-6 form-group">
-                  <label>Email Address</label>
-                  <input type="email" name="sender_email" class="form-control" placeholder="sender@example.com" value="<?php echo htmlspecialchars($shipment->sender_email); ?>">
+                  <label>Email Address <span class="text-danger">*</span></label>
+                  <input type="email" name="sender_email" class="form-control" placeholder="sender@example.com" value="<?php echo htmlspecialchars($shipment->sender_email); ?>" required>
                 </div>
                 <div class="col-md-6 form-group">
                   <label>ZIP / Postal Code <span class="text-danger">*</span></label>
@@ -100,19 +104,23 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
                   <label>Mobile Number <span class="text-danger">*</span></label>
                   <input type="text" name="receiver_mobile" class="form-control" placeholder="Consignee phone number" value="<?php echo htmlspecialchars($shipment->receiver_mobile); ?>" required>
                 </div>
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
+                  <label>WhatsApp Number</label>
+                  <input type="text" name="receiver_whatsapp" class="form-control" placeholder="WhatsApp number" value="<?php echo htmlspecialchars(isset($shipment->receiver_whatsapp) ? $shipment->receiver_whatsapp : ''); ?>">
+                </div>
+                <div class="col-md-4 form-group">
                   <label>Alternate Mobile</label>
                   <input type="text" name="receiver_alt_mobile" class="form-control" placeholder="Secondary contact number" value="<?php echo htmlspecialchars($shipment->receiver_alt_mobile); ?>">
                 </div>
               </div>
               <div class="row">
                 <div class="col-md-6 form-group">
-                  <label>Email Address</label>
-                  <input type="email" name="receiver_email" class="form-control" placeholder="receiver@example.com" value="<?php echo htmlspecialchars($shipment->receiver_email); ?>">
+                  <label>Email Address <span class="text-danger">*</span></label>
+                  <input type="email" name="receiver_email" class="form-control" placeholder="receiver@example.com" value="<?php echo htmlspecialchars($shipment->receiver_email); ?>" required>
                 </div>
                 <div class="col-md-6 form-group">
                   <label>ZIP / Postal Code <span class="text-danger">*</span></label>

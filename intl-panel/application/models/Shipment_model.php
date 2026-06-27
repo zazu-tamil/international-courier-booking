@@ -35,8 +35,8 @@ class Shipment_model extends CI_Model {
 
     public function get_shipments($id = NULL, $customer_id = NULL) {
         $this->db->select('shipment_master.*, 
-            s.name as sender_name, s.company_name as sender_company, s.mobile as sender_mobile, s.alternate_mobile as sender_alt_mobile, s.email as sender_email, s.address as sender_address, s.city as sender_city, s.state as sender_state, s.zip_code as sender_zip,
-            r.name as receiver_name, r.company_name as receiver_company, r.mobile as receiver_mobile, r.alternate_mobile as receiver_alt_mobile, r.email as receiver_email, r.address as receiver_address, r.city as receiver_city, r.state as receiver_state, r.zip_code as receiver_zip,
+            s.name as sender_name, s.company_name as sender_company, s.mobile as sender_mobile, s.alternate_mobile as sender_alt_mobile, s.whatsapp_number as sender_whatsapp, s.email as sender_email, s.address as sender_address, s.city as sender_city, s.state as sender_state, s.zip_code as sender_zip,
+            r.name as receiver_name, r.company_name as receiver_company, r.mobile as receiver_mobile, r.alternate_mobile as receiver_alt_mobile, r.whatsapp_number as receiver_whatsapp, r.email as receiver_email, r.address as receiver_address, r.city as receiver_city, r.state as receiver_state, r.zip_code as receiver_zip,
             co.country_name as origin_country_name, cd.country_name as dest_country_name,
             cp.partner_name as courier_partner_name,
             cust.name as customer_profile_name, cust.customer_type as customer_profile_type,
