@@ -123,9 +123,9 @@
       <button type="submit" class="btn btn-primary btn-block">Sign In</button>
     <?php echo form_close(); ?>
 
-    <p class="text-center" style="margin-top: 20px;">
+    <!-- <p class="text-center" style="margin-top: 20px;">
       Don't have a Customer account? <a href="<?php echo site_url('register'); ?>" style="font-weight: 600; color: #3c8dbc;">Register here</a>
-    </p>
+    </p> -->
 
     <!-- Public tracking widget -->
     <div class="public-tracking-card">

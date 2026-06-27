@@ -160,13 +160,19 @@
         </tr>
       <?php endforeach; ?>
     </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align: right;">Items Value:</td>
+        <td style="text-align: right;">₹<?php echo number_format($shipment->total_declared_value, 2); ?></td>
+      </tr>
+    </tfoot>
   </table>
 
   <table class="totals-table">
-    <tr>
-      <td>Subtotal Value:</td>
+    <!-- <tr>
+      <td>Items Value:</td>
       <td style="text-align: right;">₹<?php echo number_format($shipment->total_declared_value, 2); ?></td>
-    </tr>
+    </tr> -->
     <?php if($invoice): ?>
       <tr>
         <td>Shipping Charges:</td>

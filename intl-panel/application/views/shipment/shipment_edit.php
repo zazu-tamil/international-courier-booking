@@ -75,7 +75,7 @@
                   <select name="sender_country_id" class="form-control" required>
                     <option value="">Select country</option>
                     <?php foreach($countries as $c): ?>
-                      <option value="<?php echo $c->id; ?>" <?php echo ($c->id == $shipment->sender_country_id) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
+                      <option value="<?php echo $c->id; ?>" <?php echo ($c->id == $shipment->origin_country_id) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
@@ -137,7 +137,7 @@
                   <select name="receiver_country_id" class="form-control" required>
                     <option value="">Select country</option>
                     <?php foreach($countries as $c): ?>
-                      <option value="<?php echo $c->id; ?>" <?php echo ($c->id == $shipment->receiver_country_id) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
+                      <option value="<?php echo $c->id; ?>" <?php echo ($c->id == $shipment->destination_country_id) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
