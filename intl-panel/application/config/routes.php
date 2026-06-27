@@ -67,6 +67,11 @@ $route['service-types/add'] = 'masters/add_service_type';
 $route['service-types/edit/(:num)'] = 'masters/edit_service_type/$1';
 $route['service-types/delete/(:num)'] = 'masters/delete_service_type/$1';
 
+$route['document-types'] = 'masters/document_types';
+$route['document-types/add'] = 'masters/add_document_type';
+$route['document-types/edit/(:num)'] = 'masters/edit_document_type/$1';
+$route['document-types/delete/(:num)'] = 'masters/delete_document_type/$1';
+
 $route['app-settings'] = 'masters/app_settings';
 $route['notification-logs'] = 'masters/notification_logs';
 

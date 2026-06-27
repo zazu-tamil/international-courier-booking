@@ -694,6 +694,57 @@ class Masters extends CI_Controller {
         redirect('service-types');
     }
 
+    // --- DOCUMENT TYPES ---
+    public function document_types() {
+        $data['page_title'] = 'Document Types Master';
+        $data['document_types'] = $this->Master_model->get_document_types();
+        $data['view_path'] = 'masters/document_types_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function add_document_type() {
+        $this->form_validation->set_rules('doc_type_name', 'Document Type Name', 'required|is_unique[document_types.doc_type_name]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'doc_type_name' => $this->input->post('doc_type_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->add_document_type($data);
+            $this->session->set_flashdata('success', 'Document Type added successfully.');
+        }
+        redirect('document-types');
+    }
+
+    public function edit_document_type($id) {
+        $original = $this->Master_model->get_document_types($id);
+        $is_unique = '';
+        if ($this->input->post('doc_type_name') != $original->doc_type_name) {
+            $is_unique = '|is_unique[document_types.doc_type_name]';
+        }
+        $this->form_validation->set_rules('doc_type_name', 'Document Type Name', 'required' . $is_unique);
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'doc_type_name' => $this->input->post('doc_type_name'),
+                'description' => $this->input->post('description')
+            );
+            $this->Master_model->update_document_type($id, $data);
+            $this->session->set_flashdata('success', 'Document Type updated successfully.');
+        }
+        redirect('document-types');
+    }
+
+    public function delete_document_type($id) {
+        $this->Master_model->delete_document_type($id);
+        $this->session->set_flashdata('success', 'Document Type deleted successfully.');
+        redirect('document-types');
+    }
+
     // --- GENERAL APP SETTINGS ---
     public function app_settings() {
         $this->form_validation->set_rules('company_name', 'Company Name', 'required');

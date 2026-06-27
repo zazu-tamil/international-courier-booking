@@ -60,6 +60,9 @@ class Shipment extends CI_Controller {
         // Fetch dynamic movement stages for dropdown
         $data['movement_stages'] = $this->Master_model->get_movement_stages();
 
+        // Fetch dynamic document types
+        $data['document_types'] = $this->Master_model->get_document_types();
+
         // Fetch signature
         $this->db->select('*');
         $this->db->from('customer_signatures');

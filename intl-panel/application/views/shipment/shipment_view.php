@@ -281,10 +281,10 @@
             <div class="form-group">
               <label>Select Document Type</label>
               <select name="doc_type" class="form-control input-sm" required>
-                <option value="Exporter Invoice">Exporter Invoice</option>
-                <option value="Packing List">Packing List</option>
-                <option value="Passport Copy">Passport Copy</option>
-                <option value="Customs Documents">Customs Documents</option>
+                <option value="">Select Document</option>
+                <?php foreach($document_types as $dt): ?>
+                  <option value="<?php echo htmlspecialchars($dt->doc_type_name); ?>"><?php echo htmlspecialchars($dt->doc_type_name); ?></option>
+                <?php endforeach; ?>
               </select>
             </div>
             <div class="form-group">

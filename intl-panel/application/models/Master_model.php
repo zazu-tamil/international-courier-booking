@@ -497,4 +497,39 @@ class Master_model extends CI_Model {
         }
         return $result;
     }
+
+    // --- DOCUMENT TYPES ---
+    public function get_document_types($id = NULL) {
+        $this->db->select('*');
+        $this->db->from('document_types');
+        if ($id) {
+            $this->db->where('id', $id);
+            return $this->db->get()->row();
+        }
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function add_document_type($data) {
+        $result = $this->db->insert('document_types', $data);
+        $this->Audit_model->log_activity('Add Document Type', 'Document Name: ' . $data['doc_type_name']);
+        return $result;
+    }
+
+    public function update_document_type($id, $data) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('document_types', $data);
+        $this->Audit_model->log_activity('Update Document Type', 'Document ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_document_type($id) {
+        $doc = $this->get_document_types($id);
+        $this->db->where('id', $id);
+        $result = $this->db->delete('document_types');
+        if ($doc) {
+            $this->Audit_model->log_activity('Delete Document Type', 'Document Name: ' . $doc->doc_type_name);
+        }
+        return $result;
+    }
 }
