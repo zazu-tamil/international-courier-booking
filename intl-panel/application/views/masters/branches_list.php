@@ -53,6 +53,9 @@
                           data-toggle="modal" data-target="#createBranchUserModal">
                     <i class="fa fa-user-plus"></i> Create User
                   </button>
+                  <a href="<?php echo site_url('branches/users/' . $b->id); ?>" class="btn btn-warning btn-xs">
+                    <i class="fa fa-users"></i> View Users
+                  </a>
                   <?php if($this->session->userdata('role_id') == 1): ?>
                     <a href="<?php echo site_url('branches/delete/' . $b->id); ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this branch?');">
                       <i class="fa fa-trash"></i> Delete

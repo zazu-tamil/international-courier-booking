@@ -1,5 +1,5 @@
 <!-- CKEditor CDN -->
-<script src="https://cdn.ckeditor.com/4.16.2/standard/ckeditor.js"></script>
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 
 <div class="row">
   <div class="col-xs-12">
@@ -156,6 +156,7 @@
 <script>
   $(document).ready(function() {
     // Initialize CKEditors
+    CKEDITOR.config.versionCheck = false;
     CKEDITOR.replace('terms_content_add');
     var editorEdit = CKEDITOR.replace('terms_content_edit');
 

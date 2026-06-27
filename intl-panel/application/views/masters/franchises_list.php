@@ -41,8 +41,9 @@
                 <td>
                   <button class="btn btn-primary btn-xs edit-franchise-btn" 
                           data-id="<?php echo $f->id; ?>"
-                          data-name="<?php echo $f->name; ?>"
+                          data-name="<?php echo htmlspecialchars($f->name); ?>"
                           data-code="<?php echo $f->franchise_code; ?>"
+                          data-email="<?php echo htmlspecialchars($f->user_email); ?>"
                           data-deposit="<?php echo $f->deposit_amount; ?>"
                           data-agreement="<?php echo $f->agreement_date; ?>"
                           data-sharing="<?php echo $f->revenue_sharing_percentage; ?>"
@@ -150,6 +151,16 @@
           </div>
           <div class="row">
             <div class="col-md-6 form-group">
+              <label>Login Email <span class="text-danger">*</span></label>
+              <input type="email" name="email" id="edit_email" class="form-control" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Password</label>
+              <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 form-group">
               <label>Security Deposit Amount</label>
               <input type="number" name="deposit_amount" id="edit_deposit" class="form-control">
             </div>
@@ -200,6 +211,7 @@
       $('#editFranchiseForm').attr('action', '<?php echo site_url("franchises/edit/"); ?>' + id);
       $('#edit_name').val(name);
       $('#edit_code').val(code);
+      $('#edit_email').val($(this).data('email'));
       $('#edit_deposit').val(deposit);
       $('#edit_agreement').val(agreement);
       $('#edit_sharing').val(sharing);

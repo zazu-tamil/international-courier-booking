@@ -25,6 +25,9 @@ $route['branches/add'] = 'masters/add_branch';
 $route['branches/edit/(:num)'] = 'masters/edit_branch/$1';
 $route['branches/delete/(:num)'] = 'masters/delete_branch/$1';
 $route['branches/create-user'] = 'masters/create_branch_user';
+$route['branches/users/(:num)'] = 'masters/branch_users/$1';
+$route['branches/edit-user/(:num)'] = 'masters/edit_branch_user/$1';
+$route['branches/delete-user/(:num)'] = 'masters/delete_branch_user/$1';
 
 $route['franchises'] = 'masters/franchises';
 $route['franchises/add'] = 'masters/add_franchise';

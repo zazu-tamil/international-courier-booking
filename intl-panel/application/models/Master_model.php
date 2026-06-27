@@ -54,6 +54,40 @@ class Master_model extends CI_Model {
         return $id;
     }
 
+    public function get_branch_users($branch_id) {
+        $this->db->select('users.*, roles.name as role_name');
+        $this->db->from('users');
+        $this->db->join('roles', 'roles.id = users.role_id');
+        $this->db->where('users.branch_id', $branch_id);
+        $this->db->where('users.deleted_at IS NULL');
+        return $this->db->get()->result();
+    }
+
+    public function get_user($id) {
+        $this->db->where('id', $id);
+        $this->db->where('deleted_at IS NULL');
+        return $this->db->get('users')->row();
+    }
+
+    public function update_user($id, $data) {
+        if (isset($data['password']) && !empty($data['password'])) {
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+        } else {
+            unset($data['password']); // do not update if empty
+        }
+        $this->db->where('id', $id);
+        $result = $this->db->update('users', $data);
+        $this->Audit_model->log_activity('Update User', 'User ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_user($id) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('users', array('deleted_at' => date('Y-m-d H:i:s'), 'status' => 'Inactive'));
+        $this->Audit_model->log_activity('Delete User', 'User ID: ' . $id);
+        return $result;
+    }
+
     // --- FRANCHISES ---
     public function get_franchises($id = NULL) {
         $this->db->select('franchises.*, users.email as user_email');
@@ -97,11 +131,29 @@ class Master_model extends CI_Model {
         return $franchise_id;
     }
 
-    public function update_franchise($id, $data) {
+    public function update_franchise($id, $data, $user_data = array()) {
+        $this->db->trans_start();
+        
         $this->db->where('id', $id);
-        $result = $this->db->update('franchises', $data);
+        $this->db->update('franchises', $data);
+
+        if (!empty($user_data)) {
+            if (isset($user_data['password']) && !empty($user_data['password'])) {
+                $user_data['password'] = password_hash($user_data['password'], PASSWORD_BCRYPT);
+            } else {
+                unset($user_data['password']);
+            }
+            $franchise = $this->get_franchises($id);
+            if ($franchise && $franchise->user_id) {
+                $this->db->where('id', $franchise->user_id);
+                $this->db->update('users', $user_data);
+            }
+        }
+
+        $this->db->trans_complete();
+
         $this->Audit_model->log_activity('Update Franchise', 'Franchise ID: ' . $id);
-        return $result;
+        return $this->db->trans_status();
     }
 
     public function delete_franchise($id) {

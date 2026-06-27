@@ -109,6 +109,103 @@ class Masters extends CI_Controller {
         }
         redirect('branches');
     }
+    public function branch_users($branch_id) {
+        $branch = $this->Master_model->get_branches($branch_id);
+        if (!$branch) {
+            $this->session->set_flashdata('error', 'Branch not found.');
+            redirect('branches');
+        }
+
+        $data['page_title'] = 'Users for Branch: ' . $branch->name;
+        $data['branch'] = $branch;
+        $data['users'] = $this->Master_model->get_branch_users($branch_id);
+        
+        $all_roles = $this->Master_model->get_roles();
+        $filtered_roles = array();
+        foreach ($all_roles as $r) {
+            if ($r->id != 1 && $r->id != 3 && $r->id != 4) {
+                $filtered_roles[] = $r;
+            }
+        }
+        $data['roles'] = $filtered_roles;
+
+        $data['view_path'] = 'masters/branch_users_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function edit_branch_user($user_id) {
+        $user = $this->Master_model->get_user($user_id);
+        if (!$user) {
+            $this->session->set_flashdata('error', 'User not found.');
+            redirect('branches');
+        }
+
+        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]');
+        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email');
+        if ($this->input->post('password')) {
+            $this->form_validation->set_rules('password', 'Password', 'min_length[6]');
+        }
+        $this->form_validation->set_rules('role_id', 'Role', 'required|numeric');
+        $this->form_validation->set_rules('status', 'Status', 'required');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $post = $this->input->post(NULL, TRUE);
+            
+            // Check unique active only if changed
+            if ($post['email'] !== $user->email) {
+                $exists = $this->db->get_where('users', array('email' => $post['email'], 'deleted_at IS NULL' => null))->row();
+                if ($exists) {
+                    $this->session->set_flashdata('error', 'The Email Address is already in use.');
+                    redirect('branches/users/' . $user->branch_id);
+                }
+            }
+            if ($post['username'] !== $user->username) {
+                $exists = $this->db->get_where('users', array('username' => $post['username'], 'deleted_at IS NULL' => null))->row();
+                if ($exists) {
+                    $this->session->set_flashdata('error', 'The Username is already in use.');
+                    redirect('branches/users/' . $user->branch_id);
+                }
+            }
+
+            $update_data = array(
+                'username' => $post['username'],
+                'email' => $post['email'],
+                'role_id' => $post['role_id'],
+                'status' => $post['status']
+            );
+            if (!empty($post['password'])) {
+                $update_data['password'] = $post['password'];
+            }
+
+            if ($this->Master_model->update_user($user_id, $update_data)) {
+                $this->session->set_flashdata('success', 'User updated successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to update user.');
+            }
+        }
+        redirect('branches/users/' . $user->branch_id);
+    }
+    public function delete_branch_user($user_id) {
+        if ($this->session->userdata('role_id') != 1) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('branches');
+        }
+
+        $user = $this->Master_model->get_user($user_id);
+        if (!$user) {
+            $this->session->set_flashdata('error', 'User not found.');
+            redirect('branches');
+        }
+
+        if ($this->Master_model->delete_user($user_id)) {
+            $this->session->set_flashdata('success', 'User deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete user.');
+        }
+        redirect('branches/users/' . $user->branch_id);
+    }
 
     // --- FRANCHISES ---
     public function franchises() {
@@ -158,19 +255,53 @@ class Masters extends CI_Controller {
     }
 
     public function edit_franchise($id) {
+        $franchise = $this->Master_model->get_franchises($id);
+        if (!$franchise) {
+            $this->session->set_flashdata('error', 'Franchise not found.');
+            redirect('franchises');
+        }
+
         $this->form_validation->set_rules('name', 'Franchise Name', 'required');
         $this->form_validation->set_rules('deposit_amount', 'Deposit Amount', 'numeric');
         $this->form_validation->set_rules('revenue_sharing_percentage', 'Revenue Split', 'numeric');
         $this->form_validation->set_rules('commission_percentage', 'Commission', 'numeric');
+        $this->form_validation->set_rules('email', 'Login Email', 'required|valid_email');
+        if ($this->input->post('password')) {
+            $this->form_validation->set_rules('password', 'Password', 'min_length[6]');
+        }
 
         if ($this->form_validation->run() === FALSE) {
-            $data['page_title'] = 'Edit Franchise';
-            $data['franchise'] = $this->Master_model->get_franchises($id);
-            $data['view_path'] = 'masters/franchise_edit';
-            $this->load->view('templates/dashboard_layout', $data);
+            $this->session->set_flashdata('error', validation_errors());
+            redirect('franchises');
         } else {
             $post = $this->input->post(NULL, TRUE);
-            $this->Master_model->update_franchise($id, $post);
+            
+            if ($post['email'] !== $franchise->user_email) {
+                $exists = $this->db->get_where('users', array('email' => $post['email'], 'deleted_at IS NULL' => null))->row();
+                if ($exists) {
+                    $this->session->set_flashdata('error', 'The Login Email is already in use.');
+                    redirect('franchises');
+                }
+            }
+
+            $franchise_data = array(
+                'name' => $post['name'],
+                'deposit_amount' => $post['deposit_amount'],
+                'agreement_date' => $post['agreement_date'],
+                'revenue_sharing_percentage' => $post['revenue_sharing_percentage'],
+                'commission_percentage' => $post['commission_percentage'],
+                'status' => $post['status']
+            );
+
+            $user_data = array(
+                'email' => $post['email'],
+                'status' => $post['status']
+            );
+            if (!empty($post['password'])) {
+                $user_data['password'] = $post['password'];
+            }
+
+            $this->Master_model->update_franchise($id, $franchise_data, $user_data);
             $this->session->set_flashdata('success', 'Franchise details updated.');
             redirect('franchises');
         }
