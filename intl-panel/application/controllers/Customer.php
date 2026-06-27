@@ -150,6 +150,9 @@ class Customer extends CI_Controller {
         $this->db->order_by('id', 'DESC');
         $data['transactions'] = $this->db->get_where('customer_wallet_transactions', array('customer_id' => $customer_id))->result();
 
+        // Get pending requests
+        $data['pending_requests'] = $this->Customer_model->get_wallet_requests('Pending', $customer_id);
+
         $data['page_title'] = 'Wallet Ledger Balance';
         $data['view_path'] = 'customer/wallet_dashboard';
         $this->load->view('templates/dashboard_layout', $data);
@@ -168,13 +171,93 @@ class Customer extends CI_Controller {
         $txn = $this->input->post('transaction_id');
 
         if ($amount > 0 && $customer_id) {
-            $this->Customer_model->add_wallet_funds($customer_id, $amount, 'Credit addition via ' . $mode, $txn);
-            $this->session->set_flashdata('success', 'Funds added to customer wallet balance successfully.');
+            $proof_path = NULL;
+            if (!empty($_FILES['proof_file']['name'])) {
+                $config['upload_path'] = './uploads/wallet_proofs/';
+                $config['allowed_types'] = 'jpg|jpeg|png|pdf';
+                $config['max_size'] = 5120; // 5MB
+                $config['file_name'] = 'proof_' . $customer_id . '_' . time();
+
+                $this->load->library('upload', $config);
+
+                if ($this->upload->do_upload('proof_file')) {
+                    $uploadData = $this->upload->data();
+                    $proof_path = 'uploads/wallet_proofs/' . $uploadData['file_name'];
+                } else {
+                    $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                    redirect('customer/wallet' . ($this->session->userdata('role_id') != 4 ? '?customer_id=' . $customer_id : ''));
+                    return;
+                }
+            }
+
+            $req_data = array(
+                'customer_id' => $customer_id,
+                'amount' => $amount,
+                'payment_mode' => $mode,
+                'transaction_id' => $txn,
+                'proof_file_path' => $proof_path,
+                'status' => 'Pending'
+            );
+
+            $this->Customer_model->add_wallet_request($req_data);
+            $this->session->set_flashdata('success', 'Wallet load request submitted successfully and is pending approval.');
         } else {
             $this->session->set_flashdata('error', 'Please enter a valid amount.');
         }
 
         redirect('customer/wallet' . ($this->session->userdata('role_id') != 4 ? '?customer_id=' . $customer_id : ''));
+    }
+    
+    public function wallet_requests() {
+        if ($this->session->userdata('role_id') != 1 && $this->session->userdata('role_id') != 2) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('dashboard');
+        }
+        
+        $data['page_title'] = 'Wallet Load Requests';
+        $data['requests'] = $this->Customer_model->get_wallet_requests();
+        $data['view_path'] = 'customer/wallet_requests_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+    
+    public function approve_wallet_request($id) {
+        if ($this->session->userdata('role_id') != 1 && $this->session->userdata('role_id') != 2) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('dashboard');
+        }
+        
+        $req = $this->Customer_model->get_wallet_request($id);
+        if ($req && $req->status == 'Pending') {
+            $this->Customer_model->add_wallet_funds($req->customer_id, $req->amount, 'Approved Credit addition via ' . $req->payment_mode, $req->transaction_id);
+            
+            $update_data = array(
+                'status' => 'Approved',
+                'approved_by' => $this->session->userdata('user_id')
+            );
+            $this->Customer_model->update_wallet_request($id, $update_data);
+            $this->session->set_flashdata('success', 'Wallet load request approved and funds credited.');
+        } else {
+            $this->session->set_flashdata('error', 'Request not found or already processed.');
+        }
+        redirect('customer/wallet-requests');
+    }
+    
+    public function reject_wallet_request($id) {
+        if ($this->session->userdata('role_id') != 1 && $this->session->userdata('role_id') != 2) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('dashboard');
+        }
+        
+        $req = $this->Customer_model->get_wallet_request($id);
+        if ($req && $req->status == 'Pending') {
+            $update_data = array(
+                'status' => 'Rejected',
+                'approved_by' => $this->session->userdata('user_id')
+            );
+            $this->Customer_model->update_wallet_request($id, $update_data);
+            $this->session->set_flashdata('success', 'Wallet load request rejected.');
+        }
+        redirect('customer/wallet-requests');
     }
 
     // --- STATEMENTS (Ledger entries) ---

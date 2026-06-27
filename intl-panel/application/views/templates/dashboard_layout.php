@@ -100,6 +100,12 @@
               <a href="<?php echo site_url('customers'); ?>"><i class="fa fa-users"></i> <span>Customers</span></a>
             </li>
 
+            <?php if ($this->session->userdata('role_id') == 1 || $this->session->userdata('role_id') == 2): // Super Admin or Branch Admin ?>
+              <li class="<?php echo ($this->uri->segment(1) == 'customer' && $this->uri->segment(2) == 'wallet-requests') ? 'active' : ''; ?>">
+                <a href="<?php echo site_url('customer/wallet-requests'); ?>"><i class="fa fa-money"></i> <span>Wallet Load Requests</span></a>
+              </li>
+            <?php endif; ?>
+
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
             <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>

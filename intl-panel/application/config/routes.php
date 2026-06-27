@@ -103,6 +103,10 @@ $route['customer/submit-signature'] = 'customer/submit_signature';
 $route['customer/submit-verification'] = 'customer/submit_verification';
 $route['customer/kyc'] = 'customer/kyc_upload';
 $route['customer/wallet'] = 'customer/wallet';
+$route['customer/add_funds'] = 'customer/add_funds';
+$route['customer/wallet-requests'] = 'customer/wallet_requests';
+$route['customer/approve-wallet-request/(:num)'] = 'customer/approve_wallet_request/$1';
+$route['customer/reject-wallet-request/(:num)'] = 'customer/reject_wallet_request/$1';
 $route['customer/statement'] = 'customer/statement';
 
 // KYC Management (Staff Only)

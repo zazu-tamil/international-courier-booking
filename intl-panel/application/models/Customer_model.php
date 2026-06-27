@@ -163,6 +163,38 @@ class Customer_model extends CI_Model {
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
+    
+    // --- PREPAID WALLET LOAD REQUESTS ---
+    public function add_wallet_request($data) {
+        return $this->db->insert('wallet_load_requests', $data);
+    }
+    
+    public function get_wallet_requests($status = NULL, $customer_id = NULL) {
+        $this->db->select('wallet_load_requests.*, customers.name as customer_name, customers.company_name');
+        $this->db->from('wallet_load_requests');
+        $this->db->join('customers', 'customers.id = wallet_load_requests.customer_id');
+        if ($status) {
+            $this->db->where('wallet_load_requests.status', $status);
+        }
+        if ($customer_id) {
+            $this->db->where('wallet_load_requests.customer_id', $customer_id);
+        }
+        $this->db->order_by('wallet_load_requests.id', 'DESC');
+        return $this->db->get()->result();
+    }
+    
+    public function get_wallet_request($id) {
+        $this->db->select('wallet_load_requests.*, customers.name as customer_name, customers.company_name');
+        $this->db->from('wallet_load_requests');
+        $this->db->join('customers', 'customers.id = wallet_load_requests.customer_id');
+        $this->db->where('wallet_load_requests.id', $id);
+        return $this->db->get()->row();
+    }
+    
+    public function update_wallet_request($id, $data) {
+        $this->db->where('id', $id);
+        return $this->db->update('wallet_load_requests', $data);
+    }
 
     public function charge_wallet($customer_id, $amount, $description, $ref_id = NULL) {
         $this->db->trans_start();

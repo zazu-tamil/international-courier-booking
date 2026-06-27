@@ -33,6 +33,39 @@
   </div>
 
   <div class="col-md-8">
+    <!-- Pending Requests List -->
+    <?php if(!empty($pending_requests)): ?>
+    <div class="box box-warning">
+      <div class="box-header with-border">
+        <h3 class="box-title"><i class="fa fa-clock-o"></i> Pending Load Requests</h3>
+      </div>
+      <div class="box-body table-responsive">
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Mode</th>
+              <th>Amount</th>
+              <th>Reference ID</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach($pending_requests as $pr): ?>
+              <tr>
+                <td><?php echo date('d M Y H:i', strtotime($pr->created_at)); ?></td>
+                <td><?php echo $pr->payment_mode; ?></td>
+                <td><strong>₹<?php echo number_format($pr->amount, 2); ?></strong></td>
+                <td><code><?php echo $pr->transaction_id ? $pr->transaction_id : '-'; ?></code></td>
+                <td><span class="label label-warning">Pending Approval</span></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Transactions List -->
     <div class="box box-purple">
       <div class="box-header with-border">
@@ -78,7 +111,7 @@
 <div class="modal fade" id="addFundsModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
-      <?php echo form_open('customer/add_funds'); ?>
+      <?php echo form_open_multipart('customer/add_funds'); ?>
         <!-- Send customer ID if loaded by staff, otherwise uses logged-in session customer_id in controller -->
         <input type="hidden" name="customer_id" value="<?php echo $customer->id; ?>">
         
@@ -104,11 +137,16 @@
             <label>Transaction ID / Reference Number</label>
             <input type="text" name="transaction_id" class="form-control" placeholder="e.g. TXN9988776655">
           </div>
-          <p class="text-muted"><i class="fa fa-info-circle"></i> Deposited funds will instantly credit to your wallet balance and update your statement of account ledger.</p>
+          <div class="form-group">
+            <label>Upload Payment Proof (Optional)</label>
+            <input type="file" name="proof_file" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+            <small class="text-muted">Max 5MB. Formats: JPG, PNG, PDF</small>
+          </div>
+          <p class="text-muted"><i class="fa fa-info-circle"></i> Deposited funds will be credited to your wallet balance once approved by the administration.</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-success">Complete Deposit</button>
+          <button type="submit" class="btn btn-success">Submit for Approval</button>
         </div>
       <?php echo form_close(); ?>
     </div>
