@@ -169,7 +169,7 @@
     </tr>
     <?php if($invoice): ?>
       <tr>
-        <td>Shipping Surcharge:</td>
+        <td>Shipping Charges:</td>
         <td style="text-align: right;">₹<?php echo number_format($invoice->total_amount, 2); ?></td>
       </tr>
       <tr>
