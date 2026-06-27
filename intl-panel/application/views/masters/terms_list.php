@@ -40,6 +40,14 @@
                 </td>
                 <td><?php echo date('d M Y H:i', strtotime($t->created_at)); ?></td>
                 <td>
+                  <button class="btn btn-info btn-xs view-terms-btn" 
+                          data-title="<?php echo $t->title; ?>"
+                          data-version="<?php echo $t->version_number; ?>"
+                          data-effective="<?php echo $t->effective_date; ?>"
+                          data-content="<?php echo htmlspecialchars($t->terms_content); ?>"
+                          data-toggle="modal" data-target="#viewTermsModal">
+                    <i class="fa fa-eye"></i> View
+                  </button>
                   <button class="btn btn-primary btn-xs edit-terms-btn" 
                           data-id="<?php echo $t->id; ?>"
                           data-title="<?php echo $t->title; ?>"
@@ -69,7 +77,7 @@
           <button type="button" class="close" data-dismiss="modal">×</button>
           <h4 class="modal-title">Create Terms & Conditions Version</h4>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 65vh; overflow-y: auto; overflow-x: hidden;">
           <div class="row">
             <div class="col-md-6 form-group">
               <label>Title <span class="text-danger">*</span></label>
@@ -116,7 +124,7 @@
           <button type="button" class="close" data-dismiss="modal">×</button>
           <h4 class="modal-title">Edit Terms Version Details</h4>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 65vh; overflow-y: auto; overflow-x: hidden;">
           <div class="row">
             <div class="col-md-6 form-group">
               <label>Title <span class="text-danger">*</span></label>
@@ -153,12 +161,40 @@
   </div>
 </div>
 
+<!-- View Terms Modal -->
+<div class="modal fade" id="viewTermsModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title" id="view_terms_title">View Terms & Conditions</h4>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <div class="well well-sm">
+          <strong>Version:</strong> <span id="view_terms_version"></span> &nbsp;|&nbsp; 
+          <strong>Effective Date:</strong> <span id="view_terms_effective"></span>
+        </div>
+        <div id="view_terms_content" style="padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+          <!-- Content will be populated here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function() {
     // Initialize CKEditors
     CKEDITOR.config.versionCheck = false;
-    CKEDITOR.replace('terms_content_add');
-    var editorEdit = CKEDITOR.replace('terms_content_edit');
+    var editorConfig = {
+      height: 250,
+      resize_enabled: false
+    };
+    CKEDITOR.replace('terms_content_add', editorConfig);
+    var editorEdit = CKEDITOR.replace('terms_content_edit', editorConfig);
 
     $('.edit-terms-btn').click(function() {
       var id = $(this).data('id');
@@ -166,11 +202,7 @@
       var version = $(this).data('version');
       var effective = $(this).data('effective');
       var status = $(this).data('status');
-      
-      // Decode HTML content safely
-      var contentEl = document.createElement('div');
-      contentEl.innerHTML = $(this).data('content');
-      var content = contentEl.textContent || contentEl.innerText;
+      var content = $(this).data('content');
 
       $('#editTermsForm').attr('action', '<?php echo site_url("terms/edit/"); ?>' + id);
       $('#edit_title').val(title);
@@ -180,6 +212,18 @@
       
       // Set editor value
       editorEdit.setData(content);
+    });
+
+    $('.view-terms-btn').click(function() {
+      var title = $(this).data('title');
+      var version = $(this).data('version');
+      var effective = $(this).data('effective');
+      var content = $(this).data('content');
+
+      $('#view_terms_title').text(title);
+      $('#view_terms_version').text('v' + version);
+      $('#view_terms_effective').text(effective);
+      $('#view_terms_content').html(content);
     });
   });
 </script>

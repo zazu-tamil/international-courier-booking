@@ -21,6 +21,8 @@ class Shipment extends CI_Controller {
         $customer_id = NULL;
         if ($this->session->userdata('role_id') == 4) {
             $customer_id = $this->session->userdata('customer_id');
+        } else if ($this->session->userdata('role_id') == 3) {
+            $data['customers'] = $this->Customer_model->get_franchise_customers($this->session->userdata('user_id'));
         } else {
             $data['customers'] = $this->Customer_model->get_customers();
         }
@@ -147,10 +149,17 @@ class Shipment extends CI_Controller {
         }
 
         if ($this->form_validation->run() === FALSE) {
-            $data['page_title'] = 'Create Shipment Booking';
+            $data['page_title'] = 'Book New Shipment';
             $data['countries'] = $this->Master_model->get_countries();
-            $data['partners'] = $this->Master_model->get_courier_partners();
-            $data['customers'] = $this->Customer_model->get_customers();
+            $data['courier_partners'] = $this->Master_model->get_partners();
+            
+            if ($this->session->userdata('role_id') == 3) {
+                $data['customers'] = $this->Customer_model->get_franchise_customers($this->session->userdata('user_id'));
+            } else {
+                $data['customers'] = $this->Customer_model->get_customers();
+            }
+
+            $data['terms'] = $this->Master_model->get_active_terms();
             $data['view_path'] = 'shipment/shipment_book';
             $this->load->view('templates/dashboard_layout', $data);
         } else {

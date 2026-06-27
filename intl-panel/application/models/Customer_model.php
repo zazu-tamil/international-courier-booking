@@ -24,6 +24,16 @@ class Customer_model extends CI_Model {
         return $this->db->get()->result();
     }
 
+    public function get_franchise_customers($franchise_user_id) {
+        $this->db->select('customers.*');
+        $this->db->from('customers');
+        $this->db->join('shipment_master', 'shipment_master.customer_id = customers.id');
+        $this->db->where('shipment_master.created_by', $franchise_user_id);
+        $this->db->where('customers.deleted_at IS NULL');
+        $this->db->group_by('customers.id');
+        return $this->db->get()->result();
+    }
+
     public function get_customer_by_user_id($user_id) {
         $this->db->select('customers.*, customer_wallet.balance as wallet_balance, customer_kyc.status as kyc_status');
         $this->db->from('customers');
