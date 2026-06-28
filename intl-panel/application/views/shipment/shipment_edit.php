@@ -194,7 +194,7 @@
                   <label>Courier Partner <span class="text-danger">*</span></label>
                   <select name="courier_partner_id" class="form-control" required>
                     <option value="">Select partner</option>
-                    <?php foreach($partners as $p): ?>
+                    <?php foreach($courier_partners as $p): ?>
                       <option value="<?php echo $p->id; ?>" <?php echo ($p->id == $shipment->courier_partner_id) ? 'selected' : ''; ?>><?php echo $p->partner_name; ?></option>
                     <?php endforeach; ?>
                   </select>
