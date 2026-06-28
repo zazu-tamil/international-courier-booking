@@ -104,6 +104,14 @@ class Shipment_model extends CI_Model {
         return $this->db->get_where('shipment_documents', array('shipment_id' => $shipment_id))->result();
     }
 
+    public function get_additional_charges($shipment_id) {
+        $this->db->select('shipment_additional_charges.*, additional_charge_types.charge_name');
+        $this->db->from('shipment_additional_charges');
+        $this->db->join('additional_charge_types', 'additional_charge_types.id = shipment_additional_charges.charge_type_id');
+        $this->db->where('shipment_additional_charges.shipment_id', $shipment_id);
+        return $this->db->get()->result();
+    }
+
     public function get_tracking_timeline($shipment_id) {
         $this->db->select('shipment_tracking.*, users.username as updater_name, branches.name as branch_name, courier_partners.partner_name');
         $this->db->from('shipment_tracking');
@@ -201,6 +209,20 @@ class Shipment_model extends CI_Model {
                 'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
+        }
+
+        // 5.5 Insert additional charges
+        if (isset($data['additional_charges']) && !empty($data['additional_charges'])) {
+            foreach ($data['additional_charges'] as $charge) {
+                if (!empty($charge['charge_type_id']) && $charge['charge_amount'] > 0) {
+                    $charge_data = array(
+                        'shipment_id' => $shipment_id,
+                        'charge_type_id' => $charge['charge_type_id'],
+                        'charge_amount' => $charge['charge_amount']
+                    );
+                    $this->db->insert('shipment_additional_charges', $charge_data);
+                }
+            }
         }
 
         // 6. Create initial tracking status
@@ -457,6 +479,22 @@ class Shipment_model extends CI_Model {
                 'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
+        }
+
+        // 5.5 Delete and re-insert additional charges
+        $this->db->where('shipment_id', $shipment_id);
+        $this->db->delete('shipment_additional_charges');
+        if (isset($data['additional_charges']) && !empty($data['additional_charges'])) {
+            foreach ($data['additional_charges'] as $charge) {
+                if (!empty($charge['charge_type_id']) && $charge['charge_amount'] > 0) {
+                    $charge_data = array(
+                        'shipment_id' => $shipment_id,
+                        'charge_type_id' => $charge['charge_type_id'],
+                        'charge_amount' => $charge['charge_amount']
+                    );
+                    $this->db->insert('shipment_additional_charges', $charge_data);
+                }
+            }
         }
 
         // 6. Update invoice if exists

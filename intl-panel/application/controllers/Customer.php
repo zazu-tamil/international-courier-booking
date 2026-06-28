@@ -20,6 +20,18 @@ class Customer extends CI_Controller {
         $this->load->model('Notification_model');
     }
 
+    public function ajax_get_customer($id) {
+        if (!$this->input->is_ajax_request()) {
+            exit('No direct script access allowed');
+        }
+        $customer = $this->Customer_model->get_customers($id);
+        if ($customer) {
+            echo json_encode(array('status' => 'success', 'data' => $customer));
+        } else {
+            echo json_encode(array('status' => 'error'));
+        }
+    }
+
     // --- KYC UPLOADS (Customer portal) ---
     public function kyc_upload() {
         if ($this->session->userdata('role_id') != 4) {

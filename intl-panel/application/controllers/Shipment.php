@@ -159,6 +159,7 @@ class Shipment extends CI_Controller {
             $data['countries'] = $this->Master_model->get_countries();
             $data['courier_partners'] = $this->Master_model->get_courier_partners();
             $data['service_types'] = $this->Master_model->get_service_types();
+            $data['additional_charge_types'] = $this->Master_model->get_additional_charge_types();
             
             if ($this->session->userdata('role_id') == 3) {
                 $data['customers'] = $this->Customer_model->get_franchise_customers($this->session->userdata('user_id'));
@@ -281,6 +282,16 @@ class Shipment extends CI_Controller {
                 }
             }
 
+            // Populate additional charges
+            if (isset($post['charge_type_id']) && is_array($post['charge_type_id'])) {
+                for ($i = 0; $i < count($post['charge_type_id']); $i++) {
+                    $shipment_data['additional_charges'][] = array(
+                        'charge_type_id' => $post['charge_type_id'][$i],
+                        'charge_amount' => $post['charge_amount'][$i]
+                    );
+                }
+            }
+
             // Pickup options
             if (isset($post['pickup_required']) && $post['pickup_required'] == '1') {
                 $shipment_data['pickup'] = array(
@@ -349,13 +360,15 @@ class Shipment extends CI_Controller {
         $this->form_validation->set_rules('customer_id', 'Customer Account', 'required');
 
         if ($this->form_validation->run() === FALSE) {
-            $data['page_title'] = 'Edit Shipment Booking - ' . $shipment->awb_number;
+            $data['page_title'] = 'Edit Shipment - ' . $shipment->awb_number;
             $data['shipment'] = $shipment;
             $data['boxes'] = $this->Shipment_model->get_boxes($id);
             $data['items'] = $this->Shipment_model->get_items($id);
+            $data['additional_charges'] = $this->Shipment_model->get_additional_charges($id);
             $data['countries'] = $this->Master_model->get_countries();
-            $data['partners'] = $this->Master_model->get_courier_partners();
+            $data['courier_partners'] = $this->Master_model->get_courier_partners();
             $data['service_types'] = $this->Master_model->get_service_types();
+            $data['additional_charge_types'] = $this->Master_model->get_additional_charge_types();
             $data['customers'] = $this->Customer_model->get_customers();
             $data['view_path'] = 'shipment/shipment_edit';
             $this->load->view('templates/dashboard_layout', $data);
@@ -403,7 +416,8 @@ class Shipment extends CI_Controller {
                     'zip_code' => $post['receiver_zip']
                 ),
                 'boxes' => array(),
-                'items' => array()
+                'items' => array(),
+                'additional_charges' => array()
             );
 
             // Populate boxes
@@ -431,6 +445,16 @@ class Shipment extends CI_Controller {
                         'total_value' => $post['item_total'][$i],
                         'country_of_origin_id' => $post['item_origin'][$i],
                         'box_no' => isset($post['item_box_no'][$i]) ? $post['item_box_no'][$i] : 1
+                    );
+                }
+            }
+
+            // Populate additional charges
+            if (isset($post['charge_type_id']) && is_array($post['charge_type_id'])) {
+                for ($i = 0; $i < count($post['charge_type_id']); $i++) {
+                    $shipment_data['additional_charges'][] = array(
+                        'charge_type_id' => $post['charge_type_id'][$i],
+                        'charge_amount' => $post['charge_amount'][$i]
                     );
                 }
             }
