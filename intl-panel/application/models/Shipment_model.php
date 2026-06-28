@@ -13,7 +13,7 @@ class Shipment_model extends CI_Model {
     public function generate_awb_number() {
         //$year = date('Y');
         //$prefix = "CSYN-INT-" . $year . "-";
-        $prefix = "41";
+        $prefix = "INT41";
         
         $this->db->select('awb_number');
         $this->db->from('shipment_master');

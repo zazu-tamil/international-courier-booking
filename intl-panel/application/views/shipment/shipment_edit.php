@@ -233,8 +233,9 @@
                 <div class="col-md-6 form-group">
                   <label>Shipment Type <span class="text-danger">*</span></label>
                   <select name="shipment_type" class="form-control" required>
-                    <option value="Non-Documents" <?php echo ($shipment->shipment_type == 'Non-Documents') ? 'selected' : ''; ?>>Non-Documents (Commercial Goods / Parcels)</option>
-                    <option value="Documents" <?php echo ($shipment->shipment_type == 'Documents') ? 'selected' : ''; ?>>Documents (Paper / Files)</option>
+                    <option value="Non-Documents (Commercial Goods / Parcels)" <?php echo ($shipment->shipment_type == 'Non-Documents (Commercial Goods / Parcels)') ? 'selected' : ''; ?>>Non-Documents (Commercial Goods / Parcels)</option>
+                    <option value="Non Documents ( Non Commercial Goods )" <?php echo ($shipment->shipment_type == 'Non Documents ( Non Commercial Goods )') ? 'selected' : ''; ?>>Non Documents ( Non Commercial Goods )</option>
+                    <option value="Documents (Paper / Files)" <?php echo ($shipment->shipment_type == 'Documents (Paper / Files)') ? 'selected' : ''; ?>>Documents (Paper / Files)</option>
                   </select>
                 </div>
               </div>

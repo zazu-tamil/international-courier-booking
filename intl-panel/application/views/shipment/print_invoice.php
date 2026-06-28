@@ -109,7 +109,8 @@
   <table class="meta-table">
     <tr>
       <td><strong>Invoice Number:</strong><br><code><?php echo $invoice ? $invoice->invoice_number : 'N/A'; ?></code></td>
-      <td><strong>AWB Number:</strong><br><strong><?php echo $shipment->awb_number; ?></strong></td>
+      <td><strong>AWB Number:</strong><br><strong><?php echo $shipment->awb_number; ?></strong><br>
+      <span style="font-size: 11px; color: #555;">Service: <?php echo $shipment->service_type; ?></span></td>
       <td><strong>Invoice Date:</strong><br><?php echo $invoice ? date('d M Y', strtotime($invoice->invoice_date)) : date('d M Y'); ?></td>
       <td><strong>Payment Mode:</strong><br><?php echo $invoice && $invoice->status == 'Paid' ? 'Paid (Settled)' : 'Credit Account Debit'; ?></td>
     </tr>
@@ -145,6 +146,7 @@
         <th>Description of Goods</th>
         <th>HS Code</th>
         <th>Qty</th>
+        <th>Box No.</th>
         <th>Unit Price</th>
         <th style="text-align: right;">Total Price</th>
       </tr>
@@ -155,6 +157,7 @@
           <td><?php echo $item->item_description; ?></td>
           <td><code><?php echo $item->hs_code; ?></code></td>
           <td><?php echo $item->quantity; ?></td>
+          <td style="text-align: center;"><?php echo $item->box_no; ?></td>
           <td>₹<?php echo number_format($item->unit_value, 2); ?></td>
           <td style="text-align: right;">₹<?php echo number_format($item->total_value, 2); ?></td>
         </tr>
@@ -162,7 +165,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="4" style="text-align: right;">Items Value:</td>
+        <td colspan="5" style="text-align: right;">Items Value:</td>
         <td style="text-align: right;">₹<?php echo number_format($shipment->total_declared_value, 2); ?></td>
       </tr>
     </tfoot>

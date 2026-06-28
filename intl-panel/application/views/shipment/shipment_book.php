@@ -226,7 +226,7 @@
                   <label>Courier Partner <span class="text-danger">*</span></label>
                   <select name="courier_partner_id" class="form-control" required>
                     <option value="">Select partner</option>
-                    <?php foreach($partners as $p): ?>
+                    <?php foreach($courier_partners as $p): ?>
                       <option value="<?php echo $p->id; ?>"><?php echo $p->partner_name; ?></option>
                     <?php endforeach; ?>
                   </select>
@@ -269,8 +269,9 @@
                 <div class="col-md-6 form-group">
                   <label>Shipment Type <span class="text-danger">*</span></label>
                   <select name="shipment_type" class="form-control" required>
-                    <option value="Non-Documents">Non-Documents (Commercial Goods / Parcels)</option>
-                    <option value="Documents">Documents (Paper / Files)</option>
+                    <option value="Non-Documents (Commercial Goods / Parcels)">Non-Documents (Commercial Goods / Parcels)</option>
+                    <option value="Non Documents ( Non Commercial Goods )">Non Documents ( Non Commercial Goods )</option>
+                    <option value="Documents (Paper / Files)">Documents (Paper / Files)</option>
                   </select>
                 </div>
               </div>

@@ -550,7 +550,7 @@ if(isset($_REQUEST['awbno'])) {
     <div class="container-fluid bg-dark text-white border-top py-4 px-sm-3 px-md-5" style="border-color: #3E3E4E !important;">
         <div class="row">
             <div class="col-lg-6 text-center text-md-left mb-3 mb-md-0">
-                <p class="m-0 text-white"> &copy; 2024 <a href="index.html">Courier Syndicate. </a> All Rights Reserved. </p>
+                <p class="m-0 text-white"> &copy; 2026 <a href="index.html">Courier Syndicate. </a> All Rights Reserved. </p>
                 <strong style="display: none;">Powered by CR Info Tech</strong>
             </div>
             <div class="col-lg-6 text-center text-md-right">
