@@ -331,21 +331,29 @@ if(isset($_REQUEST['awbno'])) {
         <div class="container">
             <div class="text-center pb-2">
                 <h1 class="text-primary text-uppercase font-weight-bold">Shipment Tracking</h1><br />
-                <form method="post" action="tracking.php">
+                <form id="trackingForm" method="post" action="tracking.php">
                 <div class="row">
-                     
                     <div class="col-md-12 text-center">
                         <div class="form-group">
                         <div class="input-group"> 
-                            <input type="number" name="awbno" id="awbno" value="<?php if(isset($_REQUEST['awbno'])) echo $_REQUEST['awbno']; ?>" class="form-control border-dark" style="padding: 30px;" placeholder="Eg:41000001">
+                            <input type="text" name="awbno" id="awbno" value="<?php if(isset($_REQUEST['awbno'])) echo htmlspecialchars($_REQUEST['awbno']); ?>" class="form-control border-dark" style="padding: 30px;" >
                             <div class="input-group-append">
                                 <button class="btn btn-primary px-3" name="btn_search" value="Tracking" type="submit"><i class="fa fa-search"></i> Track</button>
                             </div> 
                         </div>
                         </div>
-                   </div> 
-               </div> 
-               </form>
+                    </div>
+                </div> 
+                </form>
+                <script>
+                document.getElementById('trackingForm').addEventListener('submit', function(e) {
+                    var awbno = document.getElementById('awbno').value.trim();
+                    if (awbno.toUpperCase().startsWith('INT41')) {
+                        e.preventDefault();
+                        window.location.href = 'intl-panel/tracking?awb=' + encodeURIComponent(awbno.toUpperCase());
+                    }
+                });
+                </script>
             </div>
         </div>
     </div>
