@@ -100,6 +100,14 @@ class Shipment_model extends CI_Model {
         return $this->db->get_where('shipment_items', array('shipment_id' => $shipment_id))->result();
     }
 
+    public function get_shipment_charges($shipment_id) {
+        $this->db->select('shipment_charges.*, master_charge_types.charge_name');
+        $this->db->from('shipment_charges');
+        $this->db->join('master_charge_types', 'master_charge_types.id = shipment_charges.charge_type_id', 'left');
+        $this->db->where('shipment_id', $shipment_id);
+        return $this->db->get()->result();
+    }
+
     public function get_documents($shipment_id) {
         return $this->db->get_where('shipment_documents', array('shipment_id' => $shipment_id))->result();
     }
@@ -201,6 +209,18 @@ class Shipment_model extends CI_Model {
                 'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
+        }
+
+        // 5.5 Insert dynamic charges
+        if (isset($data['charges']) && is_array($data['charges'])) {
+            foreach ($data['charges'] as $charge) {
+                $charge_data = array(
+                    'shipment_id' => $shipment_id,
+                    'charge_type_id' => $charge['charge_type_id'],
+                    'amount' => $charge['amount']
+                );
+                $this->db->insert('shipment_charges', $charge_data);
+            }
         }
 
         // 6. Create initial tracking status
@@ -459,6 +479,20 @@ class Shipment_model extends CI_Model {
                 'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
+        }
+
+        // 5.5 Delete and re-insert dynamic charges
+        $this->db->where('shipment_id', $shipment_id);
+        $this->db->delete('shipment_charges');
+        if (isset($data['charges']) && is_array($data['charges'])) {
+            foreach ($data['charges'] as $charge) {
+                $charge_data = array(
+                    'shipment_id' => $shipment_id,
+                    'charge_type_id' => $charge['charge_type_id'],
+                    'amount' => $charge['amount']
+                );
+                $this->db->insert('shipment_charges', $charge_data);
+            }
         }
 
         // 6. Update invoice if exists

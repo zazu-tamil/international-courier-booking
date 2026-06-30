@@ -213,11 +213,31 @@
         <?php if($invoice): ?>
           <table class="table table-condensed">
             <tr><th>Invoice No:</th><td><code><?php echo $invoice->invoice_number; ?></code></td></tr>
-            <tr><th>Base Amount:</th><td>₹<?php echo number_format($invoice->total_amount, 2); ?></td></tr>
-            <tr><th>GST Tax (18%):</th><td>₹<?php echo number_format($invoice->tax_amount, 2); ?></td></tr>
-            <tr style="font-size: 15px; font-weight: bold;">
-              <th>Final Total:</th><td>₹<?php echo number_format($invoice->final_amount, 2); ?></td>
-            </tr>
+            <?php if(!empty($charges)): ?>
+              <?php foreach($charges as $charge): 
+                $charge_name = 'Unknown Charge';
+                foreach($charge_types as $ct) {
+                  if ($ct->id == $charge->charge_type_id) {
+                    $charge_name = $ct->charge_name;
+                    break;
+                  }
+                }
+              ?>
+              <tr>
+                <th><?php echo htmlspecialchars($charge_name); ?>:</th>
+                <td>₹<?php echo number_format($charge->amount, 2); ?></td>
+              </tr>
+              <?php endforeach; ?>
+              <tr style="font-size: 15px; font-weight: bold;">
+                <th>Final Total:</th><td>₹<?php echo number_format($shipment->estimated_charges, 2); ?></td>
+              </tr>
+            <?php else: ?>
+              <tr><th>Base Amount:</th><td>₹<?php echo number_format($invoice->total_amount, 2); ?></td></tr>
+              <tr><th>GST Tax (18%):</th><td>₹<?php echo number_format($invoice->tax_amount, 2); ?></td></tr>
+              <tr style="font-size: 15px; font-weight: bold;">
+                <th>Final Total:</th><td>₹<?php echo number_format($invoice->final_amount, 2); ?></td>
+              </tr>
+            <?php endif; ?>
             <tr>
               <th>Status:</th>
               <td>

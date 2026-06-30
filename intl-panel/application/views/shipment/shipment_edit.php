@@ -319,7 +319,7 @@
                   <div class="panel panel-info" style="border-radius: 8px;">
                     <div class="panel-heading" style="font-weight: bold;"><i class="fa fa-calculator"></i> Shipping cost calculator</div>
                     <div class="panel-body text-center" style="padding: 20px;">
-                      <button type="button" class="btn btn-info btn-block btn-lg" id="btn-calc-charges"><i class="fa fa-refresh"></i> Look up rates</button>
+                      <button type="button" class="btn btn-info btn-block btn-lg" id="btn-calc-charges" disabled><i class="fa fa-refresh"></i> Look up rates</button>
                       
                       <div id="cost_summary_box" style="display: none; margin-top: 20px; text-align: left;">
                         <table class="table table-condensed">
@@ -334,12 +334,61 @@
                       </div>
                       
                       <div class="form-group text-left" style="margin-top: 20px;">
-                        <label>Confirm / Enter Billing Charges (₹) <span class="text-danger">*</span></label>
+                        <label>Billing Charge Breakup</label>
+                        <table class="table table-bordered table-condensed" id="chargesTable">
+                          <thead>
+                            <tr>
+                              <th>Charge Type</th>
+                              <th>Amount (₹)</th>
+                              <th style="width: 50px;"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <?php if(!empty($charges)): ?>
+                              <?php foreach($charges as $charge): ?>
+                              <tr>
+                                <td>
+                                  <select name="charge_type_id[]" class="form-control charge-type">
+                                    <option value="">Select Charge</option>
+                                    <?php foreach($charge_types as $ct): ?>
+                                    <option value="<?php echo $ct->id; ?>" <?php echo ($charge->charge_type_id == $ct->id) ? 'selected' : ''; ?>><?php echo $ct->charge_name; ?></option>
+                                    <?php endforeach; ?>
+                                  </select>
+                                </td>
+                                <td><input type="number" step="0.01" name="charge_amount[]" class="form-control charge-amount" oninput="calculateTotalCharges()" value="<?php echo $charge->amount; ?>" placeholder="0.00"></td>
+                                <td><button type="button" class="btn btn-sm btn-danger btn-remove-charge"><i class="fa fa-times"></i></button></td>
+                              </tr>
+                              <?php endforeach; ?>
+                            <?php else: ?>
+                              <tr>
+                                <td>
+                                  <select name="charge_type_id[]" class="form-control charge-type">
+                                    <option value="">Select Charge</option>
+                                    <?php foreach($charge_types as $ct): ?>
+                                    <option value="<?php echo $ct->id; ?>"><?php echo $ct->charge_name; ?></option>
+                                    <?php endforeach; ?>
+                                  </select>
+                                </td>
+                                <td><input type="number" step="0.01" name="charge_amount[]" class="form-control charge-amount" oninput="calculateTotalCharges()" placeholder="0.00"></td>
+                                <td><button type="button" class="btn btn-sm btn-danger btn-remove-charge"><i class="fa fa-times"></i></button></td>
+                              </tr>
+                            <?php endif; ?>
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colspan="3"><button type="button" class="btn btn-sm btn-default" id="btnAddCharge"><i class="fa fa-plus"></i> Add Charge</button></td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      <div class="form-group text-left" style="margin-top: 10px;">
+                        <label>Total Billing Charges (inclusive of GST) (₹) <span class="text-danger">*</span></label>
                         <div class="input-group">
                           <span class="input-group-addon" style="font-weight: bold; background: #eee;">₹</span>
-                          <input type="number" step="0.01" min="0.01" name="estimated_charges_val" id="estimated_charges_val" class="form-control input-lg" style="font-weight: bold; color: #0073b7;" value="<?php echo $shipment->estimated_charges; ?>" placeholder="0.00" required>
+                          <input type="number" step="0.01" min="0.01" name="estimated_charges_val" id="estimated_charges_val" class="form-control input-lg" style="font-weight: bold; color: #0073b7;" value="<?php echo $shipment->estimated_charges; ?>" placeholder="0.00" required readonly>
                         </div>
-                        <p class="help-block" style="font-size: 11px;">You can look up rates using the button above or type the billing amount manually.</p>
+                        <p class="help-block" style="font-size: 11px;">Calculated automatically from breakup charges.</p>
                       </div>
                     </div>
                   </div>
@@ -722,10 +771,43 @@
       form.submit();
     });
 
+    // --- Dynamic Charges Script ---
+    $('#btnAddCharge').click(function() {
+      var newRow = `<tr>
+        <td>
+          <select name="charge_type_id[]" class="form-control charge-type">
+            <option value="">Select Charge</option>
+            <?php foreach($charge_types as $ct): ?>
+            <option value="<?php echo $ct->id; ?>"><?php echo $ct->charge_name; ?></option>
+            <?php endforeach; ?>
+          </select>
+        </td>
+        <td><input type="number" step="0.01" name="charge_amount[]" class="form-control charge-amount" oninput="calculateTotalCharges()" placeholder="0.00"></td>
+        <td><button type="button" class="btn btn-sm btn-danger btn-remove-charge"><i class="fa fa-times"></i></button></td>
+      </tr>`;
+      $('#chargesTable tbody').append(newRow);
+    });
+
+    $(document).on('click', '.btn-remove-charge', function() {
+      $(this).closest('tr').remove();
+      calculateTotalCharges();
+    });
+
+    window.calculateTotalCharges = function() {
+      var total = 0;
+      $('.charge-amount').each(function() {
+        var val = parseFloat($(this).val());
+        if (!isNaN(val)) {
+          total += val;
+        }
+      });
+      $('#estimated_charges_val').val(total.toFixed(2));
+    };
+
     // Initialize/trigger recalculations on load
     sumWeights();
     sumInvoiceValues();
-    $('#btn-calc-charges').trigger('click');
+    // $('#btn-calc-charges').trigger('click');
 
   });
 </script>

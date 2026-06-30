@@ -8,6 +8,13 @@ class Master_model extends CI_Model {
         $this->load->model('Audit_model');
     }
 
+    // --- CHARGE TYPES ---
+    public function get_active_charge_types() {
+        $this->db->where('status', 'Active');
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get('master_charge_types')->result();
+    }
+
     // --- BRANCHES ---
     public function get_branches($id = NULL) {
         $this->db->select('*');

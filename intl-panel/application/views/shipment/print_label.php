@@ -81,7 +81,7 @@
 <?php foreach($boxes as $box): ?>
   <div class="label-container" style="page-break-after: always; margin-bottom: 20px;">
     <div class="label-header">
-      <span class="logo-text">CSYN INTERNATIONAL</span>
+      <span class="logo-text"><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></span>
       <span class="partner-name"><?php echo strtoupper($shipment->courier_partner_name); ?></span>
     </div>
     

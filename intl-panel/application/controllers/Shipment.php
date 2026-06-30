@@ -56,6 +56,9 @@ class Shipment extends CI_Controller {
         $this->db->from('invoices');
         $this->db->where('shipment_id', $id);
         $data['invoice'] = $this->db->get()->row();
+        
+        $data['charges'] = $this->Shipment_model->get_shipment_charges($id);
+        $data['charge_types'] = $this->Master_model->get_active_charge_types();
 
         // Fetch dynamic movement stages for dropdown
         $data['movement_stages'] = $this->Master_model->get_movement_stages();
@@ -167,6 +170,7 @@ class Shipment extends CI_Controller {
             }
 
             $data['terms'] = $this->Master_model->get_active_terms();
+            $data['charge_types'] = $this->Master_model->get_active_charge_types();
             $data['view_path'] = 'shipment/shipment_book';
             $this->load->view('templates/dashboard_layout', $data);
         } else {
@@ -290,6 +294,19 @@ class Shipment extends CI_Controller {
                 );
             }
 
+            // Populate dynamic charges
+            $shipment_data['charges'] = array();
+            if (isset($post['charge_type_id']) && is_array($post['charge_type_id'])) {
+                for ($i = 0; $i < count($post['charge_type_id']); $i++) {
+                    if (!empty($post['charge_type_id'][$i]) && isset($post['charge_amount'][$i]) && $post['charge_amount'][$i] !== '') {
+                        $shipment_data['charges'][] = array(
+                            'charge_type_id' => $post['charge_type_id'][$i],
+                            'amount' => $post['charge_amount'][$i]
+                        );
+                    }
+                }
+            }
+
             $shipment_id = $this->Shipment_model->book_shipment($shipment_data);
 
             if ($shipment_id === 'DUPLICATE_AWB') {
@@ -357,6 +374,8 @@ class Shipment extends CI_Controller {
             $data['partners'] = $this->Master_model->get_courier_partners();
             $data['service_types'] = $this->Master_model->get_service_types();
             $data['customers'] = $this->Customer_model->get_customers();
+            $data['charges'] = $this->Shipment_model->get_shipment_charges($id);
+            $data['charge_types'] = $this->Master_model->get_active_charge_types();
             $data['view_path'] = 'shipment/shipment_edit';
             $this->load->view('templates/dashboard_layout', $data);
         } else {
@@ -432,6 +451,19 @@ class Shipment extends CI_Controller {
                         'country_of_origin_id' => $post['item_origin'][$i],
                         'box_no' => isset($post['item_box_no'][$i]) ? $post['item_box_no'][$i] : 1
                     );
+                }
+            }
+
+            // Populate dynamic charges
+            $shipment_data['charges'] = array();
+            if (isset($post['charge_type_id']) && is_array($post['charge_type_id'])) {
+                for ($i = 0; $i < count($post['charge_type_id']); $i++) {
+                    if (!empty($post['charge_type_id'][$i]) && isset($post['charge_amount'][$i]) && $post['charge_amount'][$i] !== '') {
+                        $shipment_data['charges'][] = array(
+                            'charge_type_id' => $post['charge_type_id'][$i],
+                            'amount' => $post['charge_amount'][$i]
+                        );
+                    }
                 }
             }
 
@@ -557,6 +589,9 @@ class Shipment extends CI_Controller {
         $this->db->from('invoices');
         $this->db->where('shipment_id', $id);
         $data['invoice'] = $this->db->get()->row();
+        
+        $data['charges'] = $this->Shipment_model->get_shipment_charges($id);
+        $data['charge_types'] = $this->Master_model->get_active_charge_types();
 
         $this->load->view('shipment/print_invoice', $data);
     }

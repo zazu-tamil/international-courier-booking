@@ -172,11 +172,26 @@
   </table>
 
   <table class="totals-table">
-    <!-- <tr>
-      <td>Items Value:</td>
-      <td style="text-align: right;">₹<?php echo number_format($shipment->total_declared_value, 2); ?></td>
-    </tr> -->
-    <?php if($invoice): ?>
+    <?php if(!empty($charges)): ?>
+      <?php foreach($charges as $charge): 
+        $charge_name = 'Unknown Charge';
+        foreach($charge_types as $ct) {
+          if ($ct->id == $charge->charge_type_id) {
+            $charge_name = $ct->charge_name;
+            break;
+          }
+        }
+      ?>
+      <tr>
+        <td><?php echo htmlspecialchars($charge_name); ?>:</td>
+        <td style="text-align: right;">₹<?php echo number_format($charge->amount, 2); ?></td>
+      </tr>
+      <?php endforeach; ?>
+      <tr style="font-weight: bold; font-size: 15px; border-top: 2px solid #000;">
+        <td>Total Billing Charges:</td>
+        <td style="text-align: right;">₹<?php echo number_format($shipment->estimated_charges, 2); ?></td>
+      </tr>
+    <?php elseif($invoice): ?>
       <tr>
         <td>Shipping Charges:</td>
         <td style="text-align: right;">₹<?php echo number_format($invoice->total_amount, 2); ?></td>
