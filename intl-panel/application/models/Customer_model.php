@@ -270,7 +270,10 @@ class Customer_model extends CI_Model {
         $this->db->where('shipment_master.id', $shipment_id);
         $shipment = $this->db->get()->row();
 
-        if (!$shipment) return FALSE;
+        if (!$shipment) {
+            $this->db->trans_complete();
+            return FALSE;
+        }
 
         // Generate Invoice Number
         $invoice_no = 'INV-' . strtoupper(bin2hex(random_bytes(4)));

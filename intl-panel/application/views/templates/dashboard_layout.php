@@ -107,7 +107,7 @@
             <?php endif; ?>
 
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
-            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'app-settings', 'notification-logs', 'roles', 'masters')) ? 'active menu-open' : ''; ?>">
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
                 <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
               </a>
@@ -122,7 +122,6 @@
                 <li class="<?php echo ($this->uri->segment(1) == 'movement-stages') ? 'active' : ''; ?>"><a href="<?php echo site_url('movement-stages'); ?>"><i class="fa fa-circle-o"></i> Movement Status Stages</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'service-types') ? 'active' : ''; ?>"><a href="<?php echo site_url('service-types'); ?>"><i class="fa fa-circle-o"></i> Service Types</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'document-types') ? 'active' : ''; ?>"><a href="<?php echo site_url('document-types'); ?>"><i class="fa fa-circle-o"></i> Document Types</a></li>
-                <li class="<?php echo ($this->uri->segment(2) == 'additional_charges') ? 'active' : ''; ?>"><a href="<?php echo site_url('masters/additional_charges'); ?>"><i class="fa fa-circle-o"></i> Additional Charges</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'restricted-items') ? 'active' : ''; ?>"><a href="<?php echo site_url('restricted-items'); ?>"><i class="fa fa-circle-o"></i> Restricted Items Warns</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'app-settings') ? 'active' : ''; ?>"><a href="<?php echo site_url('app-settings'); ?>"><i class="fa fa-circle-o"></i> App Settings</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'notification-logs') ? 'active' : ''; ?>"><a href="<?php echo site_url('notification-logs'); ?>"><i class="fa fa-circle-o"></i> Notification Logs</a></li>

@@ -293,62 +293,12 @@ class Master_model extends CI_Model {
         return FALSE;
     }
 
-    // --- TERMS AND CONDITIONS ---
-    public function get_terms_conditions($id = NULL) {
+    // --- TERMS & CONDITIONS ---
+    public function get_terms($id = NULL) {
         if ($id) {
             return $this->db->get_where('terms_conditions_master', array('id' => $id))->row();
         }
-        $this->db->order_by('id', 'DESC');
         return $this->db->get('terms_conditions_master')->result();
-    }
-
-    public function insert_terms_conditions($data) {
-        $result = $this->db->insert('terms_conditions_master', $data);
-        $this->Audit_model->log_activity('Create Terms and Conditions', 'Version: ' . $data['version_number']);
-        return $result;
-    }
-
-    public function update_terms_conditions($id, $data) {
-        $this->db->where('id', $id);
-        $result = $this->db->update('terms_conditions_master', $data);
-        $this->Audit_model->log_activity('Update Terms and Conditions', 'Terms ID: ' . $id);
-        return $result;
-    }
-
-    public function delete_terms_conditions($id) {
-        $this->db->where('id', $id);
-        $result = $this->db->delete('terms_conditions_master');
-        $this->Audit_model->log_activity('Delete Terms and Conditions', 'Terms ID: ' . $id);
-        return $result;
-    }
-
-    // --- ADDITIONAL CHARGE TYPES ---
-    public function get_additional_charge_types($id = NULL) {
-        if ($id) {
-            return $this->db->get_where('additional_charge_types', array('id' => $id))->row();
-        }
-        $this->db->order_by('charge_name', 'ASC');
-        return $this->db->get('additional_charge_types')->result();
-    }
-
-    public function insert_additional_charge_type($data) {
-        $result = $this->db->insert('additional_charge_types', $data);
-        $this->Audit_model->log_activity('Create Additional Charge Type', 'Charge Name: ' . $data['charge_name']);
-        return $result;
-    }
-
-    public function update_additional_charge_type($id, $data) {
-        $this->db->where('id', $id);
-        $result = $this->db->update('additional_charge_types', $data);
-        $this->Audit_model->log_activity('Update Additional Charge Type', 'Charge ID: ' . $id);
-        return $result;
-    }
-
-    public function delete_additional_charge_type($id) {
-        $this->db->where('id', $id);
-        $result = $this->db->delete('additional_charge_types');
-        $this->Audit_model->log_activity('Delete Additional Charge Type', 'Charge ID: ' . $id);
-        return $result;
     }
 
     public function get_active_terms() {

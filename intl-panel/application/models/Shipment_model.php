@@ -24,8 +24,8 @@ class Shipment_model extends CI_Model {
 
         if ($query->num_rows() > 0) {
             $last_awb = $query->row()->awb_number;
-            $parts = explode('-', $last_awb);
-            $seq = intval(end($parts)) + 1;
+            $seq_str = str_replace($prefix, '', $last_awb);
+            $seq = intval($seq_str) + 1;
         } else {
             $seq = 1;
         }
@@ -102,14 +102,6 @@ class Shipment_model extends CI_Model {
 
     public function get_documents($shipment_id) {
         return $this->db->get_where('shipment_documents', array('shipment_id' => $shipment_id))->result();
-    }
-
-    public function get_additional_charges($shipment_id) {
-        $this->db->select('shipment_additional_charges.*, additional_charge_types.charge_name');
-        $this->db->from('shipment_additional_charges');
-        $this->db->join('additional_charge_types', 'additional_charge_types.id = shipment_additional_charges.charge_type_id');
-        $this->db->where('shipment_additional_charges.shipment_id', $shipment_id);
-        return $this->db->get()->result();
     }
 
     public function get_tracking_timeline($shipment_id) {
@@ -211,20 +203,6 @@ class Shipment_model extends CI_Model {
             $this->db->insert('shipment_items', $item_data);
         }
 
-        // 5.5 Insert additional charges
-        if (isset($data['additional_charges']) && !empty($data['additional_charges'])) {
-            foreach ($data['additional_charges'] as $charge) {
-                if (!empty($charge['charge_type_id']) && $charge['charge_amount'] > 0) {
-                    $charge_data = array(
-                        'shipment_id' => $shipment_id,
-                        'charge_type_id' => $charge['charge_type_id'],
-                        'charge_amount' => $charge['charge_amount']
-                    );
-                    $this->db->insert('shipment_additional_charges', $charge_data);
-                }
-            }
-        }
-
         // 6. Create initial tracking status
         $this->add_tracking_stage($shipment_id, 'Booking Created', 'Shipment booking created in system');
         $this->add_tracking_stage($shipment_id, 'Verification Pending', 'Customer verification checklist is required before transit release');
@@ -252,6 +230,8 @@ class Shipment_model extends CI_Model {
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
+            $error = $this->db->error();
+            error_log("DB Booking Error: " . print_r($error, true));
             return FALSE;
         }
 
@@ -479,22 +459,6 @@ class Shipment_model extends CI_Model {
                 'box_no' => $item['box_no']
             );
             $this->db->insert('shipment_items', $item_data);
-        }
-
-        // 5.5 Delete and re-insert additional charges
-        $this->db->where('shipment_id', $shipment_id);
-        $this->db->delete('shipment_additional_charges');
-        if (isset($data['additional_charges']) && !empty($data['additional_charges'])) {
-            foreach ($data['additional_charges'] as $charge) {
-                if (!empty($charge['charge_type_id']) && $charge['charge_amount'] > 0) {
-                    $charge_data = array(
-                        'shipment_id' => $shipment_id,
-                        'charge_type_id' => $charge['charge_type_id'],
-                        'charge_amount' => $charge['charge_amount']
-                    );
-                    $this->db->insert('shipment_additional_charges', $charge_data);
-                }
-            }
         }
 
         // 6. Update invoice if exists

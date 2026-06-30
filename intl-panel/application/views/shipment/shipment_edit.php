@@ -194,7 +194,7 @@
                   <label>Courier Partner <span class="text-danger">*</span></label>
                   <select name="courier_partner_id" class="form-control" required>
                     <option value="">Select partner</option>
-                    <?php foreach($courier_partners as $p): ?>
+                    <?php foreach($partners as $p): ?>
                       <option value="<?php echo $p->id; ?>" <?php echo ($p->id == $shipment->courier_partner_id) ? 'selected' : ''; ?>><?php echo $p->partner_name; ?></option>
                     <?php endforeach; ?>
                   </select>
@@ -345,68 +345,7 @@
                   </div>
                 </div>
               </div>
-              <div class="row" style="margin-top: 25px;">
-                <div class="col-md-12">
-                  <div class="panel panel-warning" style="border-radius: 8px;">
-                    <div class="panel-heading" style="font-weight: bold;"><i class="fa fa-plus-circle"></i> Additional Charges</div>
-                    <div class="panel-body">
-                      <table class="table table-bordered table-condensed" id="additionalChargesTable">
-                        <thead>
-                          <tr>
-                            <th>Charge Type</th>
-                            <th style="width: 250px;">Amount (₹)</th>
-                            <th style="width: 50px;">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <?php 
-                            $total_addtl = 0;
-                            if(!empty($additional_charges)): 
-                          ?>
-                            <?php foreach($additional_charges as $idx => $charge): 
-                              $total_addtl += $charge->charge_amount;
-                            ?>
-                              <tr class="charge-row">
-                                <td>
-                                  <select name="charge_type_id[]" class="form-control">
-                                    <option value="">Select Charge Type</option>
-                                    <?php foreach($additional_charge_types as $act): ?>
-                                      <?php if($act->status == 'Active' || $act->id == $charge->charge_type_id): ?>
-                                        <option value="<?php echo $act->id; ?>" <?php echo ($act->id == $charge->charge_type_id) ? 'selected' : ''; ?>><?php echo $act->charge_name; ?></option>
-                                      <?php endif; ?>
-                                    <?php endforeach; ?>
-                                  </select>
-                                </td>
-                                <td><input type="number" step="0.01" min="0" name="charge_amount[]" class="form-control charge-amt" value="<?php echo $charge->charge_amount; ?>" placeholder="0.00"></td>
-                                <td><button type="button" class="btn btn-danger btn-sm delete-charge-btn" <?php echo ($idx == 0 && count($additional_charges) == 1) ? 'disabled' : ''; ?>><i class="fa fa-trash"></i></button></td>
-                              </tr>
-                            <?php endforeach; ?>
-                          <?php else: ?>
-                            <tr class="charge-row">
-                              <td>
-                                <select name="charge_type_id[]" class="form-control">
-                                  <option value="">Select Charge Type</option>
-                                  <?php foreach($additional_charge_types as $act): ?>
-                                    <?php if($act->status == 'Active'): ?>
-                                      <option value="<?php echo $act->id; ?>"><?php echo $act->charge_name; ?></option>
-                                    <?php endif; ?>
-                                  <?php endforeach; ?>
-                                </select>
-                              </td>
-                              <td><input type="number" step="0.01" min="0" name="charge_amount[]" class="form-control charge-amt" placeholder="0.00"></td>
-                              <td><button type="button" class="btn btn-danger btn-sm delete-charge-btn" disabled><i class="fa fa-trash"></i></button></td>
-                            </tr>
-                          <?php endif; ?>
-                        </tbody>
-                      </table>
-                      <button type="button" class="btn btn-success btn-sm" id="addChargeBtn"><i class="fa fa-plus"></i> Add Charge Row</button>
-                      <div class="text-right" style="margin-top: 10px;">
-                        <h5>Total Additional Charges: <strong id="total_additional_charges_text">₹<?php echo number_format($total_addtl, 2); ?></strong></h5>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
               <div style="margin-top: 20px; display: flex; justify-content: space-between;">
                 <button type="button" class="btn btn-default" onclick="switchTab('#tab-consignment')"><i class="fa fa-arrow-left"></i> Back</button>
                 <button type="button" class="btn btn-primary" onclick="switchTab('#tab-contents')">Next: Contents <i class="fa fa-arrow-right"></i></button>
@@ -682,35 +621,6 @@
       sumInvoiceValues();
     });
 
-    // ADDITIONAL CHARGES GRID JS
-    function sumAdditionalCharges() {
-      var total = 0;
-      $('.charge-row').each(function() {
-        var val = parseFloat($(this).find('.charge-amt').val()) || 0;
-        total += val;
-      });
-      $('#total_additional_charges_text').text('₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2}));
-      return total;
-    }
-
-    $(document).on('keyup change', '.charge-amt', function() {
-      sumAdditionalCharges();
-    });
-
-    $('#addChargeBtn').click(function() {
-      var newRow = $('.charge-row:first').clone();
-      newRow.find('input').val('');
-      newRow.find('select').prop('selectedIndex', 0);
-      newRow.find('.delete-charge-btn').prop('disabled', false);
-      $('#additionalChargesTable tbody').append(newRow);
-      sumAdditionalCharges();
-    });
-
-    $(document).on('click', '.delete-charge-btn', function() {
-      $(this).closest('.charge-row').remove();
-      sumAdditionalCharges();
-    });
-
     // LOOK UP ESTIMATED RATES VIA AJAX
     $('#btn-calc-charges').click(function() {
       var origin = $('#origin_country_id').val();
@@ -750,12 +660,9 @@
             $('#res_fuel').text('₹' + parseFloat(data.fuel_surcharge).toFixed(2));
             $('#res_handling').text('₹' + parseFloat(data.handling_charges).toFixed(2));
             $('#res_insurance').text('₹' + parseFloat(data.insurance_charges).toFixed(2));
+            $('#res_total').text('₹' + parseFloat(data.total_charges).toFixed(2));
             
-            var addtl = sumAdditionalCharges();
-            var final_total = parseFloat(data.total_charges) + addtl;
-            
-            $('#res_total').text('₹' + final_total.toFixed(2));
-            $('#estimated_charges_val').val(final_total.toFixed(2));
+            $('#estimated_charges_val').val(data.total_charges.toFixed(2));
             $('#cost_summary_box').slideDown();
           } else {
             if (typeof Swal !== 'undefined') {
