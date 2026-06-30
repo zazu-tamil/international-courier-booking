@@ -126,12 +126,18 @@
           </div>
           <div class="form-group">
             <label>Prepaid Payment Mode</label>
-            <select name="payment_mode" class="form-control">
+            <select name="payment_mode" id="payment_mode" class="form-control">
               <option value="UPI">UPI / QR Scan</option>
               <option value="Card">Credit / Debit Card</option>
               <option value="Bank Transfer">Direct Bank Wire</option>
               <option value="Cash">Cash Handover at Office</option>
             </select>
+          </div>
+
+          <div id="upi_qr_container" style="display: none; text-align: center; margin: 15px 0; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; background: #f9f9f9;">
+            <p style="font-weight: bold; margin-bottom: 10px;">Scan to Pay via UPI</p>
+            <img id="upi_qr_img" src="" alt="UPI QR Code" style="width: 150px; height: 150px; margin: 0 auto; display: block;">
+            <p style="font-size: 12px; margin-top: 10px; color: #555; margin-bottom: 0;">UPI ID: <strong><?php echo isset($settings['company_upi_id']) ? htmlspecialchars($settings['company_upi_id']) : 'Not Configured'; ?></strong></p>
           </div>
           <div class="form-group">
             <label>Transaction ID / Reference Number</label>
@@ -152,3 +158,41 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var amountInput = document.querySelector('input[name="amount"]');
+    var paymentModeSelect = document.getElementById('payment_mode');
+    var qrContainer = document.getElementById('upi_qr_container');
+    var qrImg = document.getElementById('upi_qr_img');
+    
+    var upiId = "<?php echo isset($settings['company_upi_id']) ? htmlspecialchars($settings['company_upi_id']) : ''; ?>";
+    var companyName = "<?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate'; ?>";
+    
+    function updateQRCode() {
+        var mode = paymentModeSelect.value;
+        var amount = parseFloat(amountInput.value);
+        
+        if (mode === 'UPI' && upiId && !isNaN(amount) && amount > 0) {
+            qrContainer.style.display = 'block';
+            
+            // Generate UPI intent string
+            var upiString = "upi://pay?pa=" + encodeURIComponent(upiId) + 
+                            "&pn=" + encodeURIComponent(companyName) + 
+                            "&am=" + amount.toFixed(2) + 
+                            "&cu=INR";
+                            
+            // Generate QR Code via qrserver API
+            qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(upiString);
+        } else {
+            qrContainer.style.display = 'none';
+        }
+    }
+    
+    amountInput.addEventListener('input', updateQRCode);
+    paymentModeSelect.addEventListener('change', updateQRCode);
+    
+    // Initial check
+    updateQRCode();
+});
+</script>

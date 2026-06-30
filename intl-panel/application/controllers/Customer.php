@@ -165,6 +165,8 @@ class Customer extends CI_Controller {
         // Get pending requests
         $data['pending_requests'] = $this->Customer_model->get_wallet_requests('Pending', $customer_id);
 
+        $data['settings'] = $this->Master_model->get_app_settings();
+
         $data['page_title'] = 'Wallet Ledger Balance';
         $data['view_path'] = 'customer/wallet_dashboard';
         $this->load->view('templates/dashboard_layout', $data);

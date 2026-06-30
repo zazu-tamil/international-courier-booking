@@ -69,6 +69,13 @@
                   <input type="text" name="company_mobile" class="form-control" value="<?php echo htmlspecialchars(isset($settings['company_mobile']) ? $settings['company_mobile'] : ''); ?>">
                 </div>
               </div>
+
+              <div class="form-group">
+                <label class="col-sm-2 control-label">UPI ID</label>
+                <div class="col-sm-8">
+                  <input type="text" name="company_upi_id" class="form-control" placeholder="e.g. yourname@bank" value="<?php echo htmlspecialchars(isset($settings['company_upi_id']) ? $settings['company_upi_id'] : ''); ?>">
+                </div>
+              </div>
             </div>
 
             <!-- TAB 2: SMTP EMAIL SERVER -->
