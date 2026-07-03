@@ -129,7 +129,16 @@ class Customer_model extends CI_Model {
     // --- WALLET & CREDIT SYSTEM ---
     public function get_wallet_balance($customer_id) {
         $wallet = $this->db->get_where('customer_wallet', array('customer_id' => $customer_id))->row();
-        return $wallet ? $wallet->balance : 0.00;
+        $total_added = $wallet ? (float)$wallet->balance : 0.00;
+
+        $this->db->select_sum('estimated_charges');
+        $this->db->where('customer_id', $customer_id);
+        $this->db->where('status !=', 'Cancelled');
+        $this->db->where('deleted_at IS NULL');
+        $shipments = $this->db->get('shipment_master')->row();
+        $total_charges = $shipments ? (float)$shipments->estimated_charges : 0.00;
+
+        return $total_added - $total_charges;
     }
 
     public function add_wallet_funds($customer_id, $amount, $description = 'Added funds via portal', $ref_id = NULL) {
