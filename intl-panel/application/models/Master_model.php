@@ -9,10 +9,32 @@ class Master_model extends CI_Model {
     }
 
     // --- CHARGE TYPES ---
+    public function get_charge_types($id = NULL) {
+        if ($id) {
+            return $this->db->get_where('master_charge_types', array('id' => $id))->row();
+        }
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get('master_charge_types')->result();
+    }
+
     public function get_active_charge_types() {
         $this->db->where('status', 'Active');
         $this->db->order_by('id', 'ASC');
         return $this->db->get('master_charge_types')->result();
+    }
+
+    public function add_charge_type($data) {
+        return $this->db->insert('master_charge_types', $data);
+    }
+
+    public function update_charge_type($id, $data) {
+        $this->db->where('id', $id);
+        return $this->db->update('master_charge_types', $data);
+    }
+
+    public function delete_charge_type($id) {
+        $this->db->where('id', $id);
+        return $this->db->delete('master_charge_types');
     }
 
     // --- BRANCHES ---

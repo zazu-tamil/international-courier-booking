@@ -9,6 +9,8 @@ class Tracking extends CI_Controller {
     }
 
     public function index() {
+        $this->load->model('Master_model');
+        $data['settings'] = $this->Master_model->get_app_settings();
         $data['page_title'] = 'Public AWB Tracking Gateway';
         $data['awb'] = $this->input->get('awb');
         $data['shipment'] = NULL;

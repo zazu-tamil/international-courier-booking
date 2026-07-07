@@ -178,7 +178,7 @@ class Customer_model extends CI_Model {
         return $this->db->insert('wallet_load_requests', $data);
     }
     
-    public function get_wallet_requests($status = NULL, $customer_id = NULL) {
+    public function get_wallet_requests($status = NULL, $customer_id = NULL, $from_date = NULL, $to_date = NULL) {
         $this->db->select('wallet_load_requests.*, customers.name as customer_name, customers.company_name');
         $this->db->from('wallet_load_requests');
         $this->db->join('customers', 'customers.id = wallet_load_requests.customer_id');
@@ -187,6 +187,12 @@ class Customer_model extends CI_Model {
         }
         if ($customer_id) {
             $this->db->where('wallet_load_requests.customer_id', $customer_id);
+        }
+        if ($from_date) {
+            $this->db->where('DATE(wallet_load_requests.created_at) >=', $from_date);
+        }
+        if ($to_date) {
+            $this->db->where('DATE(wallet_load_requests.created_at) <=', $to_date);
         }
         $this->db->order_by('wallet_load_requests.id', 'DESC');
         return $this->db->get()->result();
@@ -203,6 +209,11 @@ class Customer_model extends CI_Model {
     public function update_wallet_request($id, $data) {
         $this->db->where('id', $id);
         return $this->db->update('wallet_load_requests', $data);
+    }
+
+    public function delete_wallet_request($id) {
+        $this->db->where('id', $id);
+        return $this->db->delete('wallet_load_requests');
     }
 
     public function charge_wallet($customer_id, $amount, $description, $ref_id = NULL) {

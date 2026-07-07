@@ -230,8 +230,59 @@ class Customer extends CI_Controller {
         
         $data['page_title'] = 'Wallet Load Requests';
         $data['requests'] = $this->Customer_model->get_wallet_requests();
+        $data['customers'] = $this->Customer_model->get_customers();
         $data['view_path'] = 'customer/wallet_requests_list';
         $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function save_wallet_request() {
+        if ($this->session->userdata('role_id') != 1 && $this->session->userdata('role_id') != 2) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('dashboard');
+        }
+
+        $id = $this->input->post('request_id');
+        $data = array(
+            'customer_id' => $this->input->post('customer_id'),
+            'amount' => $this->input->post('amount'),
+            'payment_mode' => $this->input->post('payment_mode'),
+            'transaction_id' => $this->input->post('transaction_id')
+        );
+
+        if ($id) {
+            // Edit
+            if ($this->Customer_model->update_wallet_request($id, $data)) {
+                $this->session->set_flashdata('success', 'Wallet request updated successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to update wallet request.');
+            }
+        } else {
+            // Add
+            $data['status'] = 'Pending';
+            $data['created_at'] = date('Y-m-d H:i:s');
+            if ($this->Customer_model->add_wallet_request($data)) {
+                $this->session->set_flashdata('success', 'Wallet request created successfully.');
+            } else {
+                $this->session->set_flashdata('error', 'Failed to create wallet request.');
+            }
+        }
+
+        redirect('customer/wallet-requests');
+    }
+
+    public function delete_wallet_request($id) {
+        if ($this->session->userdata('role_id') != 1 && $this->session->userdata('role_id') != 2) {
+            $this->session->set_flashdata('error', 'Unauthorized access.');
+            redirect('dashboard');
+        }
+
+        if ($this->Customer_model->delete_wallet_request($id)) {
+            $this->session->set_flashdata('success', 'Wallet request deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete wallet request.');
+        }
+
+        redirect('customer/wallet-requests');
     }
     
     public function approve_wallet_request($id) {

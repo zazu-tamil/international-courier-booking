@@ -79,7 +79,7 @@
         <nav class="navbar navbar-expand-lg bg-light navbar-light py-3 py-lg-0 px-lg-5">
 
             <a href="index.html" class="navbar-brand ml-lg-3" style="border: 0px solid red; width: 70%;">
-                <img src="img/logo.png" class="img-fluid img-responsive" alt="courier syndicate" width="40%" />
+                <img src="img/logo.png" class="img-fluid img-responsive" alt="courier syndicate" width="25%" />
             </a>
             <button type="button" class="navbar-toggler " data-toggle="collapse" data-target="#navbarCollapse">
                 <span class="navbar-toggler-icon"></span>
@@ -113,7 +113,7 @@
     <!-- Header Start -->
     <div class="jumbotron jumbotron-fluid mb-5">
         <div class="container text-center py-5">
-            <form method="post" action="tracking.php">
+            <form id="trackingFormIndex" method="post" action="tracking.php">
                 <h1 class="text-primary mb-4">It's Delivered</h1>
                 <h1 class="text-white display-3 mb-1">All India & International </h1>
                 <h4 class="text-white display-4 mb-4">Courier & Parcel Services </h4>
@@ -123,13 +123,22 @@
                         <input type="text" name="awbno" id="awbno" class="form-control border-light"
                             style="padding: 30px;" placeholder="Eg:41000001">
                         <div class="input-group-append">
-                            <button class="btn btn-primary px-3" name="btn_search" value="Tracking" type="submit"><i
-                                    class="fa fa-search"></i> Track</button>
+                            <button class="btn btn-primary px-3 btn_search" name="btn_search" value="Tracking"
+                                type="submit"><i class="fa fa-search"></i> Track</button>
                         </div>
 
                     </div>
                 </div>
             </form>
+            <script>
+                document.getElementById('trackingFormIndex').addEventListener('submit', function (e) {
+                    var awbno = document.getElementById('awbno').value.trim();
+                    if (awbno.toUpperCase().startsWith('INT41')) {
+                        e.preventDefault();
+                        window.location.href = 'intl-panel/tracking?awb=' + encodeURIComponent(awbno.toUpperCase());
+                    }
+                });
+            </script>
         </div>
     </div>
     <!-- Header End -->

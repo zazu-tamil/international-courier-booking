@@ -7,7 +7,7 @@
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/bootstrap/dist/css/bootstrap.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/font-awesome/css/font-awesome.min.css'); ?>">
-  <link rel="stylesheet" href="<?php echo base_url('asset/time-line.css'); ?>">
+  <link rel="stylesheet" href="<?php echo base_url('../css/timeline-cr.css'); ?>">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   
   <style>
@@ -63,8 +63,11 @@
 
 <div class="tracking-header">
   <div class="container">
-    <h1 style="font-weight: 700; margin: 0;"><i class="fa fa-paper-plane-o"></i> CourierSyndicate</h1>
-    <p style="color: rgba(255,255,255,0.7); font-size: 16px; margin-top: 10px;">Global Freight & Consignment Tracking Gateway</p>
+    <?php if(!empty($settings['company_logo'])): ?>
+        <a href="../../"><img src="<?php echo base_url('assets/img/' . $settings['company_logo']); ?>" alt="<?php echo htmlspecialchars($settings['company_name']); ?>" style="max-height: 80px; background: #fff; padding: 10px; border-radius: 8px;"></a>
+    <?php else: ?>
+        <h1 style="font-weight: 700; margin: 0;"><i class="fa fa-paper-plane-o"></i> <?php echo htmlspecialchars($settings['company_name'] ?? 'CourierSyndicate'); ?></h1>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -114,21 +117,23 @@
 
           <h4 style="font-weight: 700; margin-bottom: 20px;"><i class="fa fa-map-marker text-blue"></i> Movement History Timeline</h4>
           
-          <ul class="timeline">
-            <?php foreach($timeline as $t): ?>
-              <li>
-                <i class="fa fa-circle bg-blue"></i>
-                <div class="timeline-item">
-                  <span class="time"><i class="fa fa-clock-o"></i> <?php echo date('d M Y H:i', strtotime($t->date_time)); ?></span>
-                  <h3 class="timeline-header"><span class="label label-info"><?php echo $t->status; ?></span> at <strong><?php echo $t->location; ?></strong></h3>
-                  <div class="timeline-body"><?php echo $t->remarks; ?></div>
+          <div id="tracking">
+             <div class="tracking-list">
+                <?php foreach($timeline as $t): ?>
+                <div class="tracking-item" style="border-left: 4px dotted #3c8dbc;">
+                   <div class="tracking-icon status-intransit" style="display: flex; align-items: center; justify-content: center;">
+                       <i class="fa fa-map-marker" style="font-size: 1.2rem; color: #4cbb87;"></i> 
+                   </div>
+                   <div class="tracking-date"><?php echo date('M d, Y', strtotime($t->date_time)); ?><span><?php echo date('h:i A', strtotime($t->date_time)); ?></span></div>
+                   <div class="tracking-content">
+                     <strong><?php echo $t->status; ?></strong> <span><?php echo $t->location; ?></span>
+                        <br />
+                        <?php echo $t->remarks; ?>
+                   </div>
                 </div>
-              </li>
-            <?php endforeach; ?>
-            <li>
-              <i class="fa fa-clock-o bg-gray"></i>
-            </li>
-          </ul>
+                <?php endforeach; ?>
+             </div>
+          </div>
         </div>
       <?php endif; ?>
 

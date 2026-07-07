@@ -16,6 +16,56 @@ class Masters extends CI_Controller {
         $this->load->model('Master_model');
         $this->load->model('Audit_model');
     }
+    // --- CHARGE TYPES ---
+    public function charge_types() {
+        $data['page_title'] = 'Billing Charge Types';
+        $data['charge_types'] = $this->Master_model->get_charge_types();
+        $data['view_path'] = 'masters/charge_types_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function add_charge_type() {
+        $this->form_validation->set_rules('charge_name', 'Charge Name', 'required|is_unique[master_charge_types.charge_name]');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'charge_name' => $this->input->post('charge_name'),
+                'status' => $this->input->post('status')
+            );
+            $this->Master_model->add_charge_type($data);
+            $this->session->set_flashdata('success', 'Charge Type added successfully.');
+        }
+        redirect('charge-types');
+    }
+
+    public function edit_charge_type($id) {
+        $original = $this->Master_model->get_charge_types($id);
+        $is_unique = '';
+        if ($this->input->post('charge_name') != $original->charge_name) {
+            $is_unique = '|is_unique[master_charge_types.charge_name]';
+        }
+        $this->form_validation->set_rules('charge_name', 'Charge Name', 'required' . $is_unique);
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'charge_name' => $this->input->post('charge_name'),
+                'status' => $this->input->post('status')
+            );
+            $this->Master_model->update_charge_type($id, $data);
+            $this->session->set_flashdata('success', 'Charge Type updated successfully.');
+        }
+        redirect('charge-types');
+    }
+
+    public function delete_charge_type($id) {
+        $this->Master_model->delete_charge_type($id);
+        $this->session->set_flashdata('success', 'Charge Type deleted successfully.');
+        redirect('charge-types');
+    }
 
     // --- BRANCHES ---
     public function branches() {
