@@ -111,6 +111,9 @@
             </div>
             <div class="col-xs-6 text-right">
               <p><strong>Booking Date:</strong> <?php echo date('d M Y', strtotime($shipment->booking_date)); ?></p>
+              <?php if(!empty($shipment->expected_delivery_date)): ?>
+              <p><strong>Expected Delivery:</strong> <?php echo date('d M Y', strtotime($shipment->expected_delivery_date)); ?></p>
+              <?php endif; ?>
               <p><strong>Current Status:</strong> <span class="label label-info" style="font-size: 12px;"><?php echo $shipment->status; ?></span></p>
             </div>
           </div>

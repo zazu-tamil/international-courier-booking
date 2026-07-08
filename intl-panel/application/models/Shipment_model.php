@@ -291,6 +291,58 @@ class Shipment_model extends CI_Model {
         return $inserted;
     }
 
+    public function get_tracking_stage($id) {
+        return $this->db->get_where('shipment_tracking', array('id' => $id))->row();
+    }
+
+    public function update_tracking_stage($id, $status, $remarks, $date_time) {
+        $data = array(
+            'status' => $status,
+            'remarks' => $remarks,
+            'date_time' => $date_time
+        );
+        $this->db->where('id', $id);
+        $result = $this->db->update('shipment_tracking', $data);
+        
+        if ($result) {
+            $tracking = $this->get_tracking_stage($id);
+            if ($tracking) {
+                // Update main shipment status to match the latest tracking stage
+                $latest = $this->db->order_by('date_time', 'DESC')->order_by('id', 'DESC')->get_where('shipment_tracking', array('shipment_id' => $tracking->shipment_id))->row();
+                if ($latest) {
+                    $this->db->where('id', $tracking->shipment_id);
+                    $this->db->update('shipment_master', array('status' => $latest->status));
+                }
+                $this->Audit_model->log_activity('Tracking Edited', 'Tracking ID: ' . $id . ' Status: ' . $status);
+            }
+        }
+        return $result;
+    }
+
+    public function delete_tracking_stage($id) {
+        $tracking = $this->get_tracking_stage($id);
+        if (!$tracking) return false;
+        
+        $shipment_id = $tracking->shipment_id;
+        
+        $this->db->where('id', $id);
+        $result = $this->db->delete('shipment_tracking');
+        
+        if ($result) {
+            // Update main shipment status to match the latest tracking stage after deletion
+            $latest = $this->db->order_by('date_time', 'DESC')->order_by('id', 'DESC')->get_where('shipment_tracking', array('shipment_id' => $shipment_id))->row();
+            if ($latest) {
+                $this->db->where('id', $shipment_id);
+                $this->db->update('shipment_master', array('status' => $latest->status));
+            } else {
+                $this->db->where('id', $shipment_id);
+                $this->db->update('shipment_master', array('status' => 'Booking Created')); // Fallback
+            }
+            $this->Audit_model->log_activity('Tracking Deleted', 'Tracking ID: ' . $id);
+        }
+        return $result;
+    }
+
     public function submit_customer_signature($shipment_id, $customer_id, $image_data) {
         $ip_address = $this->input->ip_address();
         $this->load->library('user_agent');

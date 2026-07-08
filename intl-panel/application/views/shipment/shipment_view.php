@@ -121,7 +121,13 @@
             <li>
               <i class="fa fa-circle bg-blue"></i>
               <div class="timeline-item">
-                <span class="time"><i class="fa fa-clock-o"></i> <?php echo date('d M Y H:i', strtotime($t->date_time)); ?></span>
+                <span class="time" style="display:flex; align-items:center;">
+                  <i class="fa fa-clock-o" style="margin-right:5px;"></i> <?php echo date('d M Y H:i', strtotime($t->date_time)); ?>
+                  <?php if($this->session->userdata('role_id') == 1 || $this->session->userdata('role_id') == 2): ?>
+                    <a href="#" class="btn btn-xs btn-default" style="margin-left:10px;" onclick="editTrackingStage(<?php echo $t->id; ?>, '<?php echo addslashes($t->status); ?>', '<?php echo htmlspecialchars(addslashes($t->remarks), ENT_QUOTES); ?>', '<?php echo date('Y-m-d\TH:i', strtotime($t->date_time)); ?>')" data-toggle="modal" data-target="#editTrackingModal" title="Edit"><i class="fa fa-edit text-blue"></i></a>
+                    <a href="<?php echo site_url('shipments/delete-tracking-stage/'.$t->id.'/'.$shipment->id); ?>" class="btn btn-xs btn-default" style="margin-left:5px;" onclick="return confirm('Are you sure you want to delete this tracking stage?');" title="Delete"><i class="fa fa-trash text-danger"></i></a>
+                  <?php endif; ?>
+                </span>
                 <h3 class="timeline-header"><span class="label label-info"><?php echo $t->status; ?></span> at <strong><?php echo $t->location; ?></strong></h3>
                 <div class="timeline-body"><?php echo $t->remarks; ?></div>
                 <div class="timeline-footer" style="padding: 2px 10px; font-size:11px; color:#777;">Updated by: <?php echo $t->updater_name; ?></div>
@@ -229,13 +235,13 @@
               </tr>
               <?php endforeach; ?>
               <tr style="font-size: 15px; font-weight: bold;">
-                <th>Final Total:</th><td>₹<?php echo number_format($shipment->estimated_charges, 2); ?></td>
+                <th>Total (Inc GST 18%):</th><td>₹<?php echo number_format($shipment->estimated_charges, 2); ?></td>
               </tr>
             <?php else: ?>
               <tr><th>Base Amount:</th><td>₹<?php echo number_format($invoice->total_amount, 2); ?></td></tr>
               <tr><th>GST Tax (18%):</th><td>₹<?php echo number_format($invoice->tax_amount, 2); ?></td></tr>
               <tr style="font-size: 15px; font-weight: bold;">
-                <th>Final Total:</th><td>₹<?php echo number_format($invoice->final_amount, 2); ?></td>
+                <th>Total:</th><td>₹<?php echo number_format($invoice->final_amount, 2); ?></td>
               </tr>
             <?php endif; ?>
             <tr>
@@ -361,3 +367,74 @@
 
   </div>
 </div>
+
+<!-- Edit Tracking Modal -->
+<?php if($this->session->userdata('role_id') == 1 || $this->session->userdata('role_id') == 2): ?>
+<div class="modal fade" id="editTrackingModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <?php echo form_open('shipments/edit-tracking-stage'); ?>
+      <input type="hidden" name="tracking_id" id="edit_tracking_id">
+      <input type="hidden" name="shipment_id" value="<?php echo $shipment->id; ?>">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title">Edit Tracking Stage</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Movement Status Stage</label>
+            <select name="status" id="edit_tracking_status" class="form-control" required>
+              <option value="">Select Stage</option>
+              <?php if(isset($movement_stages)): ?>
+                <?php foreach($movement_stages as $stage): ?>
+                  <option value="<?php echo htmlspecialchars($stage->stage_name); ?>">
+                    <?php echo htmlspecialchars($stage->stage_name); ?>
+                  </option>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date and Time</label>
+            <input type="datetime-local" name="date_time" id="edit_tracking_datetime" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Remarks / Location Details</label>
+            <input type="text" name="remarks" id="edit_tracking_remarks" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    <?php echo form_close(); ?>
+  </div>
+</div>
+
+<script>
+function editTrackingStage(id, status, remarks, datetime) {
+    document.getElementById('edit_tracking_id').value = id;
+    
+    var statusSelect = document.getElementById('edit_tracking_status');
+    var found = false;
+    for(var i=0; i<statusSelect.options.length; i++) {
+        if(statusSelect.options[i].value == status) {
+            statusSelect.selectedIndex = i;
+            found = true;
+            break;
+        }
+    }
+    if(!found) {
+        var opt = document.createElement('option');
+        opt.value = status;
+        opt.innerHTML = status;
+        opt.selected = true;
+        statusSelect.appendChild(opt);
+    }
+    
+    document.getElementById('edit_tracking_remarks').value = remarks;
+    document.getElementById('edit_tracking_datetime').value = datetime;
+}
+</script>
+<?php endif; ?>

@@ -188,7 +188,7 @@
       </tr>
       <?php endforeach; ?>
       <tr style="font-weight: bold; font-size: 15px; border-top: 2px solid #000;">
-        <td>Total Billing Charges:</td>
+        <td>Total (Inc GST 18%):</td>
         <td style="text-align: right;">₹<?php echo number_format($shipment->estimated_charges, 2); ?></td>
       </tr>
     <?php elseif($invoice): ?>
@@ -201,7 +201,7 @@
         <td style="text-align: right;">₹<?php echo number_format($invoice->tax_amount, 2); ?></td>
       </tr>
       <tr style="font-weight: bold; font-size: 15px; border-top: 2px solid #000;">
-        <td>Final Amount:</td>
+        <td>Total (Inc GST 18%):</td>
         <td style="text-align: right;">₹<?php echo number_format($invoice->final_amount, 2); ?></td>
       </tr>
     <?php endif; ?>

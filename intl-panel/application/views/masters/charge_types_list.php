@@ -54,7 +54,7 @@
 <!-- Add Charge Type Modal -->
 <div class="modal fade" id="addChargeTypeModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
-    <form action="<?php echo site_url('charge-types/add'); ?>" method="POST">
+    <?php echo form_open('charge-types/add'); ?>
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -80,14 +80,14 @@
           <button type="submit" class="btn btn-primary">Save Charge Type</button>
         </div>
       </div>
-    </form>
+    <?php echo form_close(); ?>
   </div>
 </div>
 
 <!-- Edit Charge Type Modal -->
 <div class="modal fade" id="editChargeTypeModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
-    <form action="" method="POST" id="editChargeTypeForm">
+    <?php echo form_open('', array('id' => 'editChargeTypeForm')); ?>
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -113,7 +113,7 @@
           <button type="submit" class="btn btn-primary">Update Charge Type</button>
         </div>
       </div>
-    </form>
+    <?php echo form_close(); ?>
   </div>
 </div>
 

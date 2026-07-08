@@ -215,6 +215,7 @@ class Shipment extends CI_Controller {
             $shipment_data = array(
                 'awb_number' => isset($post['awb_type']) && $post['awb_type'] == 'manual' ? trim($post['awb_number']) : '',
                 'booking_date' => $post['booking_date'],
+                'expected_delivery_date' => !empty($post['expected_delivery_date']) ? $post['expected_delivery_date'] : NULL,
                 'service_type' => $post['service_type'],
                 'shipment_type' => $post['shipment_type'],
                 'origin_country_id' => $post['origin_country_id'],
@@ -384,6 +385,7 @@ class Shipment extends CI_Controller {
             // Structure data for model
             $shipment_data = array(
                 'booking_date' => $post['booking_date'],
+                'expected_delivery_date' => !empty($post['expected_delivery_date']) ? $post['expected_delivery_date'] : NULL,
                 'service_type' => $post['service_type'],
                 'shipment_type' => $post['shipment_type'],
                 'origin_country_id' => $post['origin_country_id'],
@@ -520,6 +522,42 @@ class Shipment extends CI_Controller {
             $this->session->set_flashdata('error', 'Failed to update tracking stage.');
         }
         redirect('shipments/view/' . $id);
+    }
+
+    public function edit_tracking_stage() {
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
+
+        $id = $this->input->post('tracking_id');
+        $shipment_id = $this->input->post('shipment_id');
+        $status = $this->input->post('status');
+        $remarks = $this->input->post('remarks');
+        $date_time = $this->input->post('date_time');
+        
+        $formatted_date_time = $date_time ? date('Y-m-d H:i:s', strtotime($date_time)) : date('Y-m-d H:i:s');
+
+        if ($this->Shipment_model->update_tracking_stage($id, $status, $remarks, $formatted_date_time)) {
+            $this->session->set_flashdata('success', 'Tracking stage updated successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to update tracking stage.');
+        }
+        redirect('shipments/view/' . $shipment_id);
+    }
+
+    public function delete_tracking_stage($id, $shipment_id) {
+        if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
+
+        if ($this->Shipment_model->delete_tracking_stage($id)) {
+            $this->session->set_flashdata('success', 'Tracking stage deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete tracking stage.');
+        }
+        redirect('shipments/view/' . $shipment_id);
     }
 
     // --- DOCUMENT ATTACHMENTS ---

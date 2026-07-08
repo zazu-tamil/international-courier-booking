@@ -182,20 +182,24 @@
               </div>
 
               <div class="row">
-                <div class="col-md-4 form-group">
+                <div class="col-md-3 form-group">
                   <label>AWB Generation <span class="text-danger">*</span></label>
                   <select name="awb_type" id="awb_type" class="form-control" onchange="toggleAWBType()">
                     <option value="auto">Auto Generated</option>
                     <option value="manual">Manual Entry</option>
                   </select>
                 </div>
-                <div class="col-md-4 form-group">
+                <div class="col-md-3 form-group">
                   <label>AWB Number <span class="text-danger" id="awb_req_star" style="display:none;">*</span></label>
                   <input type="text" name="awb_number" id="awb_number" class="form-control" placeholder="Auto Generated..." readonly style="background-color: #f7f9fa; font-weight: bold; color: #000;">
                 </div>
-                <div class="col-md-4 form-group">
+                <div class="col-md-3 form-group">
                   <label>Booking Date <span class="text-danger">*</span></label>
                   <input type="date" name="booking_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                </div>
+                <div class="col-md-3 form-group">
+                  <label>Expected Delivery Date</label>
+                  <input type="date" name="expected_delivery_date" class="form-control" value="">
                 </div>
               </div>
 
