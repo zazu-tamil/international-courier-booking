@@ -101,7 +101,7 @@
 <!-- Wallet Request Modal -->
 <div class="modal fade" id="walletRequestModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
-    <form action="<?php echo site_url('customer/save_wallet_request'); ?>" method="POST">
+    <?php echo form_open('customer/save_wallet_request'); ?>
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -141,7 +141,7 @@
           <button type="submit" class="btn btn-primary">Save Request</button>
         </div>
       </div>
-    </form>
+    <?php echo form_close(); ?>
   </div>
 </div>
 
