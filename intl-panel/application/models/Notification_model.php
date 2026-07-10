@@ -324,78 +324,44 @@ class Notification_model extends CI_Model {
      * Core PDF Builder Utility
      */
     public function generate_shipment_details_pdf($shipment_id, $is_verified = FALSE) {
-        $shipment = $this->Shipment_model->get_shipments($shipment_id);
-        if (!$shipment) return FALSE;
-
-        $boxes = $this->Shipment_model->get_boxes($shipment_id);
-        $items = $this->Shipment_model->get_items($shipment_id);
-        $terms = $this->Master_model->get_active_terms();
-
-        // Construct PDF structure data
-        $title = $is_verified ? "VERIFIED TRANSIT RELEASE RECEIPT" : "CONSIGNMENT SUMMARY REPORT";
+        $data['shipment'] = $this->Shipment_model->get_shipments($shipment_id);
+        if (!$data['shipment']) return FALSE;
         
-        $sections = array(
-            'consignment_info' => array(
-                "AWB Number: " . $shipment->awb_number,
-                "Booking Date: " . $shipment->booking_date,
-                "Service Type: " . $shipment->service_type,
-                "Courier Partner: " . $shipment->courier_partner_name,
-                "Chargeable Weight: " . $shipment->chargeable_weight . " kg",
-                "Total Value: INR " . number_format($shipment->total_declared_value, 2),
-                "Estimated Shipping Charges: INR " . number_format($shipment->estimated_charges, 2)
-            ),
-            'sender_info' => array(
-                "Name: " . $shipment->sender_name,
-                "Company: " . $shipment->sender_company,
-                "Mobile: " . $shipment->sender_mobile,
-                "Email: " . $shipment->sender_email,
-                "Address: " . $shipment->sender_address . ", " . $shipment->sender_city . ", " . $shipment->sender_state . " - " . $shipment->sender_zip
-            ),
-            'receiver_info' => array(
-                "Name: " . $shipment->receiver_name,
-                "Company: " . $shipment->receiver_company,
-                "Mobile: " . $shipment->receiver_mobile,
-                "Email: " . $shipment->receiver_email,
-                "Address: " . $shipment->receiver_address . ", " . $shipment->receiver_city . ", " . $shipment->receiver_state . " - " . $shipment->receiver_zip
-            ),
-            'items_declaration' => array(),
-            'terms_conditions' => array()
-        );
-
-        // Add items
-        foreach ($items as $index => $item) {
-            $sections['items_declaration'][] = ($index + 1) . ". Description: " . $item->item_description . " | HS: " . $item->hs_code . " | Qty: " . $item->quantity . " | Unit Value: INR " . number_format($item->unit_value, 2);
+        $data['boxes'] = $this->Shipment_model->get_boxes($shipment_id);
+        $data['items'] = $this->Shipment_model->get_items($shipment_id);
+        
+        // Fetch accepted terms and conditions or current active terms
+        $this->db->select('t.*');
+        $this->db->from('terms_acceptance_log l');
+        $this->db->join('terms_conditions_master t', 't.id = l.terms_version_id');
+        $this->db->where('l.shipment_id', $shipment_id);
+        $data['accepted_terms'] = $this->db->get()->row();
+        
+        if (!$data['accepted_terms']) {
+            $data['accepted_terms'] = $this->Master_model->get_active_terms();
         }
 
-        // Add verification details
-        if ($is_verified) {
-            $sections['verification_details'] = array(
-                "Declaration Acceptance: Accepted",
-                "Terms and Conditions: Accepted",
-                "MFA OTP Status: Verified",
-                "Verification Timestamp: " . ($shipment->verification_completed_at ? $shipment->verification_completed_at : date('Y-m-d H:i:s'))
-            );
-        }
+        // Fetch signature
+        $this->db->select('*');
+        $this->db->from('customer_signatures');
+        $this->db->where('shipment_id', $shipment_id);
+        $data['signature'] = $this->db->get()->row();
 
-        // Add terms
-        if ($terms) {
-            $sections['terms_conditions'][] = "Title: " . $terms->title;
-            $sections['terms_conditions'][] = "Version: " . $terms->version_number;
-            $sections['terms_conditions'][] = "Effective Date: " . $terms->effective_date;
-            
-            // Strip HTML elements for plaintext representation inside the PDF
-            $cleaned = strip_tags($terms->terms_content);
-            $cleaned = str_replace(array('</h4>', '</p>', '<br>'), "\n", $cleaned);
-            $cleaned_lines = explode("\n", $cleaned);
-            foreach ($cleaned_lines as $line) {
-                if (trim($line)) {
-                    $sections['terms_conditions'][] = trim($line);
-                }
-            }
-        }
+        $html = $this->load->view('shipment/print_awb', $data, TRUE);
 
-        // Build PDF text-stream content
-        $pdf_content = SimplePDF::generate($title, $sections);
+        require_once FCPATH . 'vendor/autoload.php';
+        $dompdf = new \Dompdf\Dompdf();
+        
+        // Configure Dompdf to allow remote resources like images if needed
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf->setOptions($options);
+
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdf_content = $dompdf->output();
 
         // Ensure target documents folder exists
         $dir = './assets/shipment_documents/';
@@ -403,7 +369,7 @@ class Notification_model extends CI_Model {
             mkdir($dir, 0777, TRUE);
         }
 
-        $filename = ($is_verified ? 'release_receipt_' : 'details_') . $shipment->awb_number . '.pdf';
+        $filename = ($is_verified ? 'release_receipt_' : 'details_') . $data['shipment']->awb_number . '.pdf';
         $full_path = 'assets/shipment_documents/' . $filename;
         
         if (file_put_contents('./' . $full_path, $pdf_content)) {
