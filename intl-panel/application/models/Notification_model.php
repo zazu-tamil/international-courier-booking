@@ -350,6 +350,11 @@ class Notification_model extends CI_Model {
         $html = $this->load->view('shipment/print_awb', $data, TRUE);
 
         require_once FCPATH . 'vendor/autoload.php';
+        
+        if (!class_exists('\Dompdf\Dompdf')) {
+            throw new \Exception("Dompdf class not found. Please ensure that you have run 'composer install' on your production server or uploaded the complete 'vendor' directory from your local environment.");
+        }
+        
         $dompdf = new \Dompdf\Dompdf();
         
         // Configure Dompdf to allow remote resources like images if needed
