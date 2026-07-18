@@ -152,7 +152,7 @@ class Shipment extends CI_Controller {
         $this->form_validation->set_rules('courier_partner_id', 'Courier Partner', 'required');
 
         if ($this->input->post('create_customer_account') == '1') {
-            $this->form_validation->set_rules('sender_email', 'Sender Email Address', 'required|valid_email|is_unique_active[users.email]');
+            $this->form_validation->set_rules('sender_email', 'Sender Email Address', 'required|valid_email|is_unique[users.email]');
         } else {
             $this->form_validation->set_rules('customer_id', 'Customer Account', 'required');
         }
@@ -206,7 +206,14 @@ class Shipment extends CI_Controller {
                     $customer_id = $new_customer_id;
                     $created_msg = ' Automatically created customer login account with Username/Email: <strong>' . htmlspecialchars($post['sender_email']) . '</strong> and Password: <strong>' . htmlspecialchars($password) . '</strong>.';
                 } else {
-                    $this->session->set_flashdata('error', 'Failed to automatically create customer account. Please try again.');
+                    $db_error = $this->db->error();
+                    $error_message = 'Failed to automatically create customer account. ';
+                    if (!empty($db_error['message'])) {
+                        $error_message .= 'Error: ' . $db_error['message'];
+                    } else {
+                        $error_message .= 'Please try again.';
+                    }
+                    $this->session->set_flashdata('error', $error_message);
                     redirect('shipments/book');
                 }
             }

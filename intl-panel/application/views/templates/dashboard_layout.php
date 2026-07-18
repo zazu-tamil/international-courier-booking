@@ -49,7 +49,7 @@
       <span class="logo-mini"><b>C</b>S</span>
       <span class="logo-lg">
         <?php if(defined('COMPANY_LOGO') && !empty(COMPANY_LOGO)): ?>
-          <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="Logo" style="max-height: 40px; margin-top: -5px;">
+          <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="Logo"   style="max-height: 40px; margin-top: -5px; border-radius:5px; background-color:white; padding:5px; ">
         <?php else: ?>
           <b><?php echo defined('COMPANY_NAME') && !empty(COMPANY_NAME) ? explode(' ', COMPANY_NAME)[0] : 'Courier'; ?></b><?php echo defined('COMPANY_NAME') && count(explode(' ', COMPANY_NAME)) > 1 ? explode(' ', COMPANY_NAME)[1] : 'Syndicate'; ?>
         <?php endif; ?>
@@ -157,6 +157,9 @@
 
         <li class="<?php echo ($this->uri->segment(1) == 'change-password') ? 'active' : ''; ?>">
           <a href="<?php echo site_url('change-password'); ?>"><i class="fa fa-lock"></i> <span>Change Password</span></a>
+        </li>
+        <li class="<?php echo ($this->uri->segment(1) == 'logout') ? 'active' : ''; ?>">
+          <a href="<?php echo site_url('logout'); ?>"><i class="fa fa-sign-out"></i> <span>Log Out</span></a>
         </li>
       </ul>
     </section>

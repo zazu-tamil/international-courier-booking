@@ -134,8 +134,8 @@ class Masters extends CI_Controller {
     public function create_branch_user() {
         $this->form_validation->set_rules('branch_id', 'Branch', 'required|numeric');
         $this->form_validation->set_rules('role_id', 'Role', 'required|numeric');
-        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]|is_unique_active[users.username]');
-        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email|is_unique_active[users.email]');
+        $this->form_validation->set_rules('username', 'Username', 'required|trim|min_length[4]|is_unique[users.username]');
+        $this->form_validation->set_rules('email', 'Email Address', 'required|trim|valid_email|is_unique[users.email]');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
 
         if ($this->form_validation->run() === FALSE) {

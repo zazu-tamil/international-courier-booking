@@ -90,14 +90,19 @@
 <div class="login-container">
   <div class="login-branding">
     <div>
-      <h2 style="font-weight: 700; margin: 0; color: #fff;"><i class="fa fa-paper-plane-o"></i> CourierSyndicate</h2>
+      <?php if(defined('COMPANY_LOGO') && COMPANY_LOGO): ?>
+        <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="<?php echo htmlspecialchars(defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate'); ?>" style="max-height: 80px; max-width: 100%; background: #fff; padding: 10px; border-radius: 8px;">
+        <h2 style="font-weight: 700; margin: 15px 0 0 0; color: #fff;"><?php echo htmlspecialchars(defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate'); ?></h2>
+      <?php else: ?>
+        <h2 style="font-weight: 700; margin: 0; color: #fff;"><i class="fa fa-paper-plane-o"></i> <?php echo htmlspecialchars(defined('COMPANY_NAME') ? COMPANY_NAME : 'CourierSyndicate'); ?></h2>
+      <?php endif; ?>
       <p style="color: rgba(255,255,255,0.7); font-size: 14px;">Enterprise Logistics Solutions</p>
     </div>
     <div style="margin-top: 40px;">
       <h3 style="font-weight: 600; color: #fff;">Enterprise-Grade International Cargo ERP</h3>
       <p style="color: rgba(255,255,255,0.8); line-height: 1.6;">Secure, multi-branch, franchise-ready shipment scheduling system incorporating mandatory customer digital signatures and OTP verification logs.</p>
     </div>
-    <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin: 0;">&copy; 2026 CourierSyndicate. All rights reserved.</p>
+    <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin: 0;">&copy; 2026 <?php echo htmlspecialchars(defined('COMPANY_NAME') ? COMPANY_NAME : 'Company'); ?>. All rights reserved.</p>
   </div>
 
   <div class="login-form-box">
@@ -133,7 +138,7 @@
       <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Track your package without signing in. Enter AWB or mobile number:</p>
       <form action="<?php echo site_url('tracking'); ?>" method="GET">
         <div class="input-group">
-          <input type="text" name="awb" class="form-control input-sm" placeholder="e.g. CSYN-INT-2026-000001" required>
+          <input type="text" name="awb" class="form-control input-sm" placeholder="e.g. INT41000001" required>
           <span class="input-group-btn">
             <button class="btn btn-primary btn-sm" type="submit" style="padding: 7px 15px;"><i class="fa fa-arrow-right"></i></button>
           </span>

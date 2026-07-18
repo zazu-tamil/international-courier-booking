@@ -65,7 +65,7 @@ class Notification_model extends CI_Model {
             $reply_name = trim(COMPANY_NAME);
             
             $from_email = $config['smtp_user'];
-            $from_name = 'No Reply | Courier Syndicate';
+            $from_name = $reply_name;
 
             $this->email->from($from_email, $from_name);
             $this->email->to($contact);
