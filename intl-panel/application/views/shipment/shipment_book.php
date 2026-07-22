@@ -212,7 +212,7 @@
                   if (type === 'manual') {
                     input.readOnly = false;
                     input.required = true;
-                    input.placeholder = "Enter AWB Number";
+                    input.placeholder = "Enter AWB Number as INT41";
                     input.style.backgroundColor = "#fff";
                     star.style.display = "inline";
                     input.value = "";

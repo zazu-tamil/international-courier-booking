@@ -130,6 +130,17 @@
             </li>
             <?php endif; ?>
 
+            <?php if ($this->session->userdata('role_id') == 1 || $this->session->userdata('role_id') == 2): ?>
+            <li class="treeview <?php echo ($this->uri->segment(1) == 'reports') ? 'active menu-open' : ''; ?>">
+              <a href="#"><i class="fa fa-bar-chart"></i> <span>Reports</span>
+                <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+              </a>
+              <ul class="treeview-menu">
+                <li class="<?php echo ($this->uri->segment(1) == 'reports' && $this->uri->segment(2) == 'tracking_idle') ? 'active' : ''; ?>"><a href="<?php echo site_url('reports/tracking_idle'); ?>"><i class="fa fa-circle-o"></i> Tracking Idle Report</a></li>
+              </ul>
+            </li>
+            <?php endif; ?>
+
             <li class="<?php echo ($this->uri->segment(1) == 'customer' && $this->uri->segment(2) == 'statement') ? 'active' : ''; ?>">
               <a href="<?php echo site_url('customer/statement'); ?>"><i class="fa fa-file-text-o"></i> <span>Customer Statements</span></a>
             </li>

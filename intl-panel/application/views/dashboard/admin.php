@@ -59,6 +59,37 @@
   </div>
 </div>
 
+<!-- Delayed Shipments Row -->
+<div class="row">
+  <div class="col-md-4 col-sm-6 col-xs-12">
+    <div class="info-box delayed-box" data-type="green" style="background-color: #00a65a; color: #fff; cursor: pointer;">
+      <span class="info-box-icon"><i class="fa fa-clock-o"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Idle Shipments (0-1 days)</span>
+        <span class="info-box-number"><?php echo isset($idle_green) ? $idle_green : 0; ?></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-xs-12">
+    <div class="info-box delayed-box" data-type="yellow" style="background-color: #f39c12; color: #fff; cursor: pointer;">
+      <span class="info-box-icon"><i class="fa fa-warning"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Delayed Shipments (2-3 days)</span>
+        <span class="info-box-number"><?php echo isset($idle_yellow) ? $idle_yellow : 0; ?></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-xs-12">
+    <div class="info-box delayed-box" data-type="red" style="background-color: #dd4b39; color: #fff; cursor: pointer;">
+      <span class="info-box-icon"><i class="fa fa-exclamation-triangle"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Critical Delayed (>3 days)</span>
+        <span class="info-box-number"><?php echo isset($idle_red) ? $idle_red : 0; ?></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="col-md-3 col-sm-6 col-xs-12">
     <div class="info-box">
@@ -304,4 +335,96 @@
     };
     countryChart.Bar(countryData, barOptions);
   });
+</script>
+
+<!-- Delayed Shipments Modal -->
+<div class="modal fade" id="delayedShipmentsModal" tabindex="-1" role="dialog" aria-labelledby="delayedShipmentsModalLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="delayedShipmentsModalLabel">Delayed Shipments List</h4>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped" id="delayedShipmentsTable">
+                <thead>
+                    <tr>
+                        <th>AWB Number</th>
+                        <th>Destination</th>
+                        <th>Customer</th>
+                        <th>Current Status</th>
+                        <th>Last Update Date</th>
+                        <th>Idle Days</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated via AJAX -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Add CSRF token for AJAX
+    var csrfName = '<?php echo $this->security->get_csrf_token_name(); ?>';
+    var csrfHash = '<?php echo $this->security->get_csrf_hash(); ?>';
+    
+    // Add click listeners to the delayed boxes
+    $('.delayed-box').on('click', function() {
+        var type = $(this).data('type');
+        var title = '';
+        if (type == 'green') title = 'Idle Shipments (0-1 days)';
+        if (type == 'yellow') title = 'Delayed Shipments (2-3 days)';
+        if (type == 'red') title = 'Critical Delayed (>3 days)';
+        
+        $('#delayedShipmentsModalLabel').text(title);
+        $('#delayedShipmentsTable tbody').html('<tr><td colspan="6" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr>');
+        $('#delayedShipmentsModal').modal('show');
+        
+        var postData = { type: type };
+        postData[csrfName] = csrfHash;
+        
+        $.ajax({
+            url: '<?php echo site_url('dashboard/ajax_delayed_shipments'); ?>',
+            type: 'POST',
+            data: postData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.status == 'success') {
+                    var html = '';
+                    if (response.data.length > 0) {
+                        $.each(response.data, function(i, row) {
+                            var viewUrl = '<?php echo site_url("shipments/view/"); ?>' + row.shipment_id;
+                            var dest = row.destination_country ? row.destination_country : '-';
+                            var updateDate = row.last_update_date ? row.last_update_date : '-';
+                            var trackingStatus = row.tracking_status ? row.tracking_status : row.master_status;
+                            
+                            html += '<tr>';
+                            html += '<td><a href="'+viewUrl+'" target="_blank"><strong>'+row.awb_number+'</strong></a></td>';
+                            html += '<td>'+dest+'</td>';
+                            html += '<td>'+row.customer_name+'</td>';
+                            html += '<td>'+trackingStatus+'</td>';
+                            html += '<td>'+updateDate+'</td>';
+                            html += '<td>'+row.idle_days+' days</td>';
+                            html += '</tr>';
+                        });
+                    } else {
+                        html = '<tr><td colspan="6" class="text-center">No shipments found.</td></tr>';
+                    }
+                    $('#delayedShipmentsTable tbody').html(html);
+                } else {
+                    $('#delayedShipmentsTable tbody').html('<tr><td colspan="6" class="text-center text-danger">Error: ' + response.message + '</td></tr>');
+                }
+            },
+            error: function() {
+                $('#delayedShipmentsTable tbody').html('<tr><td colspan="6" class="text-center text-danger">Failed to fetch data.</td></tr>');
+            }
+        });
+    });
+});
 </script>

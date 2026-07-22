@@ -183,7 +183,8 @@ class Shipment extends CI_Controller {
                 $password = 'cust_' . rand(100000, 999999);
                 
                 // Formulate the customer type
-                $customer_type = !empty($post['sender_company']) ? 'business' : 'individual';
+                //$customer_type = !empty($post['sender_company']) ? 'business' : 'individual';
+                $customer_type =  'individual';
 
                 // Setup customer data for registration
                 $cust_data = array(

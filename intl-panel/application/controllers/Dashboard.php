@@ -178,8 +178,48 @@ class Dashboard extends CI_Controller {
                 $this->db->where('status', 'pending');
                 $this->db->where("customer_id IN (SELECT id FROM customers WHERE deleted_at IS NULL)");
                 $data['pending_kyc'] = $this->db->count_all_results('customer_kyc');
-                $data['total_bookings'] = 0;
+                
+                $this->db->where('deleted_at IS NULL');
+                $data['total_bookings'] = $this->db->count_all_results('shipment_master');
             }
+
+            // Delayed / Idle Shipments
+            $idle_sql = "
+                SELECT 
+                    SUM(CASE WHEN idle_days <= 1 THEN 1 ELSE 0 END) as idle_green,
+                    SUM(CASE WHEN idle_days >= 2 AND idle_days <= 3 THEN 1 ELSE 0 END) as idle_yellow,
+                    SUM(CASE WHEN idle_days > 3 THEN 1 ELSE 0 END) as idle_red
+                FROM (
+                    SELECT DATEDIFF(CURRENT_DATE(), DATE(COALESCE(st.date_time, sm.booking_date))) as idle_days
+                    FROM shipment_master sm
+                    LEFT JOIN (
+                        SELECT t1.shipment_id, t1.date_time
+                        FROM shipment_tracking t1
+                        INNER JOIN (
+                            SELECT shipment_id, MAX(date_time) as max_date
+                            FROM shipment_tracking
+                            GROUP BY shipment_id
+                        ) t2 ON t1.shipment_id = t2.shipment_id AND t1.date_time = t2.max_date
+                        GROUP BY t1.shipment_id
+                    ) st ON sm.id = st.shipment_id
+                    WHERE sm.status NOT IN ('Delivered', 'Cancelled')
+                    AND sm.deleted_at IS NULL
+            ";
+
+            if ($role_id == 3) {
+                $idle_sql .= " AND sm.created_by = " . intval($this->session->userdata('user_id'));
+            } elseif ($role_id == 2) {
+                $idle_sql .= " AND sm.branch_id = " . intval($this->session->userdata('branch_id'));
+            }
+
+            $idle_sql .= " ) as counts";
+
+            $idle_query = $this->db->query($idle_sql)->row();
+            $data['idle_green'] = $idle_query ? (int)$idle_query->idle_green : 0;
+            $data['idle_yellow'] = $idle_query ? (int)$idle_query->idle_yellow : 0;
+            $data['idle_red'] = $idle_query ? (int)$idle_query->idle_red : 0;
+
+            $data['view_path'] = 'dashboard/admin';
 
             // CHARTS COMPILING
 
@@ -294,4 +334,55 @@ class Dashboard extends CI_Controller {
             echo $this->email->print_debugger();
         }
     }     
+    public function ajax_delayed_shipments() {
+        //if (!$this->input->is_ajax_request()) exit('No direct script access allowed');
+        $type = $this->input->post('type');
+        $role_id = $this->session->userdata('role_id');
+
+        $sql = "
+            SELECT sm.id as shipment_id, sm.awb_number, dest.country_name as destination_country, 
+                   c.name as customer_name, sm.status as master_status,
+                   st.status as tracking_status, st.date_time as last_update_date,
+                   DATEDIFF(CURRENT_DATE(), DATE(COALESCE(st.date_time, sm.booking_date))) as idle_days
+            FROM shipment_master sm
+            LEFT JOIN customers c ON sm.customer_id = c.id
+            LEFT JOIN countries dest ON sm.destination_country_id = dest.id
+            LEFT JOIN (
+                SELECT t1.shipment_id, t1.date_time, t1.status
+                FROM shipment_tracking t1
+                INNER JOIN (
+                    SELECT shipment_id, MAX(date_time) as max_date
+                    FROM shipment_tracking
+                    GROUP BY shipment_id
+                ) t2 ON t1.shipment_id = t2.shipment_id AND t1.date_time = t2.max_date
+                GROUP BY t1.shipment_id
+            ) st ON sm.id = st.shipment_id
+            WHERE sm.status NOT IN ('Delivered', 'Cancelled')
+            AND sm.deleted_at IS NULL
+        ";
+
+        if ($role_id == 3) {
+            $sql .= " AND sm.created_by = " . intval($this->session->userdata('user_id'));
+        } elseif ($role_id == 2) {
+            $sql .= " AND sm.branch_id = " . intval($this->session->userdata('branch_id'));
+        }
+
+        if ($type == 'green') {
+            $sql .= " HAVING idle_days <= 1 ";
+        } elseif ($type == 'yellow') {
+            $sql .= " HAVING idle_days >= 2 AND idle_days <= 3 ";
+        } elseif ($type == 'red') {
+            $sql .= " HAVING idle_days > 3 ";
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid type']);
+            return;
+        }
+        
+        $sql .= " ORDER BY idle_days DESC, sm.booking_date DESC LIMIT 50";
+
+        $query = $this->db->query($sql);
+        $result = $query->result_array();
+
+        echo json_encode(['status' => 'success', 'data' => $result]);
+    }
 }

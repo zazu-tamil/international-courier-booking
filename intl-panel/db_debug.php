@@ -11,10 +11,16 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$res = $conn->query("SHOW COLUMNS FROM customer_wallet");
-echo "CUSTOMER_WALLET TABLE:\n";
-while($row = $res->fetch_assoc()){
-    print_r($row);
+$res = $conn->query("SHOW COLUMNS FROM shipment_master");
+echo "SHIPMENT MASTER:\n";
+while($row = $res->fetch_array()){
+    echo $row[0] . "\n";
+}
+
+$res = $conn->query("SHOW COLUMNS FROM shipment_tracking");
+echo "SHIPMENT TRACKING:\n";
+while($row = $res->fetch_array()){
+    echo $row[0] . "\n";
 }
 
 $conn->close();
