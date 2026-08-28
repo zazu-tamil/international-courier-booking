@@ -300,6 +300,9 @@ class Notification_model extends CI_Model {
      * D. Send Shipment Tracking Status Updates
      */
     public function send_tracking_update_notifications($shipment_id, $status, $remarks) {
+        // Customer tracking update notifications are disabled
+        return FALSE;
+
         $shipment = $this->Shipment_model->get_shipments($shipment_id);
         if (!$shipment) return FALSE;
 
