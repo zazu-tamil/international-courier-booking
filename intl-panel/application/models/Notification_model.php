@@ -357,9 +357,11 @@ class Notification_model extends CI_Model {
         
         $dompdf = new \Dompdf\Dompdf();
         
-        // Configure Dompdf to allow remote resources like images if needed
+        // Configure Dompdf to allow remote resources and local filesystem access
         $options = new \Dompdf\Options();
         $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('chroot', FCPATH);
         $dompdf->setOptions($options);
 
         $dompdf->loadHtml($html);

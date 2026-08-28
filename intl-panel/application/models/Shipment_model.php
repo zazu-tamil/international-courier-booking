@@ -11,26 +11,31 @@ class Shipment_model extends CI_Model {
     }
 
     public function generate_awb_number() {
-        //$year = date('Y');
-        //$prefix = "CSYN-INT-" . $year . "-";
         $prefix = "INT41";
         
-        $this->db->select('awb_number');
+        $this->db->select("MAX(CAST(SUBSTRING(awb_number, " . (strlen($prefix) + 1) . ") AS UNSIGNED)) as max_seq", FALSE);
         $this->db->from('shipment_master');
         $this->db->like('awb_number', $prefix, 'after');
-        $this->db->order_by('id', 'DESC');
-        $this->db->limit(1);
         $query = $this->db->get();
 
-        if ($query->num_rows() > 0) {
-            $last_awb = $query->row()->awb_number;
-            $seq_str = str_replace($prefix, '', $last_awb);
-            $seq = intval($seq_str) + 1;
-        } else {
-            $seq = 1;
+        $max_seq = 0;
+        if ($query->num_rows() > 0 && $query->row()->max_seq !== NULL) {
+            $max_seq = intval($query->row()->max_seq);
         }
 
-        return $prefix . str_pad($seq, 6, '0', STR_PAD_LEFT);
+        $seq = $max_seq + 1;
+
+        do {
+            $candidate_awb = $prefix . str_pad($seq, 6, '0', STR_PAD_LEFT);
+            $check = $this->db->get_where('shipment_master', array('awb_number' => $candidate_awb))->num_rows();
+            if ($check > 0) {
+                $seq++;
+            } else {
+                break;
+            }
+        } while (true);
+
+        return $candidate_awb;
     }
 
     public function get_shipments($id = NULL, $customer_id = NULL) {
@@ -264,11 +269,12 @@ class Shipment_model extends CI_Model {
         $branch_id = $this->session->userdata('branch_id') ? $this->session->userdata('branch_id') : 1;
         
         $shipment = $this->db->get_where('shipment_master', array('id' => $shipment_id))->row();
+        $branch_row = $branch_id ? $this->db->get_where('branches', array('id' => $branch_id))->row() : NULL;
 
         $tracking_data = array(
             'shipment_id' => $shipment_id,
             'date_time' => $date_time ? $date_time : date('Y-m-d H:i:s'),
-            'location' => $branch_id ? $this->db->get_where('branches', array('id' => $branch_id))->row()->name : 'System Gateway',
+            'location' => $branch_row ? $branch_row->name : 'System Gateway',
             'remarks' => $remarks,
             'updated_by' => $user_id,
             'branch_id' => $branch_id,

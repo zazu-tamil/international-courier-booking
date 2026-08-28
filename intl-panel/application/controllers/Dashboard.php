@@ -312,7 +312,7 @@ class Dashboard extends CI_Controller {
         $config['protocol'] = 'smtp'; 
         $config['smtp_host'] = 'smtp.hostinger.com';
         $config['smtp_user'] = 'noreply@couriersyndicate.co.in'; 
-        $config['smtp_pass'] = '7/FjSy^rhU';
+        $config['smtp_pass'] = 'bmhz-mlo3-pcwc-e1n0';
         $config['smtp_port'] = 465;
         $config['smtp_crypto'] = 'ssl';
         $config['mailtype'] = 'html';

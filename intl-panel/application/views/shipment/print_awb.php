@@ -2,6 +2,46 @@
 <html>
 <head>
   <title>Air Waybill (AWB) Document - <?php echo $shipment->awb_number; ?></title>
+  <?php
+    // Base64 helper for live server PDF rendering stability (Dompdf loopback workaround)
+    $pdf_logo_src = '';
+    if (defined('COMPANY_LOGO') && !empty(COMPANY_LOGO)) {
+        $logo_file_path = FCPATH . 'assets/img/' . COMPANY_LOGO;
+        if (file_exists($logo_file_path)) {
+            $logo_ext = pathinfo($logo_file_path, PATHINFO_EXTENSION);
+            $pdf_logo_src = 'data:image/' . $logo_ext . ';base64,' . base64_encode(file_get_contents($logo_file_path));
+        } else {
+            $pdf_logo_src = base_url('assets/img/' . COMPANY_LOGO);
+        }
+    }
+
+    $pdf_barcode_src = '';
+    if (!empty($shipment->awb_number)) {
+        try {
+            $CI =& get_instance();
+            $CI->load->library('zend');
+            $CI->zend->load('Zend/Barcode');
+            $barcode_resource = Zend_Barcode::draw('code128', 'image', array('text' => $shipment->awb_number, 'drawText' => TRUE), array());
+            ob_start();
+            imagepng($barcode_resource);
+            $barcode_png_data = ob_get_clean();
+            $pdf_barcode_src = 'data:image/png;base64,' . base64_encode($barcode_png_data);
+        } catch (Exception $e) {
+            $pdf_barcode_src = site_url('shipment/barcode/' . $shipment->awb_number);
+        }
+    }
+
+    $pdf_signature_src = '';
+    if (isset($signature) && !empty($signature->signature_image_path)) {
+        $sig_file_path = FCPATH . $signature->signature_image_path;
+        if (file_exists($sig_file_path)) {
+            $sig_ext = pathinfo($sig_file_path, PATHINFO_EXTENSION);
+            $pdf_signature_src = 'data:image/' . $sig_ext . ';base64,' . base64_encode(file_get_contents($sig_file_path));
+        } else {
+            $pdf_signature_src = base_url($signature->signature_image_path);
+        }
+    }
+  ?>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -139,13 +179,13 @@
       <td style="width: 33%; text-align: left;">
         <div class="document-title">Air Waybill (AWB)</div>
         <div style="margin-top: 5px;">
-          <img src="<?php echo site_url('shipment/barcode/' . $shipment->awb_number); ?>" style="width: 180px; height: 38px;" alt="Barcode"><br>
+          <img src="<?php echo !empty($pdf_barcode_src) ? $pdf_barcode_src : site_url('shipment/barcode/' . $shipment->awb_number); ?>" style="width: 180px; height: 38px;" alt="Barcode"><br>
           <span style="font-size: 8px; font-weight: bold; letter-spacing: 1px; display: block; margin-top: 2px;"><?php echo $shipment->awb_number; ?></span>
         </div>
       </td>
       <td style="width: 34%; text-align: center;">
-        <?php if(defined('COMPANY_LOGO') && !empty(COMPANY_LOGO)): ?>
-          <img src="<?php echo base_url('assets/img/' . COMPANY_LOGO); ?>" alt="Company Logo" style="max-height: 70px;">
+        <?php if(!empty($pdf_logo_src)): ?>
+          <img src="<?php echo $pdf_logo_src; ?>" alt="Company Logo" style="max-height: 70px;">
         <?php endif; ?>
       </td>
       <td style="width: 33%; text-align: right;">
@@ -177,6 +217,10 @@
       <td><strong><?php echo $shipment->chargeable_weight; ?> kg</strong></td>
       <th>Declared Value:</th>
       <td><strong>₹<?php echo number_format($shipment->total_declared_value, 2); ?></strong></td>
+    </tr>
+    <tr>
+      <th>Total Billing Charges (inclusive of GST) (₹):</th>
+      <td colspan="3"><strong>₹<?php echo number_format($shipment->estimated_charges, 2); ?></strong></td>
     </tr>
   </table>
 
@@ -304,7 +348,7 @@
       <td style="text-align: center; padding-right: 20px;">
         <?php if($signature): ?>
           <div style="margin-bottom: 8px;">
-            <img src="<?php echo base_url($signature->signature_image_path); ?>" style="max-height: 60px; border: 1px dashed #777; background: #fff;" alt="Exporter Signature"><br>
+            <img src="<?php echo !empty($pdf_signature_src) ? $pdf_signature_src : base_url($signature->signature_image_path); ?>" style="max-height: 60px; border: 1px dashed #777; background: #fff;" alt="Exporter Signature"><br>
           </div>
           <span style="font-size: 10px; color: #555; display: block;">Signed from IP: <?php echo $signature->ip_address; ?></span>
         <?php else: ?>
