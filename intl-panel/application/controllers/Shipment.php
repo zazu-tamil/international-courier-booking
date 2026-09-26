@@ -27,8 +27,26 @@ class Shipment extends CI_Controller {
             $data['customers'] = $this->Customer_model->get_customers();
         }
 
+        $from_date = $this->input->get_post('from_date', TRUE);
+        $to_date = $this->input->get_post('to_date', TRUE);
+
+        // Sanitize and validate dates (expected format: YYYY-MM-DD)
+        if (!empty($from_date) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $from_date)) {
+            $from_date = NULL;
+        }
+        if (!empty($to_date) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to_date)) {
+            $to_date = NULL;
+        }
+        if (!empty($from_date) && !empty($to_date) && $from_date > $to_date) {
+            $temp = $from_date;
+            $from_date = $to_date;
+            $to_date = $temp;
+        }
+
+        $data['filter_from'] = $from_date;
+        $data['filter_to'] = $to_date;
         $data['page_title'] = 'Shipment Records';
-        $data['shipments'] = $this->Shipment_model->get_shipments(NULL, $customer_id);
+        $data['shipments'] = $this->Shipment_model->get_shipments(NULL, $customer_id, $from_date, $to_date);
         $data['view_path'] = 'shipment/shipment_list';
         $this->load->view('templates/dashboard_layout', $data);
     }

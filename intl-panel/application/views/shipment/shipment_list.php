@@ -10,12 +10,15 @@
         <?php endif; ?>
       </div>
       
-      <div class="box-body table-responsive">
-        <?php if($this->session->userdata('role_id') != 4 && !empty($customers)): ?>
-          <div class="row" style="margin-bottom: 15px;">
-            <div class="col-md-4">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="control-label">Filter by Customer (Exporter):</label>
+      <!-- Filters Section -->
+      <div class="box-body" style="background-color: #f9fafc; border-bottom: 1px solid #e7ebee; padding: 15px 20px;">
+        <form method="GET" action="<?php echo site_url('shipments'); ?>" id="shipmentFilterForm">
+          <div class="row">
+            <?php if($this->session->userdata('role_id') != 4 && !empty($customers)): ?>
+              <div class="col-md-3 col-sm-6" style="margin-bottom: 10px;">
+                <label for="customerFilter" style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">
+                  <i class="fa fa-user text-muted"></i> Filter by Customer:
+                </label>
                 <select id="customerFilter" class="form-control input-sm">
                   <option value="">All Customers</option>
                   <?php foreach($customers as $cust): ?>
@@ -23,9 +26,41 @@
                   <?php endforeach; ?>
                 </select>
               </div>
+            <?php endif; ?>
+
+            <div class="<?php echo ($this->session->userdata('role_id') != 4 && !empty($customers)) ? 'col-md-3 col-sm-6' : 'col-md-4 col-sm-6'; ?>" style="margin-bottom: 10px;">
+              <label for="fromDate" style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">
+                <i class="fa fa-calendar text-muted"></i> Booking From Date:
+              </label>
+              <input type="date" name="from_date" id="fromDate" class="form-control input-sm" value="<?php echo isset($filter_from) ? htmlspecialchars($filter_from) : ''; ?>">
+            </div>
+
+            <div class="<?php echo ($this->session->userdata('role_id') != 4 && !empty($customers)) ? 'col-md-3 col-sm-6' : 'col-md-4 col-sm-6'; ?>" style="margin-bottom: 10px;">
+              <label for="toDate" style="display:block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">
+                <i class="fa fa-calendar text-muted"></i> Booking To Date:
+              </label>
+              <input type="date" name="to_date" id="toDate" class="form-control input-sm" value="<?php echo isset($filter_to) ? htmlspecialchars($filter_to) : ''; ?>">
+            </div>
+
+            <div class="<?php echo ($this->session->userdata('role_id') != 4 && !empty($customers)) ? 'col-md-3 col-sm-6' : 'col-md-4 col-sm-6'; ?>" style="margin-bottom: 10px;">
+              <label style="display:block; margin-bottom: 4px; visibility: hidden; font-size: 13px;">Actions</label>
+              <button type="submit" class="btn btn-primary btn-sm" style="margin-right: 5px;">
+                <i class="fa fa-filter"></i> Filter
+              </button>
+              <a href="<?php echo site_url('shipments'); ?>" class="btn btn-default btn-sm" title="Clear filter">
+                <i class="fa fa-refresh"></i> Reset
+              </a>
+              <?php if(!empty($filter_from) || !empty($filter_to)): ?>
+                <span class="label label-info" style="margin-left: 8px; font-size: 11px; padding: 5px 8px; display: inline-block;">
+                  <i class="fa fa-check-circle"></i> Filtered (<?php echo count($shipments); ?>)
+                </span>
+              <?php endif; ?>
             </div>
           </div>
-        <?php endif; ?>
+        </form>
+      </div>
+
+      <div class="box-body table-responsive">
 
         <table class="table table-bordered table-striped dataTable">
           <thead>
@@ -99,6 +134,17 @@
       var table = $('.dataTable').DataTable();
       // Column 4 is Exporter Profile. We perform an exact regex search.
       table.column(4).search(val ? '^' + $.fn.dataTable.util.escapeRegex(val) + '$' : '', true, false).draw();
+    });
+
+    // Validate date range on filter submit
+    $('#shipmentFilterForm').on('submit', function(e) {
+      var from = $('#fromDate').val();
+      var to = $('#toDate').val();
+      if (from && to && from > to) {
+        alert('Booking "From Date" cannot be after "To Date".');
+        e.preventDefault();
+        return false;
+      }
     });
   });
 </script>
