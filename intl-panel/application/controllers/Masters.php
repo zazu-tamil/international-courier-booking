@@ -954,4 +954,565 @@ class Masters extends CI_Controller {
         }
         redirect('roles');
     }
+
+    // --- GEO LOCATIONS (01_geo_location_info) ---
+    public function geo_locations() {
+        $data['page_title'] = 'Geo Locations Master';
+        $data['countries'] = $this->Master_model->get_countries();
+        $data['total_count'] = $this->Master_model->count_all_geo_locations();
+        $data['view_path'] = 'masters/geo_location_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function geo_locations_ajax() {
+        $draw = intval($this->input->post('draw'));
+        $start = intval($this->input->post('start'));
+        $length = intval($this->input->post('length'));
+        if ($length <= 0) {
+            $length = 10;
+        }
+
+        $search_data = $this->input->post('search');
+        $search = isset($search_data['value']) ? trim($search_data['value']) : null;
+
+        $order = $this->input->post('order');
+        $col_index = isset($order[0]['column']) ? intval($order[0]['column']) : 0;
+        $order_dir = (isset($order[0]['dir']) && strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
+
+        $column_map = array(
+            0 => 'id',
+            1 => 'country_name',
+            2 => 'state_name',
+            3 => 'district_name',
+            4 => 'city_name',
+            5 => 'postal_code',
+            6 => 'latitude',
+            7 => 'is_active',
+            8 => 'id'
+        );
+        $order_col = isset($column_map[$col_index]) ? $column_map[$col_index] : 'id';
+
+        $total_records = $this->Master_model->count_all_geo_locations();
+        $filtered_records = $this->Master_model->count_filtered_geo_locations($search);
+        $records = $this->Master_model->get_geo_locations_datatable($length, $start, $search, $order_col, $order_dir);
+
+        $data = array();
+        foreach ($records as $row) {
+            $country_html = '<strong>' . htmlspecialchars($row->country_name) . '</strong>';
+            if (!empty($row->country_code)) {
+                $country_html .= ' <span class="label label-primary">' . htmlspecialchars($row->country_code) . '</span>';
+            }
+            if (!empty($row->country_code3)) {
+                $country_html .= ' <small class="text-muted">' . htmlspecialchars($row->country_code3) . '</small>';
+            }
+
+            $state_html = htmlspecialchars($row->state_name ? $row->state_name : '-');
+            if (!empty($row->state_code)) {
+                $state_html .= ' <span class="label label-default">' . htmlspecialchars($row->state_code) . '</span>';
+            }
+
+            $postal_html = '<strong>' . htmlspecialchars($row->postal_code ? $row->postal_code : '-') . '</strong>';
+            if (!empty($row->postal_name)) {
+                $postal_html .= '<br><small class="text-muted"><i class="fa fa-map-pin"></i> ' . htmlspecialchars($row->postal_name) . '</small>';
+            }
+
+            $coords_html = '-';
+            if (!empty($row->latitude) || !empty($row->longitude)) {
+                $coords_html = '<span class="text-muted"><small>' . htmlspecialchars($row->latitude) . ',<br>' . htmlspecialchars($row->longitude) . '</small></span>';
+            }
+
+            $status_html = ($row->is_active == 1) 
+                ? '<span class="label label-success">Active</span>' 
+                : '<span class="label label-danger">Inactive</span>';
+
+            $actions_html = '
+                <button type="button" class="btn btn-primary btn-xs edit-geo-btn" data-id="' . $row->id . '">
+                    <i class="fa fa-pencil"></i> Edit
+                </button>
+                <a href="' . site_url('geo-locations/delete/' . $row->id) . '" class="btn btn-danger btn-xs" onclick="return confirm(\'Are you sure you want to delete this geo location?\');">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            ';
+
+            $data[] = array(
+                $row->id,
+                $country_html,
+                $state_html,
+                htmlspecialchars($row->district_name ? $row->district_name : '-'),
+                htmlspecialchars($row->city_name ? $row->city_name : '-'),
+                $postal_html,
+                $coords_html,
+                $status_html,
+                $actions_html
+            );
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $total_records,
+            "recordsFiltered" => $filtered_records,
+            "data" => $data
+        );
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($output));
+    }
+
+    public function get_geo_location($id) {
+        $record = $this->Master_model->get_geo_locations($id);
+        if ($record) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('status' => 'success', 'data' => $record)));
+        } else {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('status' => 'error', 'message' => 'Record not found')));
+        }
+    }
+
+    public function add_geo_location() {
+        $this->form_validation->set_rules('country_name', 'Country Name', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'country_code'   => strtoupper(trim($this->input->post('country_code'))),
+                'country_code3'  => strtoupper(trim($this->input->post('country_code3'))),
+                'country_name'   => trim($this->input->post('country_name')),
+                'state_code'     => trim($this->input->post('state_code')),
+                'state_name'     => trim($this->input->post('state_name')),
+                'state_type'     => trim($this->input->post('state_type')),
+                'district_code'  => trim($this->input->post('district_code')),
+                'district_name'  => trim($this->input->post('district_name')),
+                'district_type'  => trim($this->input->post('district_type')),
+                'city_name'      => trim($this->input->post('city_name')),
+                'city_type'      => trim($this->input->post('city_type')),
+                'postal_code'    => trim($this->input->post('postal_code')),
+                'postal_name'    => trim($this->input->post('postal_name')),
+                'latitude'       => $this->input->post('latitude') !== '' ? $this->input->post('latitude') : NULL,
+                'longitude'      => $this->input->post('longitude') !== '' ? $this->input->post('longitude') : NULL,
+                'is_active'      => intval($this->input->post('is_active')),
+                'created_at'     => date('Y-m-d H:i:s'),
+                'updated_at'     => date('Y-m-d H:i:s')
+            );
+
+            $this->Master_model->add_geo_location($data);
+            $this->session->set_flashdata('success', 'Geo Location added successfully.');
+        }
+        redirect('geo-locations');
+    }
+
+    public function edit_geo_location($id) {
+        $this->form_validation->set_rules('country_name', 'Country Name', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $data = array(
+                'country_code'   => strtoupper(trim($this->input->post('country_code'))),
+                'country_code3'  => strtoupper(trim($this->input->post('country_code3'))),
+                'country_name'   => trim($this->input->post('country_name')),
+                'state_code'     => trim($this->input->post('state_code')),
+                'state_name'     => trim($this->input->post('state_name')),
+                'state_type'     => trim($this->input->post('state_type')),
+                'district_code'  => trim($this->input->post('district_code')),
+                'district_name'  => trim($this->input->post('district_name')),
+                'district_type'  => trim($this->input->post('district_type')),
+                'city_name'      => trim($this->input->post('city_name')),
+                'city_type'      => trim($this->input->post('city_type')),
+                'postal_code'    => trim($this->input->post('postal_code')),
+                'postal_name'    => trim($this->input->post('postal_name')),
+                'latitude'       => $this->input->post('latitude') !== '' ? $this->input->post('latitude') : NULL,
+                'longitude'      => $this->input->post('longitude') !== '' ? $this->input->post('longitude') : NULL,
+                'is_active'      => intval($this->input->post('is_active')),
+                'updated_at'     => date('Y-m-d H:i:s')
+            );
+
+            $this->Master_model->update_geo_location($id, $data);
+            $this->session->set_flashdata('success', 'Geo Location updated successfully.');
+        }
+        redirect('geo-locations');
+    }
+
+    public function delete_geo_location($id) {
+        $this->Master_model->delete_geo_location($id);
+        $this->session->set_flashdata('success', 'Geo Location deleted successfully.');
+        redirect('geo-locations');
+    }
+
+    public function export_geo_locations() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('memory_limit', '512M');
+        set_time_limit(300);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        $objPHPExcel = new PHPExcel();
+        $objPHPExcel->getProperties()->setCreator("Courier Syndicate")
+                                     ->setTitle("Geo Locations Export");
+
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Geo Locations');
+
+        $headers = array(
+            'A1' => 'ID',
+            'B1' => 'Country Code',
+            'C1' => 'Country Code 3',
+            'D1' => 'Country Name',
+            'E1' => 'State Code',
+            'F1' => 'State Name',
+            'G1' => 'State Type',
+            'H1' => 'District Code',
+            'I1' => 'District Name',
+            'J1' => 'District Type',
+            'K1' => 'City Name',
+            'L1' => 'City Type',
+            'M1' => 'Postal Code',
+            'N1' => 'Postal Name',
+            'O1' => 'Latitude',
+            'P1' => 'Longitude',
+            'Q1' => 'Status',
+            'R1' => 'Created At',
+            'S1' => 'Updated At'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        // Style Header Row
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '3C8DBC')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:S1')->applyFromArray($headerStyle);
+
+        $records = $this->Master_model->get_all_geo_locations_for_export();
+        $row_num = 2;
+        foreach ($records as $r) {
+            $sheet->setCellValueExplicit('A' . $row_num, $r['id'], PHPExcel_Cell_DataType::TYPE_NUMERIC);
+            $sheet->setCellValueExplicit('B' . $row_num, $r['country_code'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('C' . $row_num, $r['country_code3'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('D' . $row_num, $r['country_name']);
+            $sheet->setCellValueExplicit('E' . $row_num, $r['state_code'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('F' . $row_num, $r['state_name']);
+            $sheet->setCellValue('G' . $row_num, $r['state_type']);
+            $sheet->setCellValueExplicit('H' . $row_num, $r['district_code'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('I' . $row_num, $r['district_name']);
+            $sheet->setCellValue('J' . $row_num, $r['district_type']);
+            $sheet->setCellValue('K' . $row_num, $r['city_name']);
+            $sheet->setCellValue('L' . $row_num, $r['city_type']);
+            $sheet->setCellValueExplicit('M' . $row_num, $r['postal_code'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('N' . $row_num, $r['postal_name']);
+            $sheet->setCellValue('O' . $row_num, $r['latitude']);
+            $sheet->setCellValue('P' . $row_num, $r['longitude']);
+            $sheet->setCellValue('Q' . $row_num, ($r['is_active'] == 1 ? 'Active' : 'Inactive'));
+            $sheet->setCellValue('R' . $row_num, $r['created_at']);
+            $sheet->setCellValue('S' . $row_num, $r['updated_at']);
+            $row_num++;
+        }
+
+        // Auto width
+        foreach (range('A', 'S') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'geo_locations_' . date('Y-m-d_His') . '.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function download_geo_location_template() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Template');
+
+        $headers = array(
+            'A1' => 'Country Code',
+            'B1' => 'Country Code 3',
+            'C1' => 'Country Name',
+            'D1' => 'State Code',
+            'E1' => 'State Name',
+            'F1' => 'State Type',
+            'G1' => 'District Code',
+            'H1' => 'District Name',
+            'I1' => 'District Type',
+            'J1' => 'City Name',
+            'K1' => 'City Type',
+            'L1' => 'Postal Code',
+            'M1' => 'Postal Name',
+            'N1' => 'Latitude',
+            'O1' => 'Longitude',
+            'P1' => 'Status'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '00A65A')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:P1')->applyFromArray($headerStyle);
+
+        // Sample rows
+        $sample_data = array(
+            array('IN', 'IND', 'India', 'TN', 'Tamil Nadu', 'State', 'CH', 'Chennai', 'District', 'Chennai', 'City', '600001', 'George Town', '13.0827000', '80.2707000', 'Active'),
+            array('IN', 'IND', 'India', 'KA', 'Karnataka', 'State', 'BLR', 'Bengaluru Urban', 'District', 'Bengaluru', 'City', '560001', 'GPO', '12.9716000', '77.5946000', 'Active'),
+            array('US', 'USA', 'United States', 'NY', 'New York', 'State', 'NY', 'New York', 'County', 'New York', 'City', '10001', 'Manhattan', '40.7501000', '-73.9967000', 'Active')
+        );
+
+        $r = 2;
+        foreach ($sample_data as $row) {
+            $col = 'A';
+            foreach ($row as $val) {
+                $sheet->setCellValueExplicit($col . $r, $val, PHPExcel_Cell_DataType::TYPE_STRING);
+                $col++;
+            }
+            $r++;
+        }
+
+        foreach (range('A', 'P') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'geo_location_import_template.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function import_geo_locations() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('memory_limit', '512M');
+        set_time_limit(600);
+
+        if (empty($_FILES['excel_file']['name'])) {
+            $this->session->set_flashdata('error', 'Please choose an Excel or CSV file to import.');
+            redirect('geo-locations');
+        }
+
+        $file_name = $_FILES['excel_file']['name'];
+        $tmp_file = $_FILES['excel_file']['tmp_name'];
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        $valid_extensions = array('xls', 'xlsx', 'csv');
+        if (!in_array($file_ext, $valid_extensions)) {
+            $this->session->set_flashdata('error', 'Invalid file type. Allowed formats: .xls, .xlsx, .csv');
+            redirect('geo-locations');
+        }
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        try {
+            if ($file_ext === 'csv') {
+                $objReader = PHPExcel_IOFactory::createReader('CSV');
+            } elseif ($file_ext === 'xlsx') {
+                $objReader = PHPExcel_IOFactory::createReader('Excel2007');
+            } else {
+                $objReader = PHPExcel_IOFactory::createReader('Excel5');
+            }
+
+            $objPHPExcel = $objReader->load($tmp_file);
+            $sheet = $objPHPExcel->getActiveSheet();
+            $sheetData = $sheet->toArray(null, true, true, false);
+
+            if (empty($sheetData) || count($sheetData) < 2) {
+                $this->session->set_flashdata('error', 'The uploaded file contains no data rows.');
+                redirect('geo-locations');
+            }
+
+            // Map header row
+            $header_row = $sheetData[0];
+            $col_map = array();
+
+            foreach ($header_row as $idx => $heading) {
+                if ($heading === null) continue;
+                $norm = strtolower(trim(str_replace(array(' ', '_', '-'), '', $heading)));
+                switch ($norm) {
+                    case 'countrycode':
+                    case 'countrycode2':
+                    case 'iso2':
+                    case 'countryiso':
+                        $col_map['country_code'] = $idx;
+                        break;
+                    case 'countrycode3':
+                    case 'iso3':
+                        $col_map['country_code3'] = $idx;
+                        break;
+                    case 'country':
+                    case 'countryname':
+                        $col_map['country_name'] = $idx;
+                        break;
+                    case 'statecode':
+                        $col_map['state_code'] = $idx;
+                        break;
+                    case 'state':
+                    case 'statename':
+                        $col_map['state_name'] = $idx;
+                        break;
+                    case 'statetype':
+                        $col_map['state_type'] = $idx;
+                        break;
+                    case 'districtcode':
+                        $col_map['district_code'] = $idx;
+                        break;
+                    case 'district':
+                    case 'districtname':
+                        $col_map['district_name'] = $idx;
+                        break;
+                    case 'districttype':
+                        $col_map['district_type'] = $idx;
+                        break;
+                    case 'city':
+                    case 'cityname':
+                        $col_map['city_name'] = $idx;
+                        break;
+                    case 'citytype':
+                        $col_map['city_type'] = $idx;
+                        break;
+                    case 'postalcode':
+                    case 'pincode':
+                    case 'zipcode':
+                    case 'pincodecode':
+                    case 'pin':
+                    case 'zip':
+                        $col_map['postal_code'] = $idx;
+                        break;
+                    case 'postalname':
+                    case 'area':
+                    case 'areaname':
+                    case 'locality':
+                        $col_map['postal_name'] = $idx;
+                        break;
+                    case 'latitude':
+                    case 'lat':
+                        $col_map['latitude'] = $idx;
+                        break;
+                    case 'longitude':
+                    case 'long':
+                    case 'lng':
+                        $col_map['longitude'] = $idx;
+                        break;
+                    case 'status':
+                    case 'isactive':
+                    case 'active':
+                        $col_map['is_active'] = $idx;
+                        break;
+                }
+            }
+
+            if (!isset($col_map['country_name']) && !isset($col_map['postal_code'])) {
+                $this->session->set_flashdata('error', 'Unable to find required columns (Country Name or Postal Code) in file header.');
+                redirect('geo-locations');
+            }
+
+            $inserted = 0;
+            $updated = 0;
+            $skipped = 0;
+
+            for ($i = 1; $i < count($sheetData); $i++) {
+                $row = $sheetData[$i];
+
+                // Check if row is empty
+                $non_empty = array_filter($row, function($v) { return $v !== null && trim($v) !== ''; });
+                if (empty($non_empty)) {
+                    continue;
+                }
+
+                $country_name = isset($col_map['country_name'], $row[$col_map['country_name']]) ? trim($row[$col_map['country_name']]) : '';
+                $postal_code = isset($col_map['postal_code'], $row[$col_map['postal_code']]) ? trim($row[$col_map['postal_code']]) : '';
+
+                if (empty($country_name) && empty($postal_code)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $country_code = isset($col_map['country_code'], $row[$col_map['country_code']]) ? strtoupper(trim($row[$col_map['country_code']])) : NULL;
+                $country_code3 = isset($col_map['country_code3'], $row[$col_map['country_code3']]) ? strtoupper(trim($row[$col_map['country_code3']])) : NULL;
+                $state_code = isset($col_map['state_code'], $row[$col_map['state_code']]) ? trim($row[$col_map['state_code']]) : NULL;
+                $state_name = isset($col_map['state_name'], $row[$col_map['state_name']]) ? trim($row[$col_map['state_name']]) : NULL;
+                $state_type = isset($col_map['state_type'], $row[$col_map['state_type']]) ? trim($row[$col_map['state_type']]) : NULL;
+                $district_code = isset($col_map['district_code'], $row[$col_map['district_code']]) ? trim($row[$col_map['district_code']]) : NULL;
+                $district_name = isset($col_map['district_name'], $row[$col_map['district_name']]) ? trim($row[$col_map['district_name']]) : NULL;
+                $district_type = isset($col_map['district_type'], $row[$col_map['district_type']]) ? trim($row[$col_map['district_type']]) : NULL;
+                $city_name = isset($col_map['city_name'], $row[$col_map['city_name']]) ? trim($row[$col_map['city_name']]) : NULL;
+                $city_type = isset($col_map['city_type'], $row[$col_map['city_type']]) ? trim($row[$col_map['city_type']]) : NULL;
+                $postal_name = isset($col_map['postal_name'], $row[$col_map['postal_name']]) ? trim($row[$col_map['postal_name']]) : NULL;
+                $latitude = isset($col_map['latitude'], $row[$col_map['latitude']]) && trim($row[$col_map['latitude']]) !== '' ? trim($row[$col_map['latitude']]) : NULL;
+                $longitude = isset($col_map['longitude'], $row[$col_map['longitude']]) && trim($row[$col_map['longitude']]) !== '' ? trim($row[$col_map['longitude']]) : NULL;
+
+                $is_active = 1;
+                if (isset($col_map['is_active'], $row[$col_map['is_active']])) {
+                    $st_val = strtolower(trim($row[$col_map['is_active']]));
+                    if ($st_val === 'inactive' || $st_val === '0' || $st_val === 'false' || $st_val === 'no') {
+                        $is_active = 0;
+                    }
+                }
+
+                $record_data = array(
+                    'country_code'   => $country_code ?: NULL,
+                    'country_code3'  => $country_code3 ?: NULL,
+                    'country_name'   => $country_name ?: 'Unknown',
+                    'state_code'     => $state_code ?: NULL,
+                    'state_name'     => $state_name ?: NULL,
+                    'state_type'     => $state_type ?: NULL,
+                    'district_code'  => $district_code ?: NULL,
+                    'district_name'  => $district_name ?: NULL,
+                    'district_type'  => $district_type ?: NULL,
+                    'city_name'      => $city_name ?: NULL,
+                    'city_type'      => $city_type ?: NULL,
+                    'postal_code'    => $postal_code ?: NULL,
+                    'postal_name'    => $postal_name ?: NULL,
+                    'latitude'       => $latitude,
+                    'longitude'      => $longitude,
+                    'is_active'      => $is_active
+                );
+
+                $res = $this->Master_model->upsert_geo_location($record_data);
+                if ($res === 'updated') {
+                    $updated++;
+                } else {
+                    $inserted++;
+                }
+            }
+
+            $this->Audit_model->log_activity('Import Geo Locations', "Imported: $inserted, Updated: $updated, Skipped: $skipped");
+            $this->session->set_flashdata('success', "Import completed successfully! $inserted records inserted, $updated records updated" . ($skipped > 0 ? ", $skipped empty/invalid rows skipped." : "."));
+
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Error reading Excel file: ' . $e->getMessage());
+        }
+
+        redirect('geo-locations');
+    }
 }

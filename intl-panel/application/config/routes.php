@@ -86,6 +86,17 @@ $route['roles/edit/(:num)'] = 'masters/edit_role/$1';
 $route['roles/delete/(:num)'] = 'masters/delete_role/$1';
 $route['roles/save-permissions'] = 'masters/save_role_permissions';
 
+// Geo Locations Master
+$route['geo-locations'] = 'masters/geo_locations';
+$route['geo-locations/ajax'] = 'masters/geo_locations_ajax';
+$route['geo-locations/add'] = 'masters/add_geo_location';
+$route['geo-locations/edit/(:num)'] = 'masters/edit_geo_location/$1';
+$route['geo-locations/get/(:num)'] = 'masters/get_geo_location/$1';
+$route['geo-locations/delete/(:num)'] = 'masters/delete_geo_location/$1';
+$route['geo-locations/export'] = 'masters/export_geo_locations';
+$route['geo-locations/import'] = 'masters/import_geo_locations';
+$route['geo-locations/template'] = 'masters/download_geo_location_template';
+
 // Shipment Booking & Handling
 $route['shipment/calculator'] = 'shipment/calculator';
 $route['shipment/barcode/(:any)'] = 'shipment/barcode/$1';

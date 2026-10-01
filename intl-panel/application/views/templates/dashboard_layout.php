@@ -107,7 +107,7 @@
             <?php endif; ?>
 
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
-            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'charge-types', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'geo-locations', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'charge-types', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
                 <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
               </a>
@@ -116,6 +116,7 @@
                 <li class="<?php echo ($this->uri->segment(1) == 'branches') ? 'active' : ''; ?>"><a href="<?php echo site_url('branches'); ?>"><i class="fa fa-circle-o"></i> Branches</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'franchises') ? 'active' : ''; ?>"><a href="<?php echo site_url('franchises'); ?>"><i class="fa fa-circle-o"></i> Franchises</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'countries') ? 'active' : ''; ?>"><a href="<?php echo site_url('countries'); ?>"><i class="fa fa-circle-o"></i> Countries</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'geo-locations') ? 'active' : ''; ?>"><a href="<?php echo site_url('geo-locations'); ?>"><i class="fa fa-map-marker"></i> Geo Locations</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-circle-o"></i> Shipping Rates Matrix</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
@@ -218,7 +219,7 @@
 
 <script>
   $(document).ready(function() {
-    $('.dataTable').DataTable({
+    $('.dataTable').not('#geoLocationsTable').DataTable({
       'paging'      : true,
       'lengthChange': true,
       'searching'   : true,

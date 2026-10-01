@@ -561,4 +561,119 @@ class Master_model extends CI_Model {
         }
         return $result;
     }
+
+    // --- GEO LOCATIONS (01_geo_location_info) ---
+    public function get_geo_locations($id = NULL) {
+        if ($id) {
+            $this->db->where('id', $id);
+            return $this->db->get('01_geo_location_info')->row();
+        }
+        $this->db->order_by('id', 'DESC');
+        return $this->db->get('01_geo_location_info')->result();
+    }
+
+    public function get_geo_locations_datatable($limit, $start, $search = null, $order_col = 'id', $order_dir = 'DESC') {
+        $this->db->select('*');
+        $this->db->from('01_geo_location_info');
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('country_name', $search);
+            $this->db->or_like('country_code', $search);
+            $this->db->or_like('country_code3', $search);
+            $this->db->or_like('state_name', $search);
+            $this->db->or_like('state_code', $search);
+            $this->db->or_like('district_name', $search);
+            $this->db->or_like('city_name', $search);
+            $this->db->or_like('postal_code', $search);
+            $this->db->or_like('postal_name', $search);
+            $this->db->group_end();
+        }
+
+        $allowed_cols = array(
+            'id', 'country_name', 'state_name', 'district_name', 'city_name', 'postal_code', 'latitude', 'is_active'
+        );
+        if (in_array($order_col, $allowed_cols)) {
+            $this->db->order_by($order_col, $order_dir);
+        } else {
+            $this->db->order_by('id', 'DESC');
+        }
+
+        $this->db->limit($limit, $start);
+        return $this->db->get()->result();
+    }
+
+    public function count_all_geo_locations() {
+        return $this->db->count_all('01_geo_location_info');
+    }
+
+    public function count_filtered_geo_locations($search = null) {
+        $this->db->from('01_geo_location_info');
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('country_name', $search);
+            $this->db->or_like('country_code', $search);
+            $this->db->or_like('country_code3', $search);
+            $this->db->or_like('state_name', $search);
+            $this->db->or_like('state_code', $search);
+            $this->db->or_like('district_name', $search);
+            $this->db->or_like('city_name', $search);
+            $this->db->or_like('postal_code', $search);
+            $this->db->or_like('postal_name', $search);
+            $this->db->group_end();
+        }
+        return $this->db->count_all_results();
+    }
+
+    public function add_geo_location($data) {
+        $result = $this->db->insert('01_geo_location_info', $data);
+        $id = $this->db->insert_id();
+        $this->Audit_model->log_activity('Add Geo Location', 'Location ID: ' . $id . ', Postal: ' . (isset($data['postal_code']) ? $data['postal_code'] : ''));
+        return $id;
+    }
+
+    public function update_geo_location($id, $data) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('01_geo_location_info', $data);
+        $this->Audit_model->log_activity('Update Geo Location', 'Location ID: ' . $id);
+        return $result;
+    }
+
+    public function delete_geo_location($id) {
+        $geo = $this->get_geo_locations($id);
+        $this->db->where('id', $id);
+        $result = $this->db->delete('01_geo_location_info');
+        if ($geo) {
+            $this->Audit_model->log_activity('Delete Geo Location', 'Location ID: ' . $id . ', Postal: ' . $geo->postal_code);
+        }
+        return $result;
+    }
+
+    public function get_all_geo_locations_for_export($limit = 100000) {
+        $this->db->select('*');
+        $this->db->from('01_geo_location_info');
+        $this->db->order_by('id', 'ASC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
+    }
+
+    public function upsert_geo_location($data) {
+        if (!empty($data['postal_code']) && !empty($data['country_name'])) {
+            $this->db->where('postal_code', $data['postal_code']);
+            $this->db->where('country_name', $data['country_name']);
+            if (!empty($data['city_name'])) {
+                $this->db->where('city_name', $data['city_name']);
+            }
+            $existing = $this->db->get('01_geo_location_info')->row();
+            if ($existing) {
+                $data['updated_at'] = date('Y-m-d H:i:s');
+                $this->db->where('id', $existing->id);
+                $this->db->update('01_geo_location_info', $data);
+                return 'updated';
+            }
+        }
+        $data['created_at'] = date('Y-m-d H:i:s');
+        $this->db->insert('01_geo_location_info', $data);
+        return 'inserted';
+    }
 }
