@@ -61,6 +61,14 @@
       </a>
       <div class="navbar-custom-menu">
         <ul class="nav navbar-nav">
+          <?php if ($this->session->userdata('role_id') != 4): // Staff internal chat icon ?>
+          <li class="messages-menu">
+            <a href="<?php echo site_url('chat'); ?>" title="Internal Staff Chat" style="position:relative;">
+              <i class="fa fa-comments-o" style="font-size:16px;"></i>
+              <span class="label label-danger chat-global-unread-badge" style="display:none; position:absolute; top:9px; right:4px; font-size:10px; border-radius:8px; padding:2px 5px;">0</span>
+            </a>
+          </li>
+          <?php endif; ?>
           <li class="user user-menu">
             <a href="#">
               <i class="fa fa-user-circle"></i>
@@ -89,6 +97,15 @@
           
           <li class="<?php echo ($this->uri->segment(1) == 'shipments') ? 'active' : ''; ?>">
             <a href="<?php echo site_url('shipments'); ?>"><i class="fa fa-cubes"></i> <span>Shipment Bookings</span></a>
+          </li>
+
+          <li class="<?php echo ($this->uri->segment(1) == 'chat') ? 'active' : ''; ?>">
+            <a href="<?php echo site_url('chat'); ?>">
+              <i class="fa fa-comments"></i> <span>Internal Chat</span>
+              <span class="pull-right-container">
+                <span class="label label-primary pull-right chat-sidebar-unread-badge" style="display:none; font-size:11px; border-radius:10px;">0</span>
+              </span>
+            </a>
           </li>
 
           <?php if ($this->session->userdata('role_id') != 3): // Hide for Franchise Users ?>
@@ -230,5 +247,41 @@
     });
   });
 </script>
+
+<?php if ($this->session->userdata('role_id') && $this->session->userdata('role_id') != 4): ?>
+<script>
+  // Global Internal Chat Unread Poller & Online Heartbeat
+  (function() {
+    function updateChatBadges() {
+      $.ajax({
+        url: '<?php echo site_url("chat/unread-count"); ?>',
+        type: 'GET',
+        dataType: 'json',
+        cache: false,
+        success: function(res) {
+          if (res && res.status === 'success') {
+            var count = parseInt(res.total_unread) || 0;
+            if (count > 0) {
+              var displayCount = count > 99 ? '99+' : count;
+              $('.chat-global-unread-badge').text(displayCount).show();
+              $('.chat-sidebar-unread-badge').text(displayCount).show();
+            } else {
+              $('.chat-global-unread-badge').hide();
+              $('.chat-sidebar-unread-badge').hide();
+            }
+          }
+        }
+      });
+    }
+
+    $(document).ready(function() {
+      // Run on page load
+      updateChatBadges();
+      // Periodically refresh every 15 seconds
+      setInterval(updateChatBadges, 15000);
+    });
+  })();
+</script>
+<?php endif; ?>
 </body>
 </html>

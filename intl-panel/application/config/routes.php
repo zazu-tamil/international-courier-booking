@@ -143,6 +143,15 @@ $route['kyc-requests/delete/(:num)'] = 'customer/delete_kyc_staff/$1';
 // Payments
 $route['payments/receive/(:num)'] = 'customer/receive_payment/$1';
 
+// Internal Staff Chat
+$route['chat'] = 'chat/index';
+$route['chat/contact/(:num)'] = 'chat/index/$1';
+$route['chat/get-contacts'] = 'chat/ajax_get_contacts';
+$route['chat/get-messages'] = 'chat/ajax_get_messages';
+$route['chat/send-message'] = 'chat/ajax_send_message';
+$route['chat/unread-count'] = 'chat/ajax_unread_count';
+$route['chat/download/(:num)'] = 'chat/download_attachment/$1';
+
 // Public Tracking
 $route['tracking'] = 'tracking/index';
 $route['tracking/status'] = 'tracking/status';
