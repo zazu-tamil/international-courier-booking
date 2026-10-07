@@ -431,44 +431,82 @@
 
             <!-- TAB 5: SHIPMENT CONTENTS -->
             <div class="tab-pane" id="tab-contents">
-              <h4 style="font-weight: 700; margin-bottom: 20px;" class="text-blue"><i class="fa fa-list"></i> Consignment contents invoice items</h4>
-              <p class="text-muted">Enter individual items inside the package for customs declaration invoices.</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid #eef2f5; padding-bottom: 12px;">
+                <div>
+                  <h4 style="font-weight: 700; margin: 0 0 5px 0;" class="text-blue"><i class="fa fa-list"></i> Consignment contents invoice items</h4>
+                  <p class="text-muted" style="margin: 0;">Enter individual items inside the package for customs declaration invoices.</p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                  <a href="<?php echo site_url('shipments/download-items-template'); ?>" class="btn btn-default btn-sm" style="font-weight: 600; border-color: #27ae60; color: #27ae60;" title="Download sample Excel template format (.xls)">
+                    <i class="fa fa-download"></i> Sample Template (.xls)
+                  </a>
+                  <button type="button" class="btn btn-primary btn-sm" style="font-weight: 600;" data-toggle="modal" data-target="#importItemsModal">
+                    <i class="fa fa-file-excel-o"></i> Import from Excel / CSV
+                  </button>
+                </div>
+              </div>
 
-              <table class="table table-bordered table-striped" id="itemTable">
-                <thead>
-                  <tr class="bg-gray">
-                    <th>Description</th>
-                    <th>HS Code</th>
-                    <th style="width: 100px;">Qty</th>
-                    <th style="width: 150px;">Unit Value (₹)</th>
-                    <th style="width: 150px;">Total Value (₹)</th>
-                    <th>Country of Origin</th>
-                    <th style="width: 80px;">Box No</th>
-                    <th style="width: 50px;">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="item-row">
-                    <td><input type="text" name="item_desc[]" class="form-control" placeholder="Item description" required></td>
-                    <td><input type="text" name="item_hscode[]" class="form-control" placeholder="HS code"></td>
-                    <td><input type="number" name="item_qty[]" class="form-control item-qty" value="1" required min="1"></td>
-                    <td><input type="number" step="0.01" name="item_value[]" class="form-control item-val" placeholder="0.00" required min="0.01"></td>
-                    <td><input type="text" name="item_total[]" class="form-control item-total" readonly style="background-color:#eee; font-weight:bold;"></td>
-                    <td>
-                      <select name="item_origin[]" class="form-control" required>
-                        <option value="">Select country</option>
-                        <?php foreach($countries as $c): ?>
-                          <option value="<?php echo $c->id; ?>" <?php echo ($c->id == 1) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
-                        <?php endforeach; ?>
-                      </select>
-                    </td>
-                    <td><input type="number" name="item_box_no[]" class="form-control" value="1" required min="1"></td>
-                    <td><button type="button" class="btn btn-danger btn-sm delete-item-btn" disabled><i class="fa fa-trash"></i></button></td>
-                  </tr>
-                </tbody>
-              </table>
+              <!-- Format & Bulk Import Quick Callout -->
+              <div class="alert alert-info alert-dismissible" style="background-color: #ebf5fb !important; border: 1px solid #bce8f1 !important; color: #001f3f !important; margin-bottom: 20px; border-radius: 6px;">
+                <button type="button" class="close" data-dismiss="alert" aria-hidden="true" style="color: #001f3f !important; opacity: 0.7;">×</button>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div style="color: #001f3f !important; font-size: 13px;">
+                    <i class="fa fa-info-circle" style="color: #001f3f !important;"></i> <strong style="color: #001f3f !important;">Bulk Upload Option:</strong> <span style="color: #001f3f !important;">You can enter items row-by-row below or use</span> <strong style="color: #001f3f !important;">Import from Excel / CSV</strong> <span style="color: #001f3f !important;">to populate package items automatically.</span>
+                  </div>
+                  <div>
+                    <a href="<?php echo site_url('shipments/download-items-template'); ?>" class="btn btn-xs btn-success" style="font-weight: 600;">
+                      <i class="fa fa-download"></i> Get Sample Template (.xls)
+                    </a>
+                  </div>
+                </div>
+              </div>
 
-              <button type="button" class="btn btn-success btn-sm" id="addItemBtn" style="margin-bottom: 25px;"><i class="fa fa-plus"></i> Add Item Row</button>
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="itemTable">
+                  <thead>
+                    <tr class="bg-gray">
+                      <th>Description <span class="text-danger">*</span></th>
+                      <th>HS Code</th>
+                      <th style="width: 100px;">Qty <span class="text-danger">*</span></th>
+                      <th style="width: 150px;">Unit Value (₹) <span class="text-danger">*</span></th>
+                      <th style="width: 150px;">Total Value (₹)</th>
+                      <th>Country of Origin</th>
+                      <th style="width: 80px;">Box No</th>
+                      <th style="width: 50px;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="item-row">
+                      <td><input type="text" name="item_desc[]" class="form-control" placeholder="Item description" required></td>
+                      <td><input type="text" name="item_hscode[]" class="form-control" placeholder="HS code"></td>
+                      <td><input type="number" name="item_qty[]" class="form-control item-qty" value="1" required min="1"></td>
+                      <td><input type="number" step="0.01" name="item_value[]" class="form-control item-val" placeholder="0.00" required min="0.01"></td>
+                      <td><input type="text" name="item_total[]" class="form-control item-total" readonly style="background-color:#eee; font-weight:bold;"></td>
+                      <td>
+                        <select name="item_origin[]" class="form-control" required>
+                          <option value="">Select country</option>
+                          <?php foreach($countries as $c): ?>
+                            <option value="<?php echo $c->id; ?>" <?php echo ($c->id == 1) ? 'selected' : ''; ?>><?php echo $c->country_name; ?></option>
+                          <?php endforeach; ?>
+                        </select>
+                      </td>
+                      <td><input type="number" name="item_box_no[]" class="form-control" value="1" required min="1"></td>
+                      <td><button type="button" class="btn btn-danger btn-sm delete-item-btn" disabled><i class="fa fa-trash"></i></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn btn-success btn-sm" id="addItemBtn"><i class="fa fa-plus"></i> Add Item Row</button>
+                  <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#importItemsModal"><i class="fa fa-file-excel-o"></i> Import Excel / CSV</button>
+                  <a href="<?php echo site_url('shipments/download-items-template'); ?>" class="btn btn-default btn-sm"><i class="fa fa-download text-green"></i> Sample Template</a>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-default btn-sm text-danger" id="btnClearItemsBtn" title="Clear all item rows"><i class="fa fa-trash"></i> Clear All Rows</button>
+                </div>
+              </div>
 
               <div class="row well well-sm" style="margin: 0; background: #fcfcfc;">
                 <div class="col-xs-12 text-right">
@@ -512,6 +550,110 @@
           </div>
         </div>
       <?php echo form_close(); ?>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Import Consignment Items from Excel / CSV -->
+<div class="modal fade" id="importItemsModal" tabindex="-1" role="dialog" aria-labelledby="importItemsModalLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.2);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #3c8dbc, #286090); color: white;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 0.9;"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="importItemsModalLabel" style="font-weight: 600;">
+          <i class="fa fa-file-excel-o"></i> Import Consignment Items for Customs Declaration
+        </h4>
+      </div>
+      <div class="modal-body" style="padding: 25px;">
+        <!-- Format Instructions Alert -->
+        <div class="panel panel-default" style="border-radius: 6px; border-color: #d9edf7;">
+          <div class="panel-heading" style="background-color: #d9edf7; color: #31708f; font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span><i class="fa fa-info-circle"></i> Excel / CSV File Format & Columns Specification</span>
+            <a href="<?php echo site_url('shipments/download-items-template'); ?>" class="btn btn-xs btn-success" style="font-weight: 600;">
+              <i class="fa fa-download"></i> Download Sample Template (.xls)
+            </a>
+          </div>
+          <div class="panel-body" style="font-size: 13px;">
+            <p style="margin-bottom: 8px;">Ensure the first row in your spreadsheet contains column headers. You can use the columns listed below:</p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-condensed text-center" style="background: #fff; margin-bottom: 8px; font-size: 12px;">
+                <thead>
+                  <tr class="bg-gray">
+                    <th class="text-center" style="width: 25%;">Item Description <span class="text-danger">*</span></th>
+                    <th class="text-center" style="width: 15%;">HS Code</th>
+                    <th class="text-center" style="width: 12%;">Quantity <span class="text-danger">*</span></th>
+                    <th class="text-center" style="width: 16%;">Unit Value (₹) <span class="text-danger">*</span></th>
+                    <th class="text-center" style="width: 18%;">Country of Origin</th>
+                    <th class="text-center" style="width: 14%;">Box No</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-left">Cotton Men T-Shirt</td>
+                    <td>6109.10</td>
+                    <td>2</td>
+                    <td>499.00</td>
+                    <td>India</td>
+                    <td>1</td>
+                  </tr>
+                  <tr>
+                    <td class="text-left">Leather Wallet</td>
+                    <td>4202.31</td>
+                    <td>1</td>
+                    <td>850.00</td>
+                    <td>India</td>
+                    <td>1</td>
+                  </tr>
+                  <tr>
+                    <td class="text-left">Handmade Wooden Artifacts</td>
+                    <td>4420.10</td>
+                    <td>3</td>
+                    <td>1200.00</td>
+                    <td>India</td>
+                    <td>2</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ul style="margin-bottom: 0; padding-left: 20px; color: #555;">
+              <li><strong>Description & Unit Value</strong> are required for customs declaration.</li>
+              <li><strong>Country of Origin</strong> will automatically match country names or ISO codes (defaults to India if not matched).</li>
+              <li><strong>Supported formats:</strong> <code>.xls</code>, <code>.xlsx</code>, and <code>.csv</code>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <form id="importItemsForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="excel_items_file" style="font-weight: 600;">Choose Spreadsheet File (.xls, .xlsx, .csv) <span class="text-danger">*</span></label>
+            <input type="file" id="excel_items_file" name="items_file" class="form-control" accept=".xls,.xlsx,.csv" required style="padding: 6px 12px; height: auto;">
+            <p class="help-block" id="selectedFileInfo" style="margin-bottom: 0;"></p>
+          </div>
+
+          <div class="form-group" style="background: #fbfbfb; padding: 12px 15px; border-radius: 6px; border: 1px solid #e9e9e9;">
+            <label style="font-weight: 600; display: block; margin-bottom: 8px;">Import Mode:</label>
+            <label class="radio-inline" style="font-weight: 500; cursor: pointer;">
+              <input type="radio" name="import_mode" value="replace" checked> <strong>Replace existing items</strong> in the table
+            </label>
+            <label class="radio-inline" style="font-weight: 500; cursor: pointer; margin-left: 20px;">
+              <input type="radio" name="import_mode" value="append"> <strong>Append</strong> to current items
+            </label>
+          </div>
+
+          <div id="importLoadingState" style="display: none; margin: 15px 0;" class="text-center">
+            <i class="fa fa-spinner fa-spin fa-2x text-blue"></i>
+            <p style="margin-top: 8px; font-weight: 600;" class="text-muted">Reading and validating spreadsheet data...</p>
+          </div>
+
+          <div id="importAlertBox" style="display: none;"></div>
+        </form>
+      </div>
+      <div class="modal-footer" style="background: #f8f9fa;">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnSubmitImportItems">
+          <i class="fa fa-upload"></i> Upload & Import Items
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -697,18 +839,175 @@
       sumInvoiceValues();
     });
 
+    function updateItemDeleteButtons() {
+      var count = $('.item-row').length;
+      if (count <= 1) {
+        $('.item-row:first .delete-item-btn').prop('disabled', true);
+      } else {
+        $('.delete-item-btn').prop('disabled', false);
+      }
+    }
+
+    function createItemRow(data) {
+      data = data || {};
+      var desc = data.description || '';
+      var hs = data.hscode || data.hs_code || '';
+      var qty = (data.quantity !== undefined && data.quantity !== '') ? data.quantity : 1;
+      var unitVal = (data.unit_value !== undefined && data.unit_value !== '') ? parseFloat(data.unit_value).toFixed(2) : '';
+      var totalVal = (data.total_value !== undefined && data.total_value !== '') ? parseFloat(data.total_value).toFixed(2) : '';
+      var countryId = data.country_id || 1;
+      var boxNo = data.box_no || 1;
+
+      var countryOptions = $('.item-row:first select[name="item_origin[]"]').html();
+      if (!countryOptions) {
+        countryOptions = '<option value="1" selected>India</option>';
+      }
+
+      var $tr = $('<tr class="item-row">' +
+        '<td><input type="text" name="item_desc[]" class="form-control" placeholder="Item description" required></td>' +
+        '<td><input type="text" name="item_hscode[]" class="form-control" placeholder="HS code"></td>' +
+        '<td><input type="number" name="item_qty[]" class="form-control item-qty" value="1" required min="1"></td>' +
+        '<td><input type="number" step="0.01" name="item_value[]" class="form-control item-val" placeholder="0.00" required min="0.01"></td>' +
+        '<td><input type="text" name="item_total[]" class="form-control item-total" readonly style="background-color:#eee; font-weight:bold;"></td>' +
+        '<td><select name="item_origin[]" class="form-control" required>' + countryOptions + '</select></td>' +
+        '<td><input type="number" name="item_box_no[]" class="form-control" value="1" required min="1"></td>' +
+        '<td><button type="button" class="btn btn-danger btn-sm delete-item-btn"><i class="fa fa-trash"></i></button></td>' +
+      '</tr>');
+
+      $tr.find('input[name="item_desc[]"]').val(desc);
+      $tr.find('input[name="item_hscode[]"]').val(hs);
+      $tr.find('.item-qty').val(qty);
+      $tr.find('.item-val').val(unitVal);
+      $tr.find('.item-total').val(totalVal);
+      $tr.find('select[name="item_origin[]"]').val(countryId);
+      $tr.find('input[name="item_box_no[]"]').val(boxNo);
+
+      return $tr;
+    }
+
     $('#addItemBtn').click(function() {
       var newRow = $('.item-row:first').clone();
       newRow.find('input').val('');
       newRow.find('.item-qty').val(1);
+      newRow.find('input[name="item_box_no[]"]').val(1);
       newRow.find('.delete-item-btn').prop('disabled', false);
       $('#itemTable tbody').append(newRow);
+      updateItemDeleteButtons();
       sumInvoiceValues();
     });
 
     $(document).on('click', '.delete-item-btn', function() {
-      $(this).closest('.item-row').remove();
-      sumInvoiceValues();
+      if ($('.item-row').length > 1) {
+        $(this).closest('.item-row').remove();
+        updateItemDeleteButtons();
+        sumInvoiceValues();
+      }
+    });
+
+    $('#btnClearItemsBtn').click(function() {
+      if (confirm('Are you sure you want to clear all invoice items?')) {
+        var countryHtml = $('.item-row:first select[name="item_origin[]"]').html();
+        $('#itemTable tbody').empty();
+        var emptyRow = createItemRow({ description: '', hscode: '', quantity: 1, unit_value: '', total_value: '', country_id: 1, box_no: 1 });
+        $('#itemTable tbody').append(emptyRow);
+        updateItemDeleteButtons();
+        sumInvoiceValues();
+      }
+    });
+
+    $('#excel_items_file').change(function() {
+      var file = this.files[0];
+      if (file) {
+        var sizeKb = (file.size / 1024).toFixed(1);
+        $('#selectedFileInfo').html('<span class="text-success" style="font-weight:600;"><i class="fa fa-check-circle"></i> Ready: ' + file.name + ' (' + sizeKb + ' KB)</span>');
+      } else {
+        $('#selectedFileInfo').text('');
+      }
+      $('#importAlertBox').hide().empty();
+    });
+
+    $('#btnSubmitImportItems').click(function() {
+      var fileInput = document.getElementById('excel_items_file');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        $('#importAlertBox').html('<div class="alert alert-warning"><i class="fa fa-warning"></i> Please choose a valid .xls, .xlsx, or .csv file to import.</div>').show();
+        return;
+      }
+
+      var file = fileInput.files[0];
+      var ext = file.name.split('.').pop().toLowerCase();
+      if (['xls', 'xlsx', 'csv'].indexOf(ext) === -1) {
+        $('#importAlertBox').html('<div class="alert alert-danger"><i class="fa fa-ban"></i> Invalid file type (' + ext + '). Only .xls, .xlsx, and .csv files are supported.</div>').show();
+        return;
+      }
+
+      var mode = $('input[name="import_mode"]:checked').val() || 'replace';
+      var formData = new FormData();
+      formData.append('items_file', file);
+      formData.append('<?php echo $this->security->get_csrf_token_name(); ?>', '<?php echo $this->security->get_csrf_hash(); ?>');
+
+      $('#btnSubmitImportItems').prop('disabled', true);
+      $('#importLoadingState').slideDown();
+      $('#importAlertBox').hide().empty();
+
+      $.ajax({
+        url: '<?php echo site_url("shipments/import-items-excel"); ?>',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function(response) {
+          $('#btnSubmitImportItems').prop('disabled', false);
+          $('#importLoadingState').slideUp();
+
+          if (response.status === 'success' && response.items && response.items.length > 0) {
+            if (mode === 'replace') {
+              $('#itemTable tbody').empty();
+            } else {
+              // Append mode: If current single row is blank, remove it
+              if ($('.item-row').length === 1) {
+                var firstDesc = $('.item-row:first input[name="item_desc[]"]').val().trim();
+                var firstVal = $('.item-row:first input[name="item_value[]"]').val();
+                if (!firstDesc && (!firstVal || parseFloat(firstVal) === 0)) {
+                  $('#itemTable tbody').empty();
+                }
+              }
+            }
+
+            $.each(response.items, function(idx, item) {
+              var row = createItemRow(item);
+              $('#itemTable tbody').append(row);
+            });
+
+            updateItemDeleteButtons();
+            sumInvoiceValues();
+
+            $('#importItemsModal').modal('hide');
+            $('#importItemsForm')[0].reset();
+            $('#selectedFileInfo').empty();
+
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Items Imported!',
+                text: response.message || 'Items successfully loaded into the customs declaration grid.',
+                timer: 3500,
+                showConfirmButton: false
+              });
+            } else {
+              alert(response.message || 'Items imported successfully.');
+            }
+          } else {
+            var errMsg = response.message || 'Failed to import items from spreadsheet.';
+            $('#importAlertBox').html('<div class="alert alert-danger"><i class="fa fa-ban"></i> ' + errMsg + '</div>').show();
+          }
+        },
+        error: function(xhr, status, error) {
+          $('#btnSubmitImportItems').prop('disabled', false);
+          $('#importLoadingState').slideUp();
+          $('#importAlertBox').html('<div class="alert alert-danger"><i class="fa fa-ban"></i> Server communication error. Please check server logs or upload smaller file.</div>').show();
+        }
+      });
     });
 
     // LOOK UP ESTIMATED RATES VIA AJAX

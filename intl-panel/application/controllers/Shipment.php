@@ -521,6 +521,301 @@ class Shipment extends CI_Controller {
         exit;
     }
 
+    // --- DOWNLOAD SAMPLE CONSIGNMENT ITEMS TEMPLATE ---
+    public function download_items_template() {
+        if ($this->session->userdata('role_id') == 4) {
+            $this->session->set_flashdata('error', 'Access Denied.');
+            redirect('dashboard');
+        }
+
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('display_errors', 0);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Consignment Items');
+
+        $headers = array(
+            'A1' => 'Item Description',
+            'B1' => 'HS Code',
+            'C1' => 'Quantity',
+            'D1' => 'Unit Value (INR)',
+            'E1' => 'Country of Origin',
+            'F1' => 'Box No'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '00A65A')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+
+        // Sample data rows
+        $sample_data = array(
+            array('Cotton Men T-Shirt', '6109.10', 2, 499.00, 'India', 1),
+            array('Leather Wallet', '4202.31', 1, 850.00, 'India', 1),
+            array('Handmade Wooden Artifacts', '4420.10', 3, 1200.00, 'India', 2),
+            array('Assorted Spices & Tea Powder', '0902.30', 5, 350.00, 'India', 2)
+        );
+
+        $r = 2;
+        foreach ($sample_data as $row) {
+            $col = 'A';
+            foreach ($row as $val) {
+                $sheet->setCellValueExplicit($col . $r, $val, PHPExcel_Cell_DataType::TYPE_STRING);
+                $col++;
+            }
+            $r++;
+        }
+
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'consignment_items_sample_template.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    // --- IMPORT CONSIGNMENT ITEMS FROM EXCEL/CSV ---
+    public function import_items_excel() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('display_errors', 0);
+        ini_set('memory_limit', '256M');
+
+        if ($this->session->userdata('role_id') == 4) {
+            echo json_encode(array('status' => 'error', 'message' => 'Unauthorized access.'));
+            exit;
+        }
+
+        if (empty($_FILES['items_file']['name'])) {
+            echo json_encode(array('status' => 'error', 'message' => 'Please select an Excel or CSV file to upload.'));
+            exit;
+        }
+
+        $file_name = $_FILES['items_file']['name'];
+        $tmp_file  = $_FILES['items_file']['tmp_name'];
+        $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        $valid_extensions = array('xls', 'xlsx', 'csv');
+        if (!in_array($file_ext, $valid_extensions)) {
+            echo json_encode(array('status' => 'error', 'message' => 'Invalid file format. Allowed formats: .xls, .xlsx, .csv'));
+            exit;
+        }
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        try {
+            if ($file_ext === 'csv') {
+                $objReader = PHPExcel_IOFactory::createReader('CSV');
+            } elseif ($file_ext === 'xlsx') {
+                $objReader = PHPExcel_IOFactory::createReader('Excel2007');
+            } else {
+                $objReader = PHPExcel_IOFactory::createReader('Excel5');
+            }
+
+            $objPHPExcel = $objReader->load($tmp_file);
+            $sheet = $objPHPExcel->getActiveSheet();
+            $sheetData = $sheet->toArray(null, true, true, false);
+
+            if (empty($sheetData) || count($sheetData) < 2) {
+                echo json_encode(array('status' => 'error', 'message' => 'The uploaded file does not contain any data rows.'));
+                exit;
+            }
+
+            // Fetch active countries for lookup
+            $all_countries = $this->Master_model->get_countries();
+            $countries_by_id = array();
+            $countries_by_name = array();
+            $countries_by_iso = array();
+            $countries_by_code = array();
+            $default_country_id = 1;
+
+            if (!empty($all_countries)) {
+                $default_country_id = $all_countries[0]->id;
+                foreach ($all_countries as $c) {
+                    $countries_by_id[$c->id] = $c->id;
+                    $countries_by_name[strtolower(trim($c->country_name))] = $c->id;
+                    $countries_by_iso[strtolower(trim($c->iso_code))] = $c->id;
+                    if (!empty($c->country_code)) {
+                        $countries_by_code[strtolower(trim($c->country_code))] = $c->id;
+                    }
+                    if ($c->id == 1 || strtolower(trim($c->country_name)) === 'india') {
+                        $default_country_id = $c->id;
+                    }
+                }
+            }
+
+            // Map header row
+            $header_row = $sheetData[0];
+            $col_map = array();
+
+            foreach ($header_row as $idx => $heading) {
+                if ($heading === null) continue;
+                $norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$heading)));
+                switch ($norm) {
+                    case 'itemdescription':
+                    case 'description':
+                    case 'itemdesc':
+                    case 'item':
+                    case 'desc':
+                    case 'particulars':
+                    case 'product':
+                    case 'productname':
+                    case 'itemname':
+                        $col_map['description'] = $idx;
+                        break;
+                    case 'hscode':
+                    case 'hs':
+                    case 'harmonizedcode':
+                    case 'commoditycode':
+                    case 'tariffcode':
+                    case 'itccode':
+                        $col_map['hscode'] = $idx;
+                        break;
+                    case 'quantity':
+                    case 'qty':
+                    case 'count':
+                    case 'pcs':
+                    case 'pieces':
+                    case 'units':
+                    case 'qnty':
+                        $col_map['quantity'] = $idx;
+                        break;
+                    case 'unitvalue':
+                    case 'unitvalueinr':
+                    case 'unitprice':
+                    case 'price':
+                    case 'rate':
+                    case 'value':
+                    case 'itemvalue':
+                    case 'cost':
+                    case 'unitval':
+                        $col_map['unit_value'] = $idx;
+                        break;
+                    case 'countryoforigin':
+                    case 'country':
+                    case 'origin':
+                    case 'origincountry':
+                    case 'coo':
+                    case 'sourcecountry':
+                    case 'countryorigin':
+                        $col_map['country'] = $idx;
+                        break;
+                    case 'boxno':
+                    case 'boxnumber':
+                    case 'box':
+                    case 'carton':
+                    case 'cartonno':
+                    case 'package':
+                    case 'packageno':
+                    case 'boxnum':
+                        $col_map['box_no'] = $idx;
+                        break;
+                }
+            }
+
+            // Fallback column positions if headers were not named with keywords
+            if (!isset($col_map['description'])) $col_map['description'] = 0;
+            if (!isset($col_map['hscode']) && count($header_row) > 1) $col_map['hscode'] = 1;
+            if (!isset($col_map['quantity']) && count($header_row) > 2) $col_map['quantity'] = 2;
+            if (!isset($col_map['unit_value']) && count($header_row) > 3) $col_map['unit_value'] = 3;
+            if (!isset($col_map['country']) && count($header_row) > 4) $col_map['country'] = 4;
+            if (!isset($col_map['box_no']) && count($header_row) > 5) $col_map['box_no'] = 5;
+
+            $items = array();
+            for ($r = 1; $r < count($sheetData); $r++) {
+                $row = $sheetData[$r];
+                
+                $desc_val = isset($col_map['description'], $row[$col_map['description']]) ? trim((string)$row[$col_map['description']]) : '';
+                $hs_val   = isset($col_map['hscode'], $row[$col_map['hscode']]) ? trim((string)$row[$col_map['hscode']]) : '';
+                $qty_raw  = isset($col_map['quantity'], $row[$col_map['quantity']]) ? trim((string)$row[$col_map['quantity']]) : '1';
+                $val_raw  = isset($col_map['unit_value'], $row[$col_map['unit_value']]) ? trim((string)$row[$col_map['unit_value']]) : '0';
+                $co_raw   = isset($col_map['country'], $row[$col_map['country']]) ? trim((string)$row[$col_map['country']]) : '';
+                $box_raw  = isset($col_map['box_no'], $row[$col_map['box_no']]) ? trim((string)$row[$col_map['box_no']]) : '1';
+
+                // Skip purely empty rows
+                if ($desc_val === '' && $hs_val === '' && ($val_raw === '' || $val_raw === '0')) {
+                    continue;
+                }
+
+                if ($desc_val === '') {
+                    continue;
+                }
+
+                $qty = intval(preg_replace('/[^0-9]/', '', (string)$qty_raw));
+                if ($qty <= 0) $qty = 1;
+
+                $val_clean = preg_replace('/[^0-9.]/', '', (string)$val_raw);
+                $unit_val = floatval($val_clean);
+                if ($unit_val < 0) $unit_val = 0.00;
+
+                $box_no = intval(preg_replace('/[^0-9]/', '', (string)$box_raw));
+                if ($box_no <= 0) $box_no = 1;
+
+                // Match country
+                $country_id = $default_country_id;
+                if ($co_raw !== '') {
+                    $co_clean = strtolower($co_raw);
+                    if (isset($countries_by_id[$co_raw])) {
+                        $country_id = $countries_by_id[$co_raw];
+                    } elseif (isset($countries_by_name[$co_clean])) {
+                        $country_id = $countries_by_name[$co_clean];
+                    } elseif (isset($countries_by_iso[$co_clean])) {
+                        $country_id = $countries_by_iso[$co_clean];
+                    } elseif (isset($countries_by_code[$co_clean])) {
+                        $country_id = $countries_by_code[$co_clean];
+                    }
+                }
+
+                $total_val = round($qty * $unit_val, 2);
+
+                $items[] = array(
+                    'description' => $desc_val,
+                    'hscode'      => $hs_val,
+                    'quantity'    => $qty,
+                    'unit_value'  => number_format($unit_val, 2, '.', ''),
+                    'total_value' => number_format($total_val, 2, '.', ''),
+                    'country_id'  => $country_id,
+                    'box_no'      => $box_no
+                );
+            }
+
+            if (empty($items)) {
+                echo json_encode(array('status' => 'error', 'message' => 'No valid item rows found in the uploaded file. Please ensure Description and Unit Value are provided.'));
+                exit;
+            }
+
+            echo json_encode(array(
+                'status'  => 'success',
+                'message' => 'Successfully imported ' . count($items) . ' consignment item(s).',
+                'items'   => $items
+            ));
+            exit;
+
+        } catch (Exception $e) {
+            echo json_encode(array('status' => 'error', 'message' => 'Error reading spreadsheet: ' . $e->getMessage()));
+            exit;
+        }
+    }
+
     // --- MANUAL TRACKING UPDATE (Staff Only) ---
     public function add_tracking_stage() {
         if ($this->session->userdata('role_id') == 4 || $this->session->userdata('role_id') == 3) {
