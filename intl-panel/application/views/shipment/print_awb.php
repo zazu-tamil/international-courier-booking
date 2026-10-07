@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Air Waybill (AWB) Document - <?php echo $shipment->awb_number; ?></title>
+  <link rel="shortcut icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
+  <link rel="icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
   <?php
     // Base64 helper for live server PDF rendering stability (Dompdf loopback workaround)
     $pdf_logo_src = '';

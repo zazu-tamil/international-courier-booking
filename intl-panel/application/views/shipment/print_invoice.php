@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Commercial Invoice - <?php echo $shipment->awb_number; ?></title>
+  <link rel="shortcut icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
+  <link rel="icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
   <style>
     body {
       font-family: Arial, sans-serif;

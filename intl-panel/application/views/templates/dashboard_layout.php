@@ -6,6 +6,10 @@
   <title><?php echo isset($page_title) ? $page_title : 'Courier ERP'; ?> | International Panel</title>
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   
+  <!-- Favicon -->
+  <link rel="shortcut icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
+  <link rel="icon" href="<?php echo base_url('asset/images/logo-icon.png'); ?>" type="image/png">
+  
   <!-- CSS assets -->
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/bootstrap/dist/css/bootstrap.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/font-awesome/css/font-awesome.min.css'); ?>">

@@ -5,6 +5,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <head>
 <meta charset="utf-8">
 <title>404 Page Not Found</title>
+<link rel="shortcut icon" href="<?php echo config_item('base_url'); ?>asset/images/logo-icon.png" type="image/png">
+<link rel="icon" href="<?php echo config_item('base_url'); ?>asset/images/logo-icon.png" type="image/png">
 <style type="text/css">
 
 ::selection { background-color: #E13300; color: white; }
