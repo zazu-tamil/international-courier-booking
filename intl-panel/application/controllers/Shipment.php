@@ -538,12 +538,13 @@ class Shipment extends CI_Controller {
         $sheet->setTitle('Consignment Items');
 
         $headers = array(
-            'A1' => 'Item Description',
-            'B1' => 'HS Code',
-            'C1' => 'Quantity',
-            'D1' => 'Unit Value (INR)',
-            'E1' => 'Country of Origin',
-            'F1' => 'Box No'
+            'A1' => 'S.No',
+            'B1' => 'Item Description',
+            'C1' => 'HS Code',
+            'D1' => 'Quantity',
+            'E1' => 'Unit Value (INR)',
+            'F1' => 'Country of Origin',
+            'G1' => 'Box No'
         );
 
         foreach ($headers as $cell => $val) {
@@ -558,14 +559,14 @@ class Shipment extends CI_Controller {
             ),
             'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
         );
-        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
 
         // Sample data rows
         $sample_data = array(
-            array('Cotton Men T-Shirt', '6109.10', 2, 499.00, 'India', 1),
-            array('Leather Wallet', '4202.31', 1, 850.00, 'India', 1),
-            array('Handmade Wooden Artifacts', '4420.10', 3, 1200.00, 'India', 2),
-            array('Assorted Spices & Tea Powder', '0902.30', 5, 350.00, 'India', 2)
+            array(1, 'Cotton Men T-Shirt', '6109.10', 2, 499.00, 'India', 1),
+            array(2, 'Leather Wallet', '4202.31', 1, 850.00, 'India', 1),
+            array(3, 'Handmade Wooden Artifacts', '4420.10', 3, 1200.00, 'India', 2),
+            array(4, 'Assorted Spices & Tea Powder', '0902.30', 5, 350.00, 'India', 2)
         );
 
         $r = 2;
@@ -578,7 +579,7 @@ class Shipment extends CI_Controller {
             $r++;
         }
 
-        foreach (range('A', 'F') as $col) {
+        foreach (range('A', 'G') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -671,6 +672,14 @@ class Shipment extends CI_Controller {
                 if ($heading === null) continue;
                 $norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$heading)));
                 switch ($norm) {
+                    case 'sno':
+                    case 'slno':
+                    case 'srno':
+                    case 'serial':
+                    case 'serialno':
+                    case 'no':
+                        $col_map['sno'] = $idx;
+                        break;
                     case 'itemdescription':
                     case 'description':
                     case 'itemdesc':
@@ -733,12 +742,13 @@ class Shipment extends CI_Controller {
             }
 
             // Fallback column positions if headers were not named with keywords
-            if (!isset($col_map['description'])) $col_map['description'] = 0;
-            if (!isset($col_map['hscode']) && count($header_row) > 1) $col_map['hscode'] = 1;
-            if (!isset($col_map['quantity']) && count($header_row) > 2) $col_map['quantity'] = 2;
-            if (!isset($col_map['unit_value']) && count($header_row) > 3) $col_map['unit_value'] = 3;
-            if (!isset($col_map['country']) && count($header_row) > 4) $col_map['country'] = 4;
-            if (!isset($col_map['box_no']) && count($header_row) > 5) $col_map['box_no'] = 5;
+            $offset = (isset($col_map['sno']) && $col_map['sno'] === 0) ? 1 : 0;
+            if (!isset($col_map['description'])) $col_map['description'] = $offset;
+            if (!isset($col_map['hscode']) && count($header_row) > (1 + $offset)) $col_map['hscode'] = 1 + $offset;
+            if (!isset($col_map['quantity']) && count($header_row) > (2 + $offset)) $col_map['quantity'] = 2 + $offset;
+            if (!isset($col_map['unit_value']) && count($header_row) > (3 + $offset)) $col_map['unit_value'] = 3 + $offset;
+            if (!isset($col_map['country']) && count($header_row) > (4 + $offset)) $col_map['country'] = 4 + $offset;
+            if (!isset($col_map['box_no']) && count($header_row) > (5 + $offset)) $col_map['box_no'] = 5 + $offset;
 
             $items = array();
             for ($r = 1; $r < count($sheetData); $r++) {

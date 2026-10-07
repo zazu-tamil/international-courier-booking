@@ -465,6 +465,7 @@
                 <table class="table table-bordered table-striped" id="itemTable">
                   <thead>
                     <tr class="bg-gray">
+                      <th style="width: 50px; text-align: center;">S.No</th>
                       <th>Description <span class="text-danger">*</span></th>
                       <th>HS Code</th>
                       <th style="width: 100px;">Qty <span class="text-danger">*</span></th>
@@ -477,6 +478,7 @@
                   </thead>
                   <tbody>
                     <tr class="item-row">
+                      <td class="item-sno text-center" style="vertical-align: middle; font-weight: 600;">1</td>
                       <td><input type="text" name="item_desc[]" class="form-control" placeholder="Item description" required></td>
                       <td><input type="text" name="item_hscode[]" class="form-control" placeholder="HS code"></td>
                       <td><input type="number" name="item_qty[]" class="form-control item-qty" value="1" required min="1"></td>
@@ -579,16 +581,18 @@
               <table class="table table-bordered table-condensed text-center" style="background: #fff; margin-bottom: 8px; font-size: 12px;">
                 <thead>
                   <tr class="bg-gray">
+                    <th class="text-center" style="width: 8%;">S.No</th>
                     <th class="text-center" style="width: 25%;">Item Description <span class="text-danger">*</span></th>
-                    <th class="text-center" style="width: 15%;">HS Code</th>
-                    <th class="text-center" style="width: 12%;">Quantity <span class="text-danger">*</span></th>
-                    <th class="text-center" style="width: 16%;">Unit Value (₹) <span class="text-danger">*</span></th>
-                    <th class="text-center" style="width: 18%;">Country of Origin</th>
-                    <th class="text-center" style="width: 14%;">Box No</th>
+                    <th class="text-center" style="width: 14%;">HS Code</th>
+                    <th class="text-center" style="width: 10%;">Quantity <span class="text-danger">*</span></th>
+                    <th class="text-center" style="width: 15%;">Unit Value (₹) <span class="text-danger">*</span></th>
+                    <th class="text-center" style="width: 16%;">Country of Origin</th>
+                    <th class="text-center" style="width: 12%;">Box No</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
+                    <td>1</td>
                     <td class="text-left">Cotton Men T-Shirt</td>
                     <td>6109.10</td>
                     <td>2</td>
@@ -597,6 +601,7 @@
                     <td>1</td>
                   </tr>
                   <tr>
+                    <td>2</td>
                     <td class="text-left">Leather Wallet</td>
                     <td>4202.31</td>
                     <td>1</td>
@@ -605,6 +610,7 @@
                     <td>1</td>
                   </tr>
                   <tr>
+                    <td>3</td>
                     <td class="text-left">Handmade Wooden Artifacts</td>
                     <td>4420.10</td>
                     <td>3</td>
@@ -848,7 +854,13 @@
       }
     }
 
-    function createItemRow(data) {
+    function renumberItemRows() {
+      $('.item-row').each(function(index) {
+        $(this).find('.item-sno').text(index + 1);
+      });
+    }
+
+    function createItemRow(data, sno) {
       data = data || {};
       var desc = data.description || '';
       var hs = data.hscode || data.hs_code || '';
@@ -857,6 +869,7 @@
       var totalVal = (data.total_value !== undefined && data.total_value !== '') ? parseFloat(data.total_value).toFixed(2) : '';
       var countryId = data.country_id || 1;
       var boxNo = data.box_no || 1;
+      var displaySno = sno !== undefined ? sno : ($('.item-row').length + 1);
 
       var countryOptions = $('.item-row:first select[name="item_origin[]"]').html();
       if (!countryOptions) {
@@ -864,6 +877,7 @@
       }
 
       var $tr = $('<tr class="item-row">' +
+        '<td class="item-sno text-center" style="vertical-align: middle; font-weight: 600;">' + displaySno + '</td>' +
         '<td><input type="text" name="item_desc[]" class="form-control" placeholder="Item description" required></td>' +
         '<td><input type="text" name="item_hscode[]" class="form-control" placeholder="HS code"></td>' +
         '<td><input type="number" name="item_qty[]" class="form-control item-qty" value="1" required min="1"></td>' +
@@ -892,6 +906,7 @@
       newRow.find('input[name="item_box_no[]"]').val(1);
       newRow.find('.delete-item-btn').prop('disabled', false);
       $('#itemTable tbody').append(newRow);
+      renumberItemRows();
       updateItemDeleteButtons();
       sumInvoiceValues();
     });
@@ -899,6 +914,7 @@
     $(document).on('click', '.delete-item-btn', function() {
       if ($('.item-row').length > 1) {
         $(this).closest('.item-row').remove();
+        renumberItemRows();
         updateItemDeleteButtons();
         sumInvoiceValues();
       }
@@ -906,10 +922,10 @@
 
     $('#btnClearItemsBtn').click(function() {
       if (confirm('Are you sure you want to clear all invoice items?')) {
-        var countryHtml = $('.item-row:first select[name="item_origin[]"]').html();
         $('#itemTable tbody').empty();
-        var emptyRow = createItemRow({ description: '', hscode: '', quantity: 1, unit_value: '', total_value: '', country_id: 1, box_no: 1 });
+        var emptyRow = createItemRow({ description: '', hscode: '', quantity: 1, unit_value: '', total_value: '', country_id: 1, box_no: 1 }, 1);
         $('#itemTable tbody').append(emptyRow);
+        renumberItemRows();
         updateItemDeleteButtons();
         sumInvoiceValues();
       }
@@ -979,6 +995,7 @@
               $('#itemTable tbody').append(row);
             });
 
+            renumberItemRows();
             updateItemDeleteButtons();
             sumInvoiceValues();
 
