@@ -74,7 +74,11 @@ class Chat_model extends CI_Model {
     public function get_staff_contacts($current_user_id) {
         $active_field = $this->has_last_active ? 'u.last_active' : 'u.last_login as last_active';
 
-        // Fetch all staff users (roles 1, 2, 3)
+        // Check if current user is super admin
+        $user_row = $this->db->select('role_id')->where('id', $current_user_id)->get('users')->row();
+        $is_superadmin = ($user_row && $user_row->role_id == 1);
+
+        // Fetch staff users (roles 1, 2, 3)
         $this->db->select("u.id, u.username, u.email, u.role_id, r.name as role_name, u.branch_id, b.name as branch_name, b.branch_code, u.franchise_id, f.name as franchise_name, f.franchise_code, {$active_field}");
         $this->db->from('users u');
         $this->db->join('roles r', 'r.id = u.role_id');
@@ -84,6 +88,11 @@ class Chat_model extends CI_Model {
         $this->db->where('u.id !=', $current_user_id);
         $this->db->where('u.status', 'Active');
         $this->db->where('u.deleted_at IS NULL', NULL, FALSE);
+
+        // FEATURE 1: Super admin is invisible to all regular staff!
+        if (!$is_superadmin) {
+            $this->db->where('u.role_id !=', 1);
+        }
         
         $query = $this->db->get();
         if (!$query) {
@@ -357,6 +366,108 @@ class Chat_model extends CI_Model {
         $this->db->where('m.is_read', 0);
         $this->db->order_by('m.id', 'DESC');
         $this->db->limit($limit);
+
+        $query = $this->db->get();
+        return $query ? $query->result() : array();
+    }
+
+    /**
+     * Get all active conversation threads between staff members across the system (Super Admin Live Surveillance)
+     */
+    public function get_all_staff_conversations() {
+        if (!$this->has_chat_table) {
+            return array();
+        }
+
+        $sql = "SELECT 
+                    LEAST(m.sender_id, m.receiver_id) as user1_id,
+                    GREATEST(m.sender_id, m.receiver_id) as user2_id,
+                    COUNT(*) as message_count,
+                    MAX(m.created_at) as last_message_time,
+                    MAX(m.id) as last_message_id
+                FROM internal_chat_messages m
+                WHERE m.receiver_id IS NOT NULL
+                GROUP BY LEAST(m.sender_id, m.receiver_id), GREATEST(m.sender_id, m.receiver_id)
+                ORDER BY last_message_time DESC";
+
+        $query = $this->db->query($sql);
+        if (!$query) {
+            return array();
+        }
+
+        $pairs = $query->result();
+        $conversations = array();
+
+        foreach ($pairs as $p) {
+            $u1 = $this->get_contact_info($p->user1_id);
+            $u2 = $this->get_contact_info($p->user2_id);
+
+            if (!$u1 || !$u2) {
+                continue;
+            }
+
+            $last_msg = $this->get_message_by_id($p->last_message_id);
+
+            $time = strtotime($p->last_message_time);
+            if (date('Y-m-d', $time) === date('Y-m-d')) {
+                $formatted_time = date('h:i A', $time);
+            } elseif (date('Y-m-d', $time) === date('Y-m-d', strtotime('-1 day'))) {
+                $formatted_time = 'Yesterday ' . date('h:i A', $time);
+            } else {
+                $formatted_time = date('M d, h:i A', $time);
+            }
+
+            $conversations[] = (object) array(
+                'user1_id' => $p->user1_id,
+                'user2_id' => $p->user2_id,
+                'user1' => $u1,
+                'user2' => $u2,
+                'message_count' => $p->message_count,
+                'last_message' => $last_msg ? (!empty($last_msg->message) ? $last_msg->message : '📎 Attachment') : 'No messages',
+                'last_message_time' => $p->last_message_time,
+                'formatted_time' => $formatted_time,
+                'last_message_sender_id' => $last_msg ? $last_msg->sender_id : NULL
+            );
+        }
+
+        return $conversations;
+    }
+
+    /**
+     * Fetch conversation messages between two users (for Super Admin Surveillance)
+     */
+    public function get_conversation_messages($user1_id, $user2_id, $last_id = 0) {
+        if (!$this->has_chat_table) {
+            return array();
+        }
+
+        $this->db->select('m.*, u.username as sender_name, u.role_id as sender_role_id, r.name as sender_role_name, b.name as sender_branch_name, f.name as sender_franchise_name');
+        $this->db->from('internal_chat_messages m');
+        $this->db->join('users u', 'u.id = m.sender_id');
+        $this->db->join('roles r', 'r.id = u.role_id');
+        $this->db->join('branches b', 'b.id = u.branch_id', 'left');
+        $this->db->join('franchises f', 'f.id = u.franchise_id', 'left');
+
+        $this->db->group_start();
+            $this->db->group_start();
+                $this->db->where('m.sender_id', $user1_id);
+                $this->db->where('m.receiver_id', $user2_id);
+            $this->db->group_end();
+            $this->db->or_group_start();
+                $this->db->where('m.sender_id', $user2_id);
+                $this->db->where('m.receiver_id', $user1_id);
+            $this->db->group_end();
+        $this->db->group_end();
+
+        if ($last_id > 0) {
+            $this->db->where('m.id >', $last_id);
+        }
+
+        $this->db->order_by('m.id', 'ASC');
+
+        if ($last_id == 0) {
+            $this->db->limit(150);
+        }
 
         $query = $this->db->get();
         return $query ? $query->result() : array();

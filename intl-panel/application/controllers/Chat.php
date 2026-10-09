@@ -25,27 +25,68 @@ class Chat extends CI_Controller {
      */
     public function index($contact_id = 0) {
         $current_user_id = $this->session->userdata('user_id');
+        $current_role_id = $this->session->userdata('role_id');
+        $is_superadmin   = ($current_role_id == 1);
+
         $this->Chat_model->update_heartbeat($current_user_id);
 
         $data['current_user_id'] = $current_user_id;
-        $data['active_contact_id'] = intval($contact_id);
-        $data['contacts'] = $this->Chat_model->get_staff_contacts($current_user_id);
-        $data['total_unread'] = $this->Chat_model->get_total_unread_count($current_user_id);
+        $data['current_role_id'] = $current_role_id;
+        $data['is_superadmin']   = $is_superadmin;
 
-        if ($data['active_contact_id'] > 0) {
-            $data['active_contact'] = $this->Chat_model->get_contact_info($data['active_contact_id']);
-        } else {
+        // Check if Super Admin is observing a specific conversation pair (u1 & u2)
+        $observe_u1 = intval($this->input->get('u1'));
+        $observe_u2 = intval($this->input->get('u2'));
+        $is_observing_thread = ($is_superadmin && $observe_u1 > 0 && $observe_u2 > 0);
+
+        $data['is_observing_thread'] = $is_observing_thread;
+        $data['observe_u1'] = $observe_u1;
+        $data['observe_u2'] = $observe_u2;
+
+        if ($is_observing_thread) {
+            $data['active_contact_id'] = 0;
+            $data['observe_user1'] = $this->Chat_model->get_contact_info($observe_u1);
+            $data['observe_user2'] = $this->Chat_model->get_contact_info($observe_u2);
+
+            if (!$data['observe_user1'] || !$data['observe_user2']) {
+                redirect('chat');
+            }
+
             $data['active_contact'] = (object) array(
-                'id' => 0,
-                'username' => 'Team Announcements & General Chat',
-                'role_name' => 'Broadcast Channel',
-                'org_badge' => 'All Branches & Franchises',
-                'role_color' => 'success',
-                'is_online' => TRUE
+                'id' => -1,
+                'username' => $data['observe_user1']->username . ' ↔ ' . $data['observe_user2']->username,
+                'role_name' => 'Live Surveillance Mode',
+                'org_badge' => 'Audit & Monitoring',
+                'role_color' => 'purple',
+                'is_online' => ($data['observe_user1']->is_online || $data['observe_user2']->is_online)
             );
+        } else {
+            $data['active_contact_id'] = intval($contact_id);
+
+            // If regular staff tries to view a contact that is Super Admin, block it (invisible Super Admin)
+            if ($data['active_contact_id'] > 0) {
+                $contact_info = $this->Chat_model->get_contact_info($data['active_contact_id']);
+                if ($contact_info && $contact_info->role_id == 1 && !$is_superadmin) {
+                    redirect('chat');
+                }
+                $data['active_contact'] = $contact_info;
+            } else {
+                $data['active_contact'] = (object) array(
+                    'id' => 0,
+                    'username' => 'Team Announcements & General Discussions',
+                    'role_name' => 'Broadcast Channel',
+                    'org_badge' => 'All Branches & Franchises',
+                    'role_color' => 'success',
+                    'is_online' => TRUE
+                );
+            }
         }
 
-        $data['page_title'] = 'Internal Staff Chat';
+        $data['contacts'] = $this->Chat_model->get_staff_contacts($current_user_id);
+        $data['total_unread'] = $this->Chat_model->get_total_unread_count($current_user_id);
+        $data['all_conversations'] = $is_superadmin ? $this->Chat_model->get_all_staff_conversations() : array();
+
+        $data['page_title'] = $is_superadmin ? 'Internal Staff Chat & Audit Hub' : 'Internal Staff Chat';
         $data['view_path'] = 'chat/chat_view';
         $this->load->view('templates/dashboard_layout', $data);
     }
@@ -55,30 +96,54 @@ class Chat extends CI_Controller {
      */
     public function ajax_get_contacts() {
         $current_user_id = $this->session->userdata('user_id');
+        $current_role_id = $this->session->userdata('role_id');
+        $is_superadmin   = ($current_role_id == 1);
+
         $this->Chat_model->update_heartbeat($current_user_id);
 
         $contacts = $this->Chat_model->get_staff_contacts($current_user_id);
         $total_unread = $this->Chat_model->get_total_unread_count($current_user_id);
+        $all_conversations = $is_superadmin ? $this->Chat_model->get_all_staff_conversations() : array();
 
         echo json_encode(array(
             'status' => 'success',
             'contacts' => $contacts,
+            'all_conversations' => $all_conversations,
             'total_unread' => $total_unread
         ));
         exit;
     }
 
     /**
-     * AJAX: Fetch messages for active conversation
+     * AJAX: Fetch messages for active conversation or live thread surveillance
      */
     public function ajax_get_messages() {
         $current_user_id = $this->session->userdata('user_id');
+        $current_role_id = $this->session->userdata('role_id');
+        $is_superadmin   = ($current_role_id == 1);
+
         $this->Chat_model->update_heartbeat($current_user_id);
 
         $contact_id = intval($this->input->get('contact_id'));
+        $u1 = intval($this->input->get('u1'));
+        $u2 = intval($this->input->get('u2'));
         $last_id = intval($this->input->get('last_id'));
 
-        $messages = $this->Chat_model->get_messages($current_user_id, $contact_id, $last_id);
+        $is_observing = ($is_superadmin && $u1 > 0 && $u2 > 0);
+
+        if ($is_observing) {
+            $messages = $this->Chat_model->get_conversation_messages($u1, $u2, $last_id);
+        } else {
+            // Guard: non-superadmin cannot query Super Admin messages directly
+            if ($contact_id > 0 && !$is_superadmin) {
+                $chk = $this->Chat_model->get_contact_info($contact_id);
+                if ($chk && $chk->role_id == 1) {
+                    echo json_encode(array('status' => 'error', 'message' => 'Access denied.'));
+                    exit;
+                }
+            }
+            $messages = $this->Chat_model->get_messages($current_user_id, $contact_id, $last_id);
+        }
 
         // Format message fields for client display
         foreach ($messages as &$m) {
@@ -91,7 +156,15 @@ class Chat extends CI_Controller {
                 $m->formatted_time = date('M d, h:i A', $time);
             }
 
-            $m->is_mine = ($m->sender_id == $current_user_id);
+            if ($is_observing) {
+                // In observer mode, differentiate sides by user1 vs user2
+                $m->is_observer_mode = TRUE;
+                $m->is_mine = ($m->sender_id == $u1);
+                $m->is_user1 = ($m->sender_id == $u1);
+            } else {
+                $m->is_observer_mode = FALSE;
+                $m->is_mine = ($m->sender_id == $current_user_id);
+            }
 
             // Format attachment details
             if (!empty($m->attachment)) {
@@ -113,6 +186,7 @@ class Chat extends CI_Controller {
 
         echo json_encode(array(
             'status' => 'success',
+            'is_observing' => $is_observing,
             'messages' => $messages
         ));
         exit;
@@ -123,10 +197,36 @@ class Chat extends CI_Controller {
      */
     public function ajax_send_message() {
         $current_user_id = $this->session->userdata('user_id');
+        $current_role_id = $this->session->userdata('role_id');
+        $is_superadmin   = ($current_role_id == 1);
+
         $this->Chat_model->update_heartbeat($current_user_id);
 
         $receiver_id = intval($this->input->post('receiver_id'));
         $message_text = trim($this->input->post('message', TRUE));
+
+        // FEATURE 2: ONLY Super Admin can post in Team Announcements & General Discussions!
+        if ($receiver_id === 0) {
+            if (!$is_superadmin) {
+                echo json_encode(array(
+                    'status' => 'error',
+                    'message' => 'Permission Denied: Only Head Office / Super Admin can post in Team Announcements.'
+                ));
+                exit;
+            }
+        }
+
+        // FEATURE 1: Super Admin is invisible to all; regular staff cannot message Super Admin directly
+        if ($receiver_id > 0 && !$is_superadmin) {
+            $recipient = $this->Chat_model->get_contact_info($receiver_id);
+            if ($recipient && $recipient->role_id == 1) {
+                echo json_encode(array(
+                    'status' => 'error',
+                    'message' => 'Super Admin is unavailable for direct messages.'
+                ));
+                exit;
+            }
+        }
 
         $has_attachment = (!empty($_FILES['attachment']['name']));
 
@@ -230,14 +330,15 @@ class Chat extends CI_Controller {
      */
     public function download_attachment($message_id) {
         $current_user_id = $this->session->userdata('user_id');
+        $current_role_id = $this->session->userdata('role_id');
         $message = $this->Chat_model->get_message_by_id($message_id);
 
         if (!$message || empty($message->attachment)) {
             show_404();
         }
 
-        // Allow if broadcast OR current user is sender OR current user is receiver
-        if ($message->receiver_id !== NULL && $message->sender_id != $current_user_id && $message->receiver_id != $current_user_id) {
+        // Allow if broadcast OR Super Admin OR participant
+        if ($message->receiver_id !== NULL && $current_role_id != 1 && $message->sender_id != $current_user_id && $message->receiver_id != $current_user_id) {
             show_error('Unauthorized access to file attachment.', 403);
         }
 

@@ -12,8 +12,8 @@
   
   /* Sidebar Contacts List */
   .chat-sidebar {
-    width: 350px;
-    min-width: 300px;
+    width: 360px;
+    min-width: 320px;
     border-right: 1px solid #edf2f7;
     background: #f8fafc;
     display: flex;
@@ -83,6 +83,11 @@
     border-left: 4px solid #3c8dbc;
   }
 
+  .chat-contact-item.chat-conv-item.active {
+    background: #f3e8ff;
+    border-left: 4px solid #7c3aed;
+  }
+
   .chat-avatar {
     width: 44px;
     height: 44px;
@@ -98,25 +103,36 @@
     margin-right: 12px;
   }
 
-  .chat-avatar.role-admin { background: linear-gradient(135deg, #dd4b39, #c23321); }
-  .chat-avatar.role-branch { background: linear-gradient(135deg, #3c8dbc, #286090); }
-  .chat-avatar.role-franchise { background: linear-gradient(135deg, #f39c12, #d58512); }
-  .chat-avatar.role-broadcast { background: linear-gradient(135deg, #00a65a, #008d4c); }
+  .chat-avatar.role-admin {
+    background: linear-gradient(135deg, #e53e3e, #dd6b20);
+  }
+  .chat-avatar.role-branch {
+    background: linear-gradient(135deg, #3182ce, #00b4d8);
+  }
+  .chat-avatar.role-franchise {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+  }
+  .chat-avatar.role-broadcast {
+    background: linear-gradient(135deg, #059669, #10b981);
+  }
+  .chat-avatar.role-conv {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+  }
 
   .online-indicator {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
+    background: #cbd5e1;
     border: 2px solid #fff;
     position: absolute;
-    bottom: -1px;
-    right: -1px;
-    background-color: #94a3b8;
+    bottom: 0px;
+    right: 0px;
   }
 
   .online-indicator.is-online {
-    background-color: #22c55e;
-    box-shadow: 0 0 0 1px #fff;
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
   }
 
   .chat-contact-info {
@@ -128,14 +144,13 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
   }
 
   .chat-contact-name {
-    font-weight: 700;
-    font-size: 14px;
+    font-size: 13.5px;
+    font-weight: 600;
     color: #1e293b;
-    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -144,7 +159,7 @@
   .chat-contact-time {
     font-size: 11px;
     color: #94a3b8;
-    margin-left: 5px;
+    margin-left: 6px;
     flex-shrink: 0;
   }
 
@@ -157,41 +172,40 @@
   .chat-contact-snippet {
     font-size: 12px;
     color: #64748b;
-    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 190px;
+    flex: 1;
   }
 
   .badge-unread {
-    background-color: #ef4444;
+    background: #ef4444;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
+    padding: 2px 6px;
     border-radius: 10px;
-    padding: 2px 7px;
+    margin-left: 8px;
     flex-shrink: 0;
   }
 
-  /* Main Conversation Area */
+  /* Right Main Chat Window */
   .chat-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     height: 100%;
     background: #ffffff;
-    min-width: 0;
+    position: relative;
   }
 
   .chat-main-header {
-    padding: 12px 20px;
+    padding: 14px 20px;
     border-bottom: 1px solid #edf2f7;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .chat-active-user {
@@ -202,80 +216,117 @@
 
   .chat-messages-body {
     flex: 1;
-    overflow-y: auto;
     padding: 20px;
+    overflow-y: auto;
     background: #f8fafc;
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
 
-  /* Message Bubbles */
+  /* Chat Bubbles */
   .message-wrapper {
     display: flex;
-    margin-bottom: 5px;
-    max-width: 80%;
+    flex-direction: column;
+    max-width: 75%;
+    animation: fadeIn 0.15s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .message-wrapper.mine {
-    margin-left: auto;
-    flex-direction: row-reverse;
+    align-self: flex-end;
   }
 
   .message-wrapper.theirs {
-    margin-right: auto;
+    align-self: flex-start;
   }
 
   .message-bubble {
     padding: 10px 14px;
-    border-radius: 14px;
+    border-radius: 12px;
     font-size: 13.5px;
-    line-height: 1.5;
+    line-height: 1.45;
     position: relative;
-    word-wrap: break-word;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    word-break: break-word;
   }
 
   .message-wrapper.mine .message-bubble {
     background: #3c8dbc;
     color: #ffffff;
     border-bottom-right-radius: 2px;
+    box-shadow: 0 1px 2px rgba(60,141,188,0.2);
   }
 
   .message-wrapper.theirs .message-bubble {
     background: #ffffff;
     color: #1e293b;
-    border: 1px solid #e2e8f0;
     border-bottom-left-radius: 2px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   }
 
-  .message-meta {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 10.5px;
-    margin-top: 4px;
+  /* Observer Mode Bubbles */
+  .message-wrapper.observer-u1 {
+    align-self: flex-start;
   }
 
-  .message-wrapper.mine .message-meta {
-    color: rgba(255,255,255,0.85);
-    justify-content: flex-end;
+  .message-wrapper.observer-u1 .message-bubble {
+    background: #ffffff;
+    color: #1e293b;
+    border-left: 4px solid #3b82f6;
+    border-bottom-left-radius: 2px;
+    border-top: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
   }
 
-  .message-wrapper.theirs .message-meta {
-    color: #94a3b8;
+  .message-wrapper.observer-u2 {
+    align-self: flex-end;
+  }
+
+  .message-wrapper.observer-u2 .message-bubble {
+    background: #f8fafc;
+    color: #1e293b;
+    border-right: 4px solid #10b981;
+    border-bottom-right-radius: 2px;
+    border-top: 1px solid #e2e8f0;
+    border-left: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   .sender-tag {
     font-size: 11px;
     font-weight: 700;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     display: block;
   }
 
-  .sender-tag.role-admin { color: #dd4b39; }
-  .sender-tag.role-branch { color: #3c8dbc; }
-  .sender-tag.role-franchise { color: #d58512; }
+  .sender-tag.role-admin { color: #dc2626; }
+  .sender-tag.role-branch { color: #2563eb; }
+  .sender-tag.role-franchise { color: #d97706; }
+
+  .message-meta {
+    font-size: 10px;
+    margin-top: 4px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .message-wrapper.mine .message-meta {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .message-wrapper.theirs .message-meta,
+  .message-wrapper.observer-u1 .message-meta,
+  .message-wrapper.observer-u2 .message-meta {
+    color: #94a3b8;
+  }
 
   /* Message Attachments */
   .chat-attachment-img {
@@ -309,25 +360,11 @@
     color: #fff !important;
   }
 
-  .message-wrapper.theirs .chat-file-card {
+  .message-wrapper.theirs .chat-file-card,
+  .message-wrapper.observer-u1 .chat-file-card,
+  .message-wrapper.observer-u2 .chat-file-card {
     background: #f1f5f9;
     color: #1e293b !important;
-  }
-
-  /* Date Divider */
-  .chat-date-divider {
-    text-align: center;
-    margin: 15px 0 10px 0;
-    position: relative;
-  }
-
-  .chat-date-divider span {
-    background: #e2e8f0;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 12px;
-    border-radius: 12px;
   }
 
   /* Composer Toolbar */
@@ -427,45 +464,103 @@
       <!-- LEFT SIDEBAR: CONTACTS & CHANNELS -->
       <div class="chat-sidebar">
         <div class="chat-sidebar-header">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:14px; color:#1e293b;">Internal Messages</strong>
+            <?php if($is_superadmin): ?>
+              <span class="label label-danger" style="font-size:10px; padding:3px 6px;">
+                <i class="fa fa-user-secret"></i> Super Admin Hub
+              </span>
+            <?php else: ?>
+              <span class="label label-primary" style="font-size:10px; padding:3px 6px;">
+                Staff Chat
+              </span>
+            <?php endif; ?>
+          </div>
+
           <div class="input-group">
             <span class="input-group-addon" style="background:#fff; border-right:none;"><i class="fa fa-search text-muted"></i></span>
-            <input type="text" id="searchContactsInput" class="form-control" placeholder="Search staff, branch, franchise..." style="border-left:none;">
+            <input type="text" id="searchContactsInput" class="form-control" placeholder="Search contacts &amp; branches..." style="border-left:none;">
           </div>
           
           <div class="chat-filter-pills">
-            <button type="button" class="chat-filter-btn active" data-filter="all">All</button>
-            <button type="button" class="chat-filter-btn" data-filter="admin">Admins</button>
-            <button type="button" class="chat-filter-btn" data-filter="branch">Branches</button>
-            <button type="button" class="chat-filter-btn" data-filter="franchise">Franchises</button>
+            <?php if($is_superadmin): ?>
+              <button type="button" class="chat-filter-btn <?php echo ($is_observing_thread || (!empty($all_conversations) && $active_contact_id == 0)) ? 'active' : ''; ?>" data-filter="conversations">
+                <i class="fa fa-comments"></i> All Chats (<?php echo count($all_conversations); ?>)
+              </button>
+              <button type="button" class="chat-filter-btn <?php echo (!$is_observing_thread && empty($all_conversations)) ? 'active' : ''; ?>" data-filter="all">
+                <i class="fa fa-users"></i> Staff Directory
+              </button>
+              <button type="button" class="chat-filter-btn" data-filter="branch">Branches</button>
+              <button type="button" class="chat-filter-btn" data-filter="franchise">Franchises</button>
+            <?php else: ?>
+              <button type="button" class="chat-filter-btn active" data-filter="all">All Contacts</button>
+              <button type="button" class="chat-filter-btn" data-filter="branch">Branches</button>
+              <button type="button" class="chat-filter-btn" data-filter="franchise">Franchises</button>
+            <?php endif; ?>
           </div>
         </div>
 
         <ul class="chat-contacts-scroll" id="contactsList">
-          <!-- Pinned Broadcast Channel -->
-          <li class="chat-contact-item <?php echo ($active_contact_id == 0) ? 'active' : ''; ?>" data-contact-id="0" data-role="broadcast">
+          <!-- Pinned Announcements Channel -->
+          <li class="chat-contact-item <?php echo (!$is_observing_thread && $active_contact_id == 0) ? 'active' : ''; ?>" data-contact-id="0" data-role="broadcast">
             <div class="chat-avatar role-broadcast">
               <i class="fa fa-bullhorn"></i>
               <span class="online-indicator is-online"></span>
             </div>
             <div class="chat-contact-info">
               <div class="chat-contact-top">
-                <span class="chat-contact-name text-green"><i class="fa fa-users"></i> Team Broadcast</span>
-                <span class="chat-contact-time">Public</span>
+                <span class="chat-contact-name text-green"><i class="fa fa-bullhorn"></i> Team Announcements</span>
+                <span class="chat-contact-time"><?php echo $is_superadmin ? 'Broadcast' : 'Read-Only'; ?></span>
               </div>
               <div class="chat-contact-bottom">
-                <span class="chat-contact-snippet">General staff discussions &amp; announcements</span>
+                <span class="chat-contact-snippet">Official company notices &amp; updates</span>
               </div>
             </div>
           </li>
 
-          <!-- Dynamic Direct Contacts -->
+          <!-- Super Admin All Conversation Threads (Live Surveillance) -->
+          <?php if($is_superadmin && !empty($all_conversations)): ?>
+            <?php foreach($all_conversations as $conv): ?>
+              <?php 
+                $is_this_conv = ($is_observing_thread && (($observe_u1 == $conv->user1_id && $observe_u2 == $conv->user2_id) || ($observe_u1 == $conv->user2_id && $observe_u2 == $conv->user1_id)));
+              ?>
+              <li class="chat-contact-item chat-conv-item <?php echo $is_this_conv ? 'active' : ''; ?>" 
+                  data-conv-u1="<?php echo $conv->user1_id; ?>" 
+                  data-conv-u2="<?php echo $conv->user2_id; ?>"
+                  data-role="conversations"
+                  data-search="<?php echo strtolower($conv->user1->username . ' ' . $conv->user2->username . ' ' . $conv->user1->org_badge . ' ' . $conv->user2->org_badge . ' ' . $conv->last_message); ?>">
+                <div class="chat-avatar role-conv" style="font-size:15px;">
+                  <i class="fa fa-exchange"></i>
+                </div>
+                <div class="chat-contact-info">
+                  <div class="chat-contact-top">
+                    <span class="chat-contact-name" style="color: #4338ca; font-weight:700;">
+                      <?php echo htmlspecialchars($conv->user1->username); ?> ↔ <?php echo htmlspecialchars($conv->user2->username); ?>
+                    </span>
+                    <span class="chat-contact-time"><?php echo $conv->formatted_time; ?></span>
+                  </div>
+                  <div class="chat-contact-bottom">
+                    <span class="chat-contact-snippet">
+                      <span class="label label-primary" style="font-size: 9px; padding: 1px 4px;"><?php echo htmlspecialchars($conv->user1->org_badge); ?></span>
+                      <span class="label label-info" style="font-size: 9px; padding: 1px 4px;"><?php echo htmlspecialchars($conv->user2->org_badge); ?></span>
+                      <span class="label label-default" style="font-size: 9px; padding: 1px 4px;"><?php echo $conv->message_count; ?> msgs</span>
+                      <?php echo htmlspecialchars($conv->last_message); ?>
+                    </span>
+                  </div>
+                </div>
+              </li>
+            <?php endforeach; ?>
+          <?php endif; ?>
+
+          <!-- Dynamic Direct Contacts (Super Admin is NEVER in this list for regular staff) -->
           <?php if(!empty($contacts)): ?>
             <?php foreach($contacts as $contact): ?>
               <?php 
                 $role_class = ($contact->role_id == 1) ? 'admin' : (($contact->role_id == 2) ? 'branch' : 'franchise');
                 $initials = strtoupper(substr($contact->username, 0, 2));
+                $is_active = (!$is_observing_thread && $active_contact_id == $contact->id);
               ?>
-              <li class="chat-contact-item <?php echo ($active_contact_id == $contact->id) ? 'active' : ''; ?>" 
+              <li class="chat-contact-item <?php echo $is_active ? 'active' : ''; ?>" 
                   data-contact-id="<?php echo $contact->id; ?>" 
                   data-role="<?php echo $role_class; ?>"
                   data-search="<?php echo strtolower($contact->username . ' ' . $contact->role_name . ' ' . $contact->org_badge); ?>">
@@ -499,17 +594,44 @@
         <!-- Active Chat Header -->
         <div class="chat-main-header">
           <div class="chat-active-user">
-            <?php if($active_contact_id == 0): ?>
+            <?php if($is_observing_thread): ?>
+              <!-- Super Admin Surveillance View Header -->
+              <div class="chat-avatar role-conv" style="width: 42px; height: 42px; font-size: 16px;">
+                <i class="fa fa-eye"></i>
+              </div>
+              <div>
+                <h4 style="margin: 0; font-weight: 700; font-size: 16px; color: #1e293b;">
+                  <?php echo htmlspecialchars($observe_user1->username); ?> <small style="color:#2563eb;">(<?php echo htmlspecialchars($observe_user1->org_badge); ?>)</small>
+                  <span style="color: #7c3aed; margin: 0 4px;">↔</span>
+                  <?php echo htmlspecialchars($observe_user2->username); ?> <small style="color:#059669;">(<?php echo htmlspecialchars($observe_user2->org_badge); ?>)</small>
+                  <span class="label label-warning" style="font-size: 10px; margin-left: 8px; vertical-align: middle;">
+                    <i class="fa fa-user-secret"></i> Super Admin Observation Mode
+                  </span>
+                </h4>
+                <small class="text-muted">
+                  <i class="fa fa-shield text-purple"></i> Stealth Surveillance &mdash; Live feed between <?php echo htmlspecialchars($observe_user1->username); ?> and <?php echo htmlspecialchars($observe_user2->username); ?>
+                </small>
+              </div>
+
+            <?php elseif($active_contact_id == 0): ?>
+              <!-- Team Announcements Header -->
               <div class="chat-avatar role-broadcast" style="width: 40px; height: 40px; font-size: 14px;">
                 <i class="fa fa-bullhorn"></i>
               </div>
               <div>
                 <h4 style="margin: 0; font-weight: 700; font-size: 16px; color: #1e293b;">
                   Team Announcements &amp; General Discussions
+                  <?php if($is_superadmin): ?>
+                    <span class="label label-success" style="font-size: 10px; margin-left: 6px;"><i class="fa fa-pencil"></i> Admin Broadcast Access</span>
+                  <?php else: ?>
+                    <span class="label label-default" style="font-size: 10px; margin-left: 6px;"><i class="fa fa-lock"></i> Read-Only Channel</span>
+                  <?php endif; ?>
                 </h4>
-                <small class="text-muted"><i class="fa fa-users text-green"></i> Shared channel visible to all Admins, Branches, and Franchises</small>
+                <small class="text-muted"><i class="fa fa-users text-green"></i> Shared channel visible to all Branches and Franchises</small>
               </div>
+
             <?php else: ?>
+              <!-- Direct 1-on-1 Contact Header -->
               <?php 
                 $active_role_class = ($active_contact->role_id == 1) ? 'admin' : (($active_contact->role_id == 2) ? 'branch' : 'franchise');
                 $active_initials = strtoupper(substr($active_contact->username, 0, 2));
@@ -545,31 +667,62 @@
           </div>
         </div>
 
-        <!-- Composer / Input Bar -->
-        <div class="chat-composer">
-          <!-- Attachment selected chip -->
-          <div class="attachment-preview-bar" id="attachmentPreviewBar">
-            <span><i class="fa fa-paperclip text-blue"></i> <strong id="attachmentFileName"></strong> (<span id="attachmentFileSize"></span>)</span>
-            <button type="button" class="btn btn-xs btn-danger" id="btnRemoveAttachment"><i class="fa fa-times"></i></button>
+        <!-- Composer / Input Bar / Readonly Notices -->
+        <?php if($is_observing_thread): ?>
+          <!-- Super Admin Surveillance: Stealth Notice -->
+          <div style="padding: 14px 20px; background: #faf5ff; border-top: 1px solid #e9d5ff; display: flex; align-items: center; justify-content: center; gap: 12px; color: #6b21a8; text-align: center;">
+            <i class="fa fa-user-secret" style="font-size: 20px; color: #9333ea;"></i>
+            <span style="font-size: 13px;">
+              <strong>Super Admin Surveillance Mode:</strong> Observing conversation between <strong><?php echo htmlspecialchars($observe_user1->username); ?></strong> and <strong><?php echo htmlspecialchars($observe_user2->username); ?></strong>. You are completely invisible to both participants.
+            </span>
           </div>
 
-          <form id="chatMessageForm" enctype="multipart/form-data">
-            <input type="hidden" name="receiver_id" id="receiver_id" value="<?php echo $active_contact_id; ?>">
-            <input type="file" id="chatAttachmentInput" name="attachment" style="display: none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.zip,.txt">
-            
-            <div class="chat-input-row">
-              <button type="button" class="btn btn-attach" id="btnTriggerAttach" title="Attach file or photo">
-                <i class="fa fa-paperclip" style="font-size: 16px;"></i>
-              </button>
-              
-              <textarea name="message" id="chatMessageInput" class="chat-textarea" placeholder="Type message... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
-              
-              <button type="submit" class="btn btn-send" id="btnSendChat" title="Send message">
-                <i class="fa fa-paper-plane" style="font-size: 15px;"></i>
-              </button>
+        <?php elseif($active_contact_id == 0 && !$is_superadmin): ?>
+          <!-- FEATURE 2: Non-Superadmin read-only barrier for Team Announcements -->
+          <div style="padding: 16px 20px; background: #f0f7ff; border-top: 1px solid #bfdbfe; display: flex; align-items: center; justify-content: center; gap: 14px; color: #1e40af; text-align: center;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #dbeafe; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #2563eb; flex-shrink: 0;">
+              <i class="fa fa-bullhorn"></i>
             </div>
-          </form>
-        </div>
+            <div>
+              <strong style="font-size: 13px; display: block;">Official Team Announcements (Read-Only)</strong>
+              <span style="font-size: 12px; color: #475569;">Only Head Office / Super Admin can post announcements here. To message a colleague directly, select their branch or franchise from the contacts list.</span>
+            </div>
+          </div>
+
+        <?php else: ?>
+          <!-- Active Composer Bar (For direct chat OR for Super Admin on Announcements) -->
+          <div class="chat-composer">
+            <?php if($active_contact_id == 0 && $is_superadmin): ?>
+              <div style="padding: 6px 14px; margin: -12px -18px 10px -18px; background: #fffbeb; border-bottom: 1px solid #fde68a; font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                <i class="fa fa-bullhorn text-warning"></i>
+                <span><strong>Admin Broadcast Mode:</strong> Announcements and attachments sent here are instantly visible to all branches and franchises.</span>
+              </div>
+            <?php endif; ?>
+
+            <!-- Attachment selected preview -->
+            <div class="attachment-preview-bar" id="attachmentPreviewBar">
+              <span><i class="fa fa-paperclip text-blue"></i> <strong id="attachmentFileName"></strong> (<span id="attachmentFileSize"></span>)</span>
+              <button type="button" class="btn btn-xs btn-danger" id="btnRemoveAttachment"><i class="fa fa-times"></i></button>
+            </div>
+
+            <form id="chatMessageForm" enctype="multipart/form-data">
+              <input type="hidden" name="receiver_id" id="receiver_id" value="<?php echo $active_contact_id; ?>">
+              <input type="file" id="chatAttachmentInput" name="attachment" style="display: none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.zip,.txt">
+              
+              <div class="chat-input-row">
+                <button type="button" class="btn btn-attach" id="btnTriggerAttach" title="Attach file or photo">
+                  <i class="fa fa-paperclip" style="font-size: 16px;"></i>
+                </button>
+                
+                <textarea name="message" id="chatMessageInput" class="chat-textarea" placeholder="<?php echo ($active_contact_id == 0) ? 'Type team announcement... (Press Enter to broadcast)' : 'Type message... (Press Enter to send, Shift+Enter for new line)'; ?>" rows="1"></textarea>
+                
+                <button type="submit" class="btn btn-send" id="btnSendChat" title="<?php echo ($active_contact_id == 0) ? 'Broadcast Announcement' : 'Send message'; ?>">
+                  <i class="fa <?php echo ($active_contact_id == 0) ? 'fa-bullhorn' : 'fa-paper-plane'; ?>" style="font-size: 15px;"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        <?php endif; ?>
 
       </div>
 
@@ -589,8 +742,12 @@
 
 <script>
   $(document).ready(function() {
+    var isObserving = <?php echo $is_observing_thread ? 'true' : 'false'; ?>;
+    var observeU1 = <?php echo $observe_u1; ?>;
+    var observeU2 = <?php echo $observe_u2; ?>;
     var activeContactId = parseInt($('#receiver_id').val()) || 0;
     var currentUserId = <?php echo $current_user_id; ?>;
+    var isSuperAdmin = <?php echo $is_superadmin ? 'true' : 'false'; ?>;
     var lastMessageId = 0;
     var isPolling = false;
     var pollInterval = null;
@@ -609,19 +766,30 @@
 
     // Render single message HTML bubble
     function renderMessageBubble(msg) {
-      var isMine = (msg.sender_id == currentUserId);
-      var wrapperClass = isMine ? 'mine' : 'theirs';
-      
+      var wrapperClass = '';
       var senderHtml = '';
-      if (!isMine) {
-        var roleClass = (msg.sender_role_id == 1) ? 'role-admin' : ((msg.sender_role_id == 2) ? 'role-branch' : 'role-franchise');
-        var orgTag = msg.sender_branch_name ? msg.sender_branch_name : (msg.sender_franchise_name ? msg.sender_franchise_name : msg.sender_role_name);
-        senderHtml = '<span class="sender-tag ' + roleClass + '">' + $('<div>').text(msg.sender_name).html() + ' (' + orgTag + ')</span>';
+
+      if (isObserving) {
+        // Super Admin Live Surveillance Mode
+        wrapperClass = msg.is_user1 ? 'observer-u1' : 'observer-u2';
+        var roleTag = msg.sender_role_name || '';
+        var orgTag = msg.sender_branch_name ? msg.sender_branch_name : (msg.sender_franchise_name ? msg.sender_franchise_name : roleTag);
+        var badgeColor = msg.is_user1 ? '#2563eb' : '#059669';
+        senderHtml = '<span class="sender-tag" style="color:' + badgeColor + '; font-weight:700;"><i class="fa fa-user"></i> ' + $('<div>').text(msg.sender_name).html() + ' (' + orgTag + ')</span>';
+      } else {
+        // Standard Direct or Broadcast Mode
+        var isMine = (msg.sender_id == currentUserId);
+        wrapperClass = isMine ? 'mine' : 'theirs';
+
+        if (!isMine) {
+          var roleClass = (msg.sender_role_id == 1) ? 'role-admin' : ((msg.sender_role_id == 2) ? 'role-branch' : 'role-franchise');
+          var orgTag = msg.sender_branch_name ? msg.sender_branch_name : (msg.sender_franchise_name ? msg.sender_franchise_name : msg.sender_role_name);
+          senderHtml = '<span class="sender-tag ' + roleClass + '">' + $('<div>').text(msg.sender_name).html() + ' (' + orgTag + ')</span>';
+        }
       }
 
       var contentHtml = '';
       if (msg.message && msg.message.trim() !== '') {
-        // Safe HTML text with newlines
         var escaped = $('<div>').text(msg.message).html().replace(/\n/g, '<br>');
         contentHtml += '<div>' + escaped + '</div>';
       }
@@ -649,7 +817,7 @@
         }
       }
 
-      var checkHtml = isMine ? ' <i class="fa fa-check" style="font-size:9px;"></i>' : '';
+      var checkHtml = (!isObserving && (msg.sender_id == currentUserId)) ? ' <i class="fa fa-check" style="font-size:9px;"></i>' : '';
       var metaHtml = '<div class="message-meta"><span>' + msg.formatted_time + '</span>' + checkHtml + '</div>';
 
       return '<div class="message-wrapper ' + wrapperClass + '" data-msg-id="' + msg.id + '">' +
@@ -667,14 +835,21 @@
       isPolling = true;
 
       var reqLastId = isIncremental ? lastMessageId : 0;
+      var reqData = {
+        last_id: reqLastId
+      };
+
+      if (isObserving) {
+        reqData.u1 = observeU1;
+        reqData.u2 = observeU2;
+      } else {
+        reqData.contact_id = activeContactId;
+      }
 
       $.ajax({
         url: '<?php echo site_url("chat/get-messages"); ?>',
         type: 'GET',
-        data: {
-          contact_id: activeContactId,
-          last_id: reqLastId
-        },
+        data: reqData,
         dataType: 'json',
         success: function(res) {
           isPolling = false;
@@ -685,8 +860,8 @@
                 $('#chatMessagesContainer').html(
                   '<div class="chat-empty-state">' +
                     '<i class="fa fa-comments-o fa-4x" style="opacity:0.3; margin-bottom:12px;"></i>' +
-                    '<h4 style="font-weight:600; color:#64748b; margin:0 0 6px 0;">Start a Conversation</h4>' +
-                    '<p style="font-size:13px; max-width:300px; margin:0;">Send a message or attach documents to discuss consignment updates directly.</p>' +
+                    '<h4 style="font-weight:600; color:#64748b; margin:0 0 6px 0;">No Messages in this Channel</h4>' +
+                    '<p style="font-size:13px; max-width:320px; margin:0;">' + (isObserving ? 'No conversation history between these staff members yet.' : 'Send a message or attach documents to begin the discussion.') + '</p>' +
                   '</div>'
                 );
               }
@@ -849,18 +1024,40 @@
           $(this).show();
           return;
         }
-        if (filter === 'all' || role === filter) {
-          $(this).show();
+
+        if (filter === 'conversations') {
+          if (role === 'conversations') {
+            $(this).show();
+          } else {
+            $(this).hide();
+          }
+        } else if (filter === 'all') {
+          if (role !== 'conversations') {
+            $(this).show();
+          } else {
+            $(this).hide();
+          }
         } else {
-          $(this).hide();
+          if (role === filter) {
+            $(this).show();
+          } else {
+            $(this).hide();
+          }
         }
       });
     });
 
-    // Switch contact click
-    $(document).on('click', '.chat-contact-item', function() {
+    // Switch regular contact click
+    $(document).on('click', '.chat-contact-item:not(.chat-conv-item)', function() {
       var targetId = $(this).data('contact-id');
       window.location.href = '<?php echo site_url("chat/contact/"); ?>' + targetId;
+    });
+
+    // Switch conversation audit click (Super Admin)
+    $(document).on('click', '.chat-conv-item', function() {
+      var u1 = $(this).data('conv-u1');
+      var u2 = $(this).data('conv-u2');
+      window.location.href = '<?php echo site_url("chat"); ?>?u1=' + u1 + '&u2=' + u2;
     });
 
   });
