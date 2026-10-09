@@ -284,7 +284,89 @@ class Master_model extends CI_Model {
     // Fields: Destination Country, Service Type, Shipment Type, Courier Partner, Weight, Rate, Status
     // =========================================================================
 
+    public function ensure_rates_v2_schema() {
+        static $checked = FALSE;
+        if ($checked) return;
+        $checked = TRUE;
+
+        $table_check = $this->db->query("SHOW TABLES LIKE 'shipping_rates_v2'");
+        if (!$table_check || $table_check->num_rows() == 0) {
+            $create_sql = "CREATE TABLE IF NOT EXISTS `shipping_rates_v2` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `destination_country_id` INT(11) NOT NULL,
+              `service_type` VARCHAR(50) NOT NULL,
+              `shipment_type` VARCHAR(100) NOT NULL,
+              `courier_partner_id` INT(11) NOT NULL,
+              `weight` DECIMAL(8,3) NOT NULL,
+              `rate` DECIMAL(12,2) NOT NULL,
+              `status` ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+              `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              `deleted_at` DATETIME NULL DEFAULT NULL,
+              PRIMARY KEY (`id`),
+              KEY `idx_dest_country` (`destination_country_id`),
+              KEY `idx_partner` (`courier_partner_id`),
+              KEY `idx_service` (`service_type`),
+              KEY `idx_shipment_type` (`shipment_type`),
+              KEY `idx_status` (`status`),
+              KEY `idx_deleted_at` (`deleted_at`),
+              KEY `idx_composite_lookup` (`destination_country_id`, `courier_partner_id`, `service_type`, `shipment_type`, `weight`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+            $this->db->query($create_sql);
+
+            // Seed initial records if empty
+            $c_res = $this->db->query("SELECT id, country_name FROM countries WHERE country_name IN ('United States', 'United Kingdom', 'United Arab Emirates', 'Canada', 'Australia')");
+            $countries = array();
+            if ($c_res && $c_res->num_rows() > 0) {
+                foreach ($c_res->result() as $c) {
+                    $countries[$c->country_name] = $c->id;
+                }
+            }
+            $p_res = $this->db->query("SELECT id, partner_name FROM courier_partners LIMIT 4");
+            $partners = array();
+            if ($p_res && $p_res->num_rows() > 0) {
+                foreach ($p_res->result() as $p) {
+                    $partners[$p->partner_name] = $p->id;
+                }
+            }
+            if (!empty($countries) && !empty($partners)) {
+                $sample_data = array(
+                    array('United States', 'Express', 'Documents (Paper / Files)', 'DHL Express', 0.500, 1450.00),
+                    array('United States', 'Express', 'Documents (Paper / Files)', 'DHL Express', 1.000, 2150.00),
+                    array('United States', 'Express', 'Non-Documents (Commercial Goods / Parcels)', 'DHL Express', 0.500, 1850.00),
+                    array('United States', 'Express', 'Non-Documents (Commercial Goods / Parcels)', 'DHL Express', 1.000, 2650.00),
+                    array('United States', 'Economy', 'Non-Documents (Commercial Goods / Parcels)', 'FedEx', 1.000, 2200.00),
+                    array('United Kingdom', 'Express', 'Documents (Paper / Files)', 'DHL Express', 0.500, 1350.00),
+                    array('United Kingdom', 'Express', 'Documents (Paper / Files)', 'DHL Express', 1.000, 1950.00),
+                    array('United Arab Emirates', 'Express', 'Documents (Paper / Files)', 'Aramex', 0.500, 950.00),
+                    array('United Arab Emirates', 'Express', 'Non-Documents (Commercial Goods / Parcels)', 'Aramex', 1.000, 1750.00),
+                );
+                foreach ($sample_data as $item) {
+                    $c_id = isset($countries[$item[0]]) ? $countries[$item[0]] : reset($countries);
+                    $p_id = isset($partners[$item[3]]) ? $partners[$item[3]] : reset($partners);
+                    $this->db->insert('shipping_rates_v2', array(
+                        'destination_country_id' => $c_id,
+                        'service_type'           => $item[1],
+                        'shipment_type'          => $item[2],
+                        'courier_partner_id'     => $p_id,
+                        'weight'                 => $item[4],
+                        'rate'                   => $item[5],
+                        'status'                 => 'Active'
+                    ));
+                }
+            }
+        } else {
+            // Table exists: verify deleted_at column exists
+            $col_check = $this->db->query("SHOW COLUMNS FROM `shipping_rates_v2` LIKE 'deleted_at'");
+            if (!$col_check || $col_check->num_rows() == 0) {
+                $this->db->query("ALTER TABLE `shipping_rates_v2` ADD COLUMN `deleted_at` DATETIME NULL DEFAULT NULL AFTER `updated_at`, ADD KEY `idx_deleted_at` (`deleted_at`)");
+            }
+        }
+    }
+
     public function get_rates_v2($filters = array(), $id = NULL) {
+        $this->ensure_rates_v2_schema();
+
         $this->db->select('r.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
         $this->db->from('shipping_rates_v2 r');
         $this->db->join('countries c', 'c.id = r.destination_country_id', 'left');
@@ -293,7 +375,8 @@ class Master_model extends CI_Model {
 
         if ($id) {
             $this->db->where('r.id', $id);
-            return $this->db->get()->row();
+            $query = $this->db->get();
+            return ($query && $query->num_rows() > 0) ? $query->row() : NULL;
         }
 
         if (!empty($filters['destination_country_id'])) {
@@ -317,7 +400,8 @@ class Master_model extends CI_Model {
         $this->db->order_by('r.service_type', 'ASC');
         $this->db->order_by('r.weight', 'ASC');
 
-        return $this->db->get()->result();
+        $query = $this->db->get();
+        return ($query) ? $query->result() : array();
     }
 
     public function get_rate_v2($id) {
@@ -325,6 +409,7 @@ class Master_model extends CI_Model {
     }
 
     public function add_rate_v2($data) {
+        $this->ensure_rates_v2_schema();
         $insert_data = array(
             'destination_country_id' => intval($data['destination_country_id']),
             'service_type'           => trim($data['service_type']),
@@ -345,6 +430,7 @@ class Master_model extends CI_Model {
     }
 
     public function update_rate_v2($id, $data) {
+        $this->ensure_rates_v2_schema();
         $update_data = array(
             'destination_country_id' => intval($data['destination_country_id']),
             'service_type'           => trim($data['service_type']),
@@ -365,6 +451,7 @@ class Master_model extends CI_Model {
     }
 
     public function delete_rate_v2($id) {
+        $this->ensure_rates_v2_schema();
         $this->db->where('id', $id);
         $result = $this->db->update('shipping_rates_v2', array(
             'deleted_at' => date('Y-m-d H:i:s'),
@@ -377,6 +464,7 @@ class Master_model extends CI_Model {
     }
 
     public function toggle_rate_status_v2($id) {
+        $this->ensure_rates_v2_schema();
         $rate = $this->db->select('id, status')->where('id', $id)->where('deleted_at IS NULL')->get('shipping_rates_v2')->row();
         if ($rate) {
             $new_status = ($rate->status === 'Active') ? 'Inactive' : 'Active';
@@ -387,6 +475,8 @@ class Master_model extends CI_Model {
     }
 
     public function get_all_rates_for_export_v2($filters = array()) {
+        $this->ensure_rates_v2_schema();
+
         $this->db->select('r.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
         $this->db->from('shipping_rates_v2 r');
         $this->db->join('countries c', 'c.id = r.destination_country_id', 'left');
@@ -414,10 +504,12 @@ class Master_model extends CI_Model {
         $this->db->order_by('r.service_type', 'ASC');
         $this->db->order_by('r.weight', 'ASC');
 
-        return $this->db->get()->result_array();
+        $query = $this->db->get();
+        return ($query) ? $query->result_array() : array();
     }
 
     public function bulk_import_rates_v2($records, $strategy = 'update') {
+        $this->ensure_rates_v2_schema();
         // Pre-fetch Country maps
         $all_countries = $this->db->select('id, country_name, country_code')->get('countries')->result();
         $country_map = array();
