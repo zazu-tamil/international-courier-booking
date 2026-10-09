@@ -141,7 +141,7 @@
                 <li class="<?php echo ($this->uri->segment(1) == 'countries') ? 'active' : ''; ?>"><a href="<?php echo site_url('countries'); ?>"><i class="fa fa-circle-o"></i> Countries</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'geo-locations') ? 'active' : ''; ?>"><a href="<?php echo site_url('geo-locations'); ?>"><i class="fa fa-map-marker"></i> Geo Locations</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
-                <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-circle-o"></i> Shipping Rates Matrix</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-calculator"></i> Shipping Rates Matrix v2</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'movement-stages') ? 'active' : ''; ?>"><a href="<?php echo site_url('movement-stages'); ?>"><i class="fa fa-circle-o"></i> Movement Status Stages</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'service-types') ? 'active' : ''; ?>"><a href="<?php echo site_url('service-types'); ?>"><i class="fa fa-circle-o"></i> Service Types</a></li>
@@ -242,14 +242,18 @@
 
 <script>
   $(document).ready(function() {
-    $('.dataTable').not('#geoLocationsTable').DataTable({
-      'paging'      : true,
-      'lengthChange': true,
-      'searching'   : true,
-      'ordering'    : false,
-      'info'        : true,
-      'autoWidth'   : false,
-      'responsive'  : true
+    $('.dataTable').not('#geoLocationsTable, #ratesV2Table').each(function() {
+      if (!$.fn.DataTable.isDataTable(this)) {
+        $(this).DataTable({
+          'paging'      : true,
+          'lengthChange': true,
+          'searching'   : true,
+          'ordering'    : false,
+          'info'        : true,
+          'autoWidth'   : false,
+          'responsive'  : true
+        });
+      }
     });
   });
 </script>

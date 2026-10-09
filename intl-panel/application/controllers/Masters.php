@@ -450,64 +450,332 @@ class Masters extends CI_Controller {
         }
     }
 
-    // --- SHIPPING RATES ---
+    // =========================================================================
+    // --- SHIPPING RATES MATRIX V2 ---
+    // Fields: Destination Country, Service Type, Shipment Type, Courier Partner, Weight, Rate, Status
+    // =========================================================================
+
     public function rates() {
-        $data['page_title'] = 'Shipping Rates Matrix';
-        $data['countries'] = $this->Master_model->get_countries();
-        $data['service_types'] = $this->Master_model->get_service_types();
-        $data['rates'] = $this->Master_model->get_rates();
-        $data['view_path'] = 'masters/rates_list';
+        $filters = array(
+            'destination_country_id' => $this->input->post_get('dest_country'),
+            'courier_partner_id'     => $this->input->post_get('partner'),
+            'service_type'           => $this->input->post_get('service_type'),
+            'shipment_type'          => $this->input->post_get('shipment_type'),
+            'status'                 => $this->input->post_get('status')
+        );
+
+        $data['page_title']       = 'Shipping Rates Matrix v2';
+        $data['countries']        = $this->Master_model->get_countries();
+        $data['courier_partners'] = $this->Master_model->get_courier_partners();
+        $data['service_types']    = $this->Master_model->get_service_types();
+        $data['rates']            = $this->Master_model->get_rates_v2($filters);
+        $data['filters']          = $filters;
+
+        // Statistics
+        $all_v2 = $this->Master_model->get_rates_v2();
+        $data['total_count']     = count($all_v2);
+        $data['active_count']    = count(array_filter($all_v2, function($r) { return $r->status === 'Active'; }));
+        $unique_countries        = array_unique(array_column($all_v2, 'destination_country_id'));
+        $data['countries_count'] = count($unique_countries);
+        $unique_partners         = array_unique(array_column($all_v2, 'courier_partner_id'));
+        $data['partners_count']  = count($unique_partners);
+
+        $data['view_path'] = 'masters/rates_list_v2';
         $this->load->view('templates/dashboard_layout', $data);
     }
 
     public function add_rate() {
-        $this->form_validation->set_rules('origin_country_id', 'Origin Country', 'required');
-        $this->form_validation->set_rules('destination_country_id', 'Destination Country', 'required');
-        $this->form_validation->set_rules('service_type', 'Service Type', 'required');
-        $this->form_validation->set_rules('weight_slab_start', 'Weight Slab Start', 'required|numeric');
-        $this->form_validation->set_rules('weight_slab_end', 'Weight Slab End', 'required|numeric');
-        $this->form_validation->set_rules('base_rate', 'Base Rate', 'required|numeric');
-        $this->form_validation->set_rules('fuel_surcharge', 'Fuel Surcharge %', 'numeric');
-        $this->form_validation->set_rules('handling_charges', 'Handling Fee', 'numeric');
-        $this->form_validation->set_rules('insurance_charges', 'Insurance Fee', 'numeric');
+        $this->form_validation->set_rules('destination_country_id', 'Destination Country', 'required|numeric');
+        $this->form_validation->set_rules('courier_partner_id', 'Courier Partner', 'required|numeric');
+        $this->form_validation->set_rules('service_type', 'Service Type', 'required|trim');
+        $this->form_validation->set_rules('shipment_type', 'Shipment Type', 'required|trim');
+        $this->form_validation->set_rules('weight', 'Weight (kg)', 'required|numeric');
+        $this->form_validation->set_rules('rate', 'Rate (INR)', 'required|numeric');
 
         if ($this->form_validation->run() === FALSE) {
-            $data['page_title'] = 'Add New Shipping Rate Slab';
-            $data['countries'] = $this->Master_model->get_countries();
-            $data['service_types'] = $this->Master_model->get_service_types();
-            $data['view_path'] = 'masters/rate_add';
-            $this->load->view('templates/dashboard_layout', $data);
+            $this->session->set_flashdata('error', validation_errors('<div>', '</div>'));
         } else {
             $post = $this->input->post(NULL, TRUE);
-            $this->Master_model->add_rate($post);
-            $this->session->set_flashdata('success', 'Rate slab added to matrix.');
-            redirect('rates');
+            $this->Master_model->add_rate_v2($post);
+            $this->session->set_flashdata('success', 'New shipping rate added successfully.');
         }
+        redirect('rates');
     }
 
-    public function edit_rate($id) {
-        $this->form_validation->set_rules('weight_slab_start', 'Weight Slab Start', 'required|numeric');
-        $this->form_validation->set_rules('weight_slab_end', 'Weight Slab End', 'required|numeric');
-        $this->form_validation->set_rules('base_rate', 'Base Rate', 'required|numeric');
+    public function edit_rate($id = NULL) {
+        if (!$id) {
+            $id = $this->input->post('id');
+        }
+
+        $this->form_validation->set_rules('destination_country_id', 'Destination Country', 'required|numeric');
+        $this->form_validation->set_rules('courier_partner_id', 'Courier Partner', 'required|numeric');
+        $this->form_validation->set_rules('service_type', 'Service Type', 'required|trim');
+        $this->form_validation->set_rules('shipment_type', 'Shipment Type', 'required|trim');
+        $this->form_validation->set_rules('weight', 'Weight (kg)', 'required|numeric');
+        $this->form_validation->set_rules('rate', 'Rate (INR)', 'required|numeric');
 
         if ($this->form_validation->run() === FALSE) {
-            $data['page_title'] = 'Edit Rate Slab';
-            $data['rate'] = $this->Master_model->get_rates($id);
-            $data['countries'] = $this->Master_model->get_countries();
-            $data['service_types'] = $this->Master_model->get_service_types();
-            $data['view_path'] = 'masters/rate_edit';
-            $this->load->view('templates/dashboard_layout', $data);
+            $this->session->set_flashdata('error', validation_errors('<div>', '</div>'));
         } else {
             $post = $this->input->post(NULL, TRUE);
-            $this->Master_model->update_rate($id, $post);
-            $this->session->set_flashdata('success', 'Rate slab modified.');
-            redirect('rates');
+            $this->Master_model->update_rate_v2($id, $post);
+            $this->session->set_flashdata('success', 'Shipping rate updated successfully.');
         }
+        redirect('rates');
     }
 
     public function delete_rate($id) {
-        $this->Master_model->delete_rate($id);
-        $this->session->set_flashdata('success', 'Rate slab deleted.');
+        $this->Master_model->delete_rate_v2($id);
+        $this->session->set_flashdata('success', 'Shipping rate deleted.');
+        redirect('rates');
+    }
+
+    public function get_rate_json($id) {
+        $rate = $this->Master_model->get_rate_v2($id);
+        if ($rate) {
+            echo json_encode(array('status' => 'success', 'data' => $rate));
+        } else {
+            echo json_encode(array('status' => 'error', 'message' => 'Rate not found.'));
+        }
+        exit;
+    }
+
+    public function toggle_rate_status($id) {
+        $new_status = $this->Master_model->toggle_rate_status_v2($id);
+        if ($new_status) {
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(array('status' => 'success', 'new_status' => $new_status));
+                exit;
+            }
+            $this->session->set_flashdata('success', "Rate status updated to {$new_status}.");
+        } else {
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(array('status' => 'error', 'message' => 'Failed to update status.'));
+                exit;
+            }
+            $this->session->set_flashdata('error', 'Failed to toggle rate status.');
+        }
+        redirect('rates');
+    }
+
+    public function export_rates() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('memory_limit', '512M');
+        set_time_limit(300);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        $filters = array(
+            'destination_country_id' => $this->input->post_get('dest_country'),
+            'courier_partner_id'     => $this->input->post_get('partner'),
+            'service_type'           => $this->input->post_get('service_type'),
+            'shipment_type'          => $this->input->post_get('shipment_type'),
+            'status'                 => $this->input->post_get('status')
+        );
+
+        $records = $this->Master_model->get_all_rates_for_export_v2($filters);
+
+        $objPHPExcel = new PHPExcel();
+        $objPHPExcel->getProperties()->setCreator("Courier Syndicate")
+                                     ->setTitle("Shipping Rates Matrix v2 Export");
+
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Rates Matrix v2');
+
+        $headers = array(
+            'A1' => 'Destination Country',
+            'B1' => 'Service Type',
+            'C1' => 'Shipment Type',
+            'D1' => 'Courier Partner',
+            'E1' => 'Weight (kg)',
+            'F1' => 'Rate (INR)',
+            'G1' => 'Status'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        // Header style
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '3C8DBC')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
+
+        $row_num = 2;
+        foreach ($records as $r) {
+            $sheet->setCellValueExplicit('A' . $row_num, $r['destination_country'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $row_num, $r['service_type'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('C' . $row_num, $r['shipment_type'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('D' . $row_num, $r['courier_partner_name'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('E' . $row_num, number_format($r['weight'], 3, '.', ''), PHPExcel_Cell_DataType::TYPE_NUMERIC);
+            $sheet->setCellValueExplicit('F' . $row_num, number_format($r['rate'], 2, '.', ''), PHPExcel_Cell_DataType::TYPE_NUMERIC);
+            $sheet->setCellValueExplicit('G' . $row_num, $r['status'], PHPExcel_Cell_DataType::TYPE_STRING);
+            $row_num++;
+        }
+
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'shipping_rates_v2_' . date('Y-m-d_His') . '.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function download_rates_template() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Rate Import Template');
+
+        $headers = array(
+            'A1' => 'Destination Country',
+            'B1' => 'Service Type',
+            'C1' => 'Shipment Type',
+            'D1' => 'Courier Partner',
+            'E1' => 'Weight (kg)',
+            'F1' => 'Rate (INR)',
+            'G1' => 'Status'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        // Header style
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '2E7D32')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
+
+        // Sample dummy data
+        $sample_rows = array(
+            array('United States', 'Express', 'Documents (Paper / Files)', 'DHL Express', '0.500', '1450.00', 'Active'),
+            array('United States', 'Express', 'Documents (Paper / Files)', 'DHL Express', '1.000', '2150.00', 'Active'),
+            array('United States', 'Economy', 'Non-Documents (Commercial Goods / Parcels)', 'FedEx', '1.000', '2200.00', 'Active'),
+            array('United Kingdom', 'Express', 'Documents (Paper / Files)', 'DHL Express', '0.500', '1350.00', 'Active'),
+            array('United Arab Emirates', 'Express', 'Non-Documents (Commercial Goods / Parcels)', 'Aramex', '1.000', '1750.00', 'Active')
+        );
+
+        $row_idx = 2;
+        foreach ($sample_rows as $row) {
+            $sheet->setCellValueExplicit('A' . $row_idx, $row[0], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $row_idx, $row[1], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('C' . $row_idx, $row[2], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('D' . $row_idx, $row[3], PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('E' . $row_idx, $row[4], PHPExcel_Cell_DataType::TYPE_NUMERIC);
+            $sheet->setCellValueExplicit('F' . $row_idx, $row[5], PHPExcel_Cell_DataType::TYPE_NUMERIC);
+            $sheet->setCellValueExplicit('G' . $row_idx, $row[6], PHPExcel_Cell_DataType::TYPE_STRING);
+            $row_idx++;
+        }
+
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'sample_shipping_rates_v2_template.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function import_rates() {
+        if (empty($_FILES['excel_file']['name'])) {
+            $this->session->set_flashdata('error', 'Please choose an Excel (.xls / .xlsx) file to upload.');
+            redirect('rates');
+        }
+
+        $strategy = $this->input->post('strategy') ? $this->input->post('strategy') : 'update';
+
+        $ext = strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, array('xls', 'xlsx', 'csv'))) {
+            $this->session->set_flashdata('error', 'Invalid file type. Please upload .xls, .xlsx, or .csv');
+            redirect('rates');
+        }
+
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        try {
+            $file_path = $_FILES['excel_file']['tmp_name'];
+            $inputFileType = PHPExcel_IOFactory::identify($file_path);
+            $objReader = PHPExcel_IOFactory::createReader($inputFileType);
+            $objPHPExcel = $objReader->load($file_path);
+            $sheet = $objPHPExcel->getActiveSheet();
+            $highestRow = $sheet->getHighestRow();
+
+            $records = array();
+            for ($r = 2; $r <= $highestRow; $r++) {
+                $country = trim((string)$sheet->getCell('A' . $r)->getValue());
+                $service = trim((string)$sheet->getCell('B' . $r)->getValue());
+                $shipment = trim((string)$sheet->getCell('C' . $r)->getValue());
+                $partner = trim((string)$sheet->getCell('D' . $r)->getValue());
+                $weight  = trim((string)$sheet->getCell('E' . $r)->getValue());
+                $rate    = trim((string)$sheet->getCell('F' . $r)->getValue());
+                $status  = trim((string)$sheet->getCell('G' . $r)->getValue());
+
+                if (empty($country) && empty($partner) && empty($weight)) {
+                    continue;
+                }
+
+                $records[] = array(
+                    'destination_country' => $country,
+                    'service_type'        => $service,
+                    'shipment_type'       => $shipment,
+                    'courier_partner'     => $partner,
+                    'weight'              => $weight,
+                    'rate'                => $rate,
+                    'status'              => $status
+                );
+            }
+
+            if (empty($records)) {
+                $this->session->set_flashdata('error', 'No valid data rows found in the uploaded file.');
+                redirect('rates');
+            }
+
+            $result = $this->Master_model->bulk_import_rates_v2($records, $strategy);
+
+            $msg = "Import Complete: {$result['inserted']} new rates added, {$result['updated']} rates updated, {$result['skipped']} skipped.";
+            if (!empty($result['errors'])) {
+                $msg .= "<br><strong>Warnings/Errors:</strong><br>" . implode("<br>", array_slice($result['errors'], 0, 10));
+                if (count($result['errors']) > 10) {
+                    $msg .= "<br>...and " . (count($result['errors']) - 10) . " more errors.";
+                }
+            }
+
+            $this->session->set_flashdata('success', $msg);
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Error reading Excel file: ' . $e->getMessage());
+        }
+
         redirect('rates');
     }
 

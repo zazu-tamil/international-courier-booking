@@ -46,7 +46,12 @@ $route['partners/edit/(:num)'] = 'masters/edit_partner/$1';
 $route['rates'] = 'masters/rates';
 $route['rates/add'] = 'masters/add_rate';
 $route['rates/edit/(:num)'] = 'masters/edit_rate/$1';
+$route['rates/get/(:num)'] = 'masters/get_rate_json/$1';
 $route['rates/delete/(:num)'] = 'masters/delete_rate/$1';
+$route['rates/toggle-status/(:num)'] = 'masters/toggle_rate_status/$1';
+$route['rates/export'] = 'masters/export_rates';
+$route['rates/template'] = 'masters/download_rates_template';
+$route['rates/import'] = 'masters/import_rates';
 
 $route['terms'] = 'masters/terms';
 $route['terms/add'] = 'masters/add_terms';

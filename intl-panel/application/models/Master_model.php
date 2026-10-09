@@ -279,6 +279,269 @@ class Master_model extends CI_Model {
         return $result;
     }
 
+    // =========================================================================
+    // --- SHIPPING RATES MATRIX V2 ---
+    // Fields: Destination Country, Service Type, Shipment Type, Courier Partner, Weight, Rate, Status
+    // =========================================================================
+
+    public function get_rates_v2($filters = array(), $id = NULL) {
+        $this->db->select('r.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
+        $this->db->from('shipping_rates_v2 r');
+        $this->db->join('countries c', 'c.id = r.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = r.courier_partner_id', 'left');
+        $this->db->where('r.deleted_at IS NULL');
+
+        if ($id) {
+            $this->db->where('r.id', $id);
+            return $this->db->get()->row();
+        }
+
+        if (!empty($filters['destination_country_id'])) {
+            $this->db->where('r.destination_country_id', $filters['destination_country_id']);
+        }
+        if (!empty($filters['courier_partner_id'])) {
+            $this->db->where('r.courier_partner_id', $filters['courier_partner_id']);
+        }
+        if (!empty($filters['service_type'])) {
+            $this->db->where('r.service_type', $filters['service_type']);
+        }
+        if (!empty($filters['shipment_type'])) {
+            $this->db->where('r.shipment_type', $filters['shipment_type']);
+        }
+        if (!empty($filters['status'])) {
+            $this->db->where('r.status', $filters['status']);
+        }
+
+        $this->db->order_by('c.country_name', 'ASC');
+        $this->db->order_by('p.partner_name', 'ASC');
+        $this->db->order_by('r.service_type', 'ASC');
+        $this->db->order_by('r.weight', 'ASC');
+
+        return $this->db->get()->result();
+    }
+
+    public function get_rate_v2($id) {
+        return $this->get_rates_v2(array(), $id);
+    }
+
+    public function add_rate_v2($data) {
+        $insert_data = array(
+            'destination_country_id' => intval($data['destination_country_id']),
+            'service_type'           => trim($data['service_type']),
+            'shipment_type'          => trim($data['shipment_type']),
+            'courier_partner_id'     => intval($data['courier_partner_id']),
+            'weight'                 => floatval($data['weight']),
+            'rate'                   => floatval($data['rate']),
+            'status'                 => (!empty($data['status']) && in_array($data['status'], array('Active', 'Inactive'))) ? $data['status'] : 'Active',
+            'created_at'             => date('Y-m-d H:i:s'),
+            'updated_at'             => date('Y-m-d H:i:s')
+        );
+
+        $result = $this->db->insert('shipping_rates_v2', $insert_data);
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Add Shipping Rate v2', 'Country ID: ' . $insert_data['destination_country_id'] . ', Partner: ' . $insert_data['courier_partner_id']);
+        }
+        return $result;
+    }
+
+    public function update_rate_v2($id, $data) {
+        $update_data = array(
+            'destination_country_id' => intval($data['destination_country_id']),
+            'service_type'           => trim($data['service_type']),
+            'shipment_type'          => trim($data['shipment_type']),
+            'courier_partner_id'     => intval($data['courier_partner_id']),
+            'weight'                 => floatval($data['weight']),
+            'rate'                   => floatval($data['rate']),
+            'status'                 => (!empty($data['status']) && in_array($data['status'], array('Active', 'Inactive'))) ? $data['status'] : 'Active',
+            'updated_at'             => date('Y-m-d H:i:s')
+        );
+
+        $this->db->where('id', $id);
+        $result = $this->db->update('shipping_rates_v2', $update_data);
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Update Shipping Rate v2', 'Rate ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function delete_rate_v2($id) {
+        $this->db->where('id', $id);
+        $result = $this->db->update('shipping_rates_v2', array(
+            'deleted_at' => date('Y-m-d H:i:s'),
+            'status'     => 'Inactive'
+        ));
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Soft Delete Shipping Rate v2', 'Rate ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function toggle_rate_status_v2($id) {
+        $rate = $this->db->select('id, status')->where('id', $id)->where('deleted_at IS NULL')->get('shipping_rates_v2')->row();
+        if ($rate) {
+            $new_status = ($rate->status === 'Active') ? 'Inactive' : 'Active';
+            $this->db->where('id', $id)->update('shipping_rates_v2', array('status' => $new_status, 'updated_at' => date('Y-m-d H:i:s')));
+            return $new_status;
+        }
+        return FALSE;
+    }
+
+    public function get_all_rates_for_export_v2($filters = array()) {
+        $this->db->select('r.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
+        $this->db->from('shipping_rates_v2 r');
+        $this->db->join('countries c', 'c.id = r.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = r.courier_partner_id', 'left');
+        $this->db->where('r.deleted_at IS NULL');
+
+        if (!empty($filters['destination_country_id'])) {
+            $this->db->where('r.destination_country_id', $filters['destination_country_id']);
+        }
+        if (!empty($filters['courier_partner_id'])) {
+            $this->db->where('r.courier_partner_id', $filters['courier_partner_id']);
+        }
+        if (!empty($filters['service_type'])) {
+            $this->db->where('r.service_type', $filters['service_type']);
+        }
+        if (!empty($filters['shipment_type'])) {
+            $this->db->where('r.shipment_type', $filters['shipment_type']);
+        }
+        if (!empty($filters['status'])) {
+            $this->db->where('r.status', $filters['status']);
+        }
+
+        $this->db->order_by('c.country_name', 'ASC');
+        $this->db->order_by('p.partner_name', 'ASC');
+        $this->db->order_by('r.service_type', 'ASC');
+        $this->db->order_by('r.weight', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function bulk_import_rates_v2($records, $strategy = 'update') {
+        // Pre-fetch Country maps
+        $all_countries = $this->db->select('id, country_name, country_code')->get('countries')->result();
+        $country_map = array();
+        foreach ($all_countries as $c) {
+            $country_map[strtolower(trim($c->country_name))] = $c->id;
+            $country_map[strtolower(trim($c->country_code))] = $c->id;
+        }
+
+        // Pre-fetch Courier Partner maps
+        $all_partners = $this->db->select('id, partner_name')->get('courier_partners')->result();
+        $partner_map = array();
+        foreach ($all_partners as $p) {
+            $partner_map[strtolower(trim($p->partner_name))] = $p->id;
+        }
+
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = array();
+
+        foreach ($records as $index => $row) {
+            $row_num = $index + 2; // Assuming row 1 is header
+
+            $country_input = trim($row['destination_country'] ?? '');
+            $service_type  = trim($row['service_type'] ?? '');
+            $shipment_type = trim($row['shipment_type'] ?? '');
+            $partner_input = trim($row['courier_partner'] ?? '');
+            $weight_input  = trim($row['weight'] ?? '');
+            $rate_input    = trim($row['rate'] ?? '');
+            $status_input  = trim($row['status'] ?? 'Active');
+
+            if (empty($country_input) && empty($partner_input) && empty($weight_input)) {
+                continue; // Skip empty row
+            }
+
+            // 1. Resolve Country
+            $country_key = strtolower($country_input);
+            if (!isset($country_map[$country_key])) {
+                $errors[] = "Row {$row_num}: Unknown destination country '{$country_input}'";
+                continue;
+            }
+            $country_id = $country_map[$country_key];
+
+            // 2. Resolve Partner
+            $partner_key = strtolower($partner_input);
+            if (!isset($partner_map[$partner_key])) {
+                $errors[] = "Row {$row_num}: Unknown courier partner '{$partner_input}'";
+                continue;
+            }
+            $partner_id = $partner_map[$partner_key];
+
+            // 3. Resolve Service Type
+            if (empty($service_type)) {
+                $service_type = 'Express';
+            }
+
+            // 4. Resolve Shipment Type
+            if (empty($shipment_type)) {
+                $shipment_type = 'Documents (Paper / Files)';
+            }
+
+            // 5. Validate Weight & Rate
+            if (!is_numeric($weight_input) || floatval($weight_input) <= 0) {
+                $errors[] = "Row {$row_num}: Invalid weight '{$weight_input}'. Must be numeric > 0.";
+                continue;
+            }
+            if (!is_numeric($rate_input) || floatval($rate_input) < 0) {
+                $errors[] = "Row {$row_num}: Invalid rate '{$rate_input}'. Must be numeric >= 0.";
+                continue;
+            }
+
+            $weight = floatval($weight_input);
+            $rate = floatval($rate_input);
+            $status = (strcasecmp($status_input, 'Inactive') === 0) ? 'Inactive' : 'Active';
+
+            // 6. Check existing matching rate
+            $this->db->where('destination_country_id', $country_id);
+            $this->db->where('courier_partner_id', $partner_id);
+            $this->db->where('service_type', $service_type);
+            $this->db->where('shipment_type', $shipment_type);
+            $this->db->where('weight', $weight);
+            $existing = $this->db->get('shipping_rates_v2')->row();
+
+            if ($existing) {
+                if ($strategy === 'update') {
+                    $this->db->where('id', $existing->id)->update('shipping_rates_v2', array(
+                        'rate'       => $rate,
+                        'status'     => $status,
+                        'deleted_at' => NULL,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ));
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
+            } else {
+                $this->db->insert('shipping_rates_v2', array(
+                    'destination_country_id' => $country_id,
+                    'courier_partner_id'     => $partner_id,
+                    'service_type'           => $service_type,
+                    'shipment_type'          => $shipment_type,
+                    'weight'                 => $weight,
+                    'rate'                   => $rate,
+                    'status'                 => $status,
+                    'created_at'             => date('Y-m-d H:i:s'),
+                    'updated_at'             => date('Y-m-d H:i:s')
+                ));
+                $inserted++;
+            }
+        }
+
+        if (isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Import Shipping Rates v2', "Inserted: $inserted, Updated: $updated, Skipped: $skipped");
+        }
+
+        return array(
+            'success'  => true,
+            'inserted' => $inserted,
+            'updated'  => $updated,
+            'skipped'  => $skipped,
+            'errors'   => $errors
+        );
+    }
+
     public function calculate_shipping_charges($origin_id, $dest_id, $service_type, $chargeable_weight) {
         $this->db->select('*');
         $this->db->from('rate_master');
