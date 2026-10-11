@@ -102,8 +102,22 @@ $route['geo-locations/export'] = 'masters/export_geo_locations';
 $route['geo-locations/import'] = 'masters/import_geo_locations';
 $route['geo-locations/template'] = 'masters/download_geo_location_template';
 
+// ODA (Out of Delivery Area) Charges Master
+$route['oda-charges'] = 'masters/oda_charges';
+$route['oda-charges/ajax'] = 'masters/oda_charges_ajax';
+$route['oda-charges/add'] = 'masters/save_oda_charge';
+$route['oda-charges/save'] = 'masters/save_oda_charge';
+$route['oda-charges/get/(:num)'] = 'masters/get_oda_charge/$1';
+$route['oda-charges/delete/(:num)'] = 'masters/delete_oda_charge/$1';
+$route['oda-charges/toggle-status/(:num)'] = 'masters/toggle_oda_status/$1';
+$route['oda-charges/export'] = 'masters/export_oda_charges';
+$route['oda-charges/template'] = 'masters/download_oda_template';
+$route['oda-charges/import'] = 'masters/import_oda_charges';
+
 // Shipment Booking & Handling
 $route['shipment/calculator'] = 'shipment/calculator';
+$route['shipments/check-oda-rate'] = 'shipment/check_oda_rate';
+$route['shipment/check-oda-rate'] = 'shipment/check_oda_rate';
 $route['shipment/barcode/(:any)'] = 'shipment/barcode/$1';
 $route['shipments'] = 'shipment/list';
 $route['shipments/book'] = 'shipment/book';

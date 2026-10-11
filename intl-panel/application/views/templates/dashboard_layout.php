@@ -130,7 +130,7 @@
             <?php endif; ?>
 
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
-            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'geo-locations', 'partners', 'rates', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'charge-types', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'geo-locations', 'partners', 'rates', 'oda-charges', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'charge-types', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
                 <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
               </a>
@@ -142,6 +142,7 @@
                 <li class="<?php echo ($this->uri->segment(1) == 'geo-locations') ? 'active' : ''; ?>"><a href="<?php echo site_url('geo-locations'); ?>"><i class="fa fa-map-marker"></i> Geo Locations</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'partners') ? 'active' : ''; ?>"><a href="<?php echo site_url('partners'); ?>"><i class="fa fa-circle-o"></i> Courier Partners</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'rates') ? 'active' : ''; ?>"><a href="<?php echo site_url('rates'); ?>"><i class="fa fa-calculator"></i> Shipping Rates Matrix v2</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'oda-charges') ? 'active' : ''; ?>"><a href="<?php echo site_url('oda-charges'); ?>"><i class="fa fa-map-pin"></i> ODA Charges Master</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'terms') ? 'active' : ''; ?>"><a href="<?php echo site_url('terms'); ?>"><i class="fa fa-circle-o"></i> Terms & Conditions</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'movement-stages') ? 'active' : ''; ?>"><a href="<?php echo site_url('movement-stages'); ?>"><i class="fa fa-circle-o"></i> Movement Status Stages</a></li>
                 <li class="<?php echo ($this->uri->segment(1) == 'service-types') ? 'active' : ''; ?>"><a href="<?php echo site_url('service-types'); ?>"><i class="fa fa-circle-o"></i> Service Types</a></li>

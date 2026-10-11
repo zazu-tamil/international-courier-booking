@@ -138,7 +138,7 @@
                 </div>
                 <div class="col-md-6 form-group">
                   <label>ZIP / Postal Code <span class="text-danger">*</span></label>
-                  <input type="text" name="receiver_zip" class="form-control" placeholder="Destination zip code" required>
+                  <input type="text" name="receiver_zip" id="receiver_zip" class="form-control" placeholder="Destination zip code" required>
                 </div>
               </div>
               <div class="form-group">
@@ -148,21 +148,27 @@
               <div class="row">
                 <div class="col-md-4 form-group">
                   <label>City <span class="text-danger">*</span></label>
-                  <input type="text" name="receiver_city" class="form-control" required>
+                  <input type="text" name="receiver_city" id="receiver_city" class="form-control" required>
                 </div>
                 <div class="col-md-4 form-group">
                   <label>State <span class="text-danger">*</span></label>
-                  <input type="text" name="receiver_state" class="form-control" required>
+                  <input type="text" name="receiver_state" id="receiver_state" class="form-control" required>
                 </div>
                 <div class="col-md-4 form-group">
                   <label>Country <span class="text-danger">*</span></label>
-                  <select name="receiver_country_id" class="form-control" required>
+                  <select name="receiver_country_id" id="receiver_country_id" class="form-control" required>
                     <option value="">Select country</option>
                     <?php foreach($countries as $c): ?>
                       <option value="<?php echo $c->id; ?>"><?php echo $c->country_name; ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
+              </div>
+
+              <!-- ODA Warning Alert in Tab 2 -->
+              <div class="alert alert-warning" id="tab2_oda_alert" style="display:none; border-radius: 6px; margin-top: 15px; border-left: 5px solid #f39c12;">
+                <h5 style="margin-top: 0; font-weight: bold;"><i class="fa fa-map-pin"></i> Out of Delivery Area (ODA) Surcharge Detected</h5>
+                <p id="tab2_oda_desc" style="margin-bottom: 0; font-size: 13px;"></p>
               </div>
 
               <div style="margin-top: 20px; display: flex; justify-content: space-between;">
@@ -230,7 +236,7 @@
               <div class="row">
                 <div class="col-md-6 form-group">
                   <label>Courier Partner <span class="text-danger">*</span></label>
-                  <select name="courier_partner_id" class="form-control" required>
+                  <select name="courier_partner_id" id="courier_partner_id" class="form-control" required>
                     <option value="">Select partner</option>
                     <?php foreach($courier_partners as $p): ?>
                       <option value="<?php echo $p->id; ?>"><?php echo $p->partner_name; ?></option>
@@ -378,6 +384,13 @@
                         </table>
                       </div>
                       
+                      <!-- ODA Surcharge Alert Box in Tab 4 -->
+                      <div id="tab4_oda_alert_box" class="alert alert-warning text-left" style="display: none; margin-top: 15px; border-radius: 6px; border-left: 5px solid #f39c12;">
+                        <h5 style="margin-top: 0; font-weight: bold;"><i class="fa fa-truck"></i> Out of Delivery Area (ODA) Surcharge Detected</h5>
+                        <p id="tab4_oda_text" style="font-size: 13px; margin-bottom: 4px;"></p>
+                        <div id="tab4_oda_formula_badge" style="font-size: 12px; font-weight: 600; color: #8a6d3b;"></div>
+                      </div>
+
                       <div class="form-group text-left" style="margin-top: 20px;">
                         <label>Billing Charge Breakup</label>
                         <table class="table table-bordered table-condensed" id="chargesTable">
@@ -1070,6 +1083,10 @@
             
             $('#estimated_charges_val').val(data.total_charges.toFixed(2));
             $('#cost_summary_box').slideDown();
+            // Trigger ODA check alongside base rate calculation
+            if (typeof window.checkOdaRate === 'function') {
+              window.checkOdaRate();
+            }
           } else {
             if (typeof Swal !== 'undefined') {
               Swal.fire({
@@ -1160,6 +1177,131 @@
       });
       $('#estimated_charges_val').val(total.toFixed(2));
     };
+
+    // --- ODA Surcharge Detection Engine ---
+    var odaCheckTimer = null;
+    window.checkOdaRate = function() {
+      clearTimeout(odaCheckTimer);
+      odaCheckTimer = setTimeout(function() {
+        var countryId = $('#destination_country_id').val() || $('#receiver_country_id').val();
+        var partnerId = $('#courier_partner_id').val() || 0;
+        var zip       = $('#receiver_zip').val() ? $('#receiver_zip').val().trim() : '';
+        var city      = $('#receiver_city').val() ? $('#receiver_city').val().trim() : '';
+        var weight    = $('#chargeable_weight_val').val() || 0;
+
+        if (!countryId || (!zip && !city)) {
+          $('#tab2_oda_alert').slideUp();
+          $('#tab4_oda_alert_box').slideUp();
+          return;
+        }
+
+        $.ajax({
+          url: '<?php echo site_url("shipments/check-oda-rate"); ?>',
+          type: 'POST',
+          data: {
+            country_id: countryId,
+            partner_id: partnerId,
+            pincode: zip,
+            city: city,
+            weight: weight,
+            '<?php echo $this->security->get_csrf_token_name(); ?>': '<?php echo $this->security->get_csrf_hash(); ?>'
+          },
+          dataType: 'json',
+          success: function(res) {
+            if (res && res.is_oda) {
+              var odaAmt = parseFloat(res.oda_amount) || 0;
+              var desc = res.location_matched + ' (' + res.partner_name + '). Surcharge: ₹' + odaAmt.toFixed(2) + ' (' + res.formula_note + ')';
+              
+              // Show Tab 2 Banner
+              $('#tab2_oda_desc').text(desc);
+              $('#tab2_oda_alert').slideDown();
+
+              // Show Tab 4 Banner
+              $('#tab4_oda_text').html('<strong>' + res.location_matched + '</strong> (' + res.partner_name + ')');
+              $('#tab4_oda_formula_badge').html('<i class="fa fa-calculator"></i> Surcharge: <strong>₹' + odaAmt.toFixed(2) + '</strong> &nbsp;|&nbsp; ' + res.formula_note);
+              $('#tab4_oda_alert_box').slideDown();
+
+              // Auto-fill into chargesTable
+              var odaTypeId = res.charge_type_id || 1;
+              var foundRow = false;
+
+              $('#chargesTable tbody tr').each(function() {
+                var sel = $(this).find('.charge-type');
+                var selVal = parseInt(sel.val(), 10);
+                var selText = sel.find('option:selected').text();
+
+                if (selVal === parseInt(odaTypeId, 10) || selText.indexOf('ODA') !== -1) {
+                  $(this).find('.charge-amount').val(odaAmt.toFixed(2));
+                  foundRow = true;
+                  return false;
+                }
+              });
+
+              if (!foundRow) {
+                // If the first row has no charge selected, populate it; otherwise append new row
+                var firstRow = $('#chargesTable tbody tr:first');
+                var firstVal = firstRow.find('.charge-type').val();
+                var firstAmt = firstRow.find('.charge-amount').val();
+
+                if (firstRow.length && !firstVal && (!firstAmt || parseFloat(firstAmt) === 0)) {
+                  firstRow.find('.charge-type').val(odaTypeId);
+                  firstRow.find('.charge-amount').val(odaAmt.toFixed(2));
+                } else {
+                  var newRow = `<tr>
+                    <td>
+                      <select name="charge_type_id[]" class="form-control charge-type">
+                        <option value="">Select Charge</option>
+                        <?php foreach($charge_types as $ct): ?>
+                        <option value="<?php echo $ct->id; ?>" ` + (<?php echo $ct->id; ?> == odaTypeId ? 'selected' : '') + `><?php echo $ct->charge_name; ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                    </td>
+                    <td><input type="number" step="0.01" name="charge_amount[]" class="form-control charge-amount" value="` + odaAmt.toFixed(2) + `" oninput="calculateTotalCharges()" placeholder="0.00"></td>
+                    <td><button type="button" class="btn btn-sm btn-danger btn-remove-charge"><i class="fa fa-times"></i></button></td>
+                  </tr>`;
+                  $('#chargesTable tbody').append(newRow);
+                }
+              }
+
+              calculateTotalCharges();
+            } else {
+              $('#tab2_oda_alert').slideUp();
+              $('#tab4_oda_alert_box').slideUp();
+            }
+          }
+        });
+      }, 350);
+    };
+
+    // Auto sync Receiver Country with Destination Country
+    $('#receiver_country_id').change(function() {
+      var val = $(this).val();
+      if (val && $('#destination_country_id').val() !== val) {
+        $('#destination_country_id').val(val).trigger('change');
+      }
+      checkOdaRate();
+    });
+
+    $('#destination_country_id').change(function() {
+      var val = $(this).val();
+      if (val && $('#receiver_country_id').val() !== val) {
+        $('#receiver_country_id').val(val);
+      }
+      checkOdaRate();
+    });
+
+    $('#receiver_zip, #receiver_city').on('input change blur', function() {
+      checkOdaRate();
+    });
+
+    $('#courier_partner_id').change(function() {
+      checkOdaRate();
+    });
+
+    // Also watch box weight changes
+    $(document).on('change input', '.box-weight, .box-l, .box-w, .box-h', function() {
+      checkOdaRate();
+    });
 
   });
 </script>

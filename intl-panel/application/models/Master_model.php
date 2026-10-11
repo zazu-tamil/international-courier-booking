@@ -1031,4 +1031,558 @@ class Master_model extends CI_Model {
         $this->db->insert('01_geo_location_info', $data);
         return 'inserted';
     }
+
+    // =========================================================================
+    // --- ODA (OUT OF DELIVERY AREA) CHARGES MASTER ---
+    // Fields: Destination Country, Courier Partner, Location (Pincode/Range/City),
+    //         Calculation Type, Min Charge, Per KG Rate, Flat Charge, Status
+    // =========================================================================
+
+    public function ensure_oda_charges_schema() {
+        static $checked = FALSE;
+        if ($checked) return;
+        $checked = TRUE;
+
+        $table_check = $this->db->query("SHOW TABLES LIKE 'master_oda_charges'");
+        if (!$table_check || $table_check->num_rows() == 0) {
+            $create_sql = "CREATE TABLE IF NOT EXISTS `master_oda_charges` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `destination_country_id` INT(11) NOT NULL COMMENT 'References countries.id',
+              `courier_partner_id` INT(11) NOT NULL DEFAULT 0 COMMENT 'References courier_partners.id (0 = All Partners)',
+              `location_type` ENUM('pincode', 'pincode_range', 'city') NOT NULL DEFAULT 'pincode',
+              `postal_code` VARCHAR(30) NULL COMMENT 'Single postal code or exact match',
+              `postal_code_from` VARCHAR(30) NULL COMMENT 'Starting postal code in range',
+              `postal_code_to` VARCHAR(30) NULL COMMENT 'Ending postal code in range',
+              `city_name` VARCHAR(150) NULL COMMENT 'City, Town, or Island name',
+              `state_name` VARCHAR(150) NULL COMMENT 'State / Province (optional)',
+              `calculation_type` ENUM('higher_of', 'flat', 'per_kg') NOT NULL DEFAULT 'higher_of',
+              `min_charge` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Minimum base ODA surcharge',
+              `per_kg_rate` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Rate per kg for ODA',
+              `flat_charge` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Fixed charge if calculation_type is flat',
+              `status` ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+              `created_by` INT(11) NULL,
+              `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              `deleted_at` DATETIME NULL DEFAULT NULL,
+              PRIMARY KEY (`id`),
+              KEY `idx_oda_dest_country` (`destination_country_id`),
+              KEY `idx_oda_partner` (`courier_partner_id`),
+              KEY `idx_oda_postal` (`postal_code`),
+              KEY `idx_oda_postal_range` (`postal_code_from`, `postal_code_to`),
+              KEY `idx_oda_city` (`city_name`),
+              KEY `idx_oda_status` (`status`),
+              KEY `idx_oda_deleted_at` (`deleted_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+            $this->db->query($create_sql);
+        }
+
+        // Seed initial sample ODA entries if empty
+        $count = $this->db->where('deleted_at IS NULL')->count_all_results('master_oda_charges');
+        if ($count == 0) {
+            $c_res = $this->db->query("SELECT id, country_name FROM countries WHERE country_name IN ('United States', 'United Kingdom', 'United Arab Emirates', 'Canada', 'Australia', 'Greece')");
+            $countries = array();
+            if ($c_res && $c_res->num_rows() > 0) {
+                foreach ($c_res->result() as $c) {
+                    $countries[$c->country_name] = $c->id;
+                }
+            }
+            $p_res = $this->db->query("SELECT id, partner_name FROM courier_partners LIMIT 5");
+            $partners = array();
+            if ($p_res && $p_res->num_rows() > 0) {
+                foreach ($p_res->result() as $p) {
+                    $partners[$p->partner_name] = $p->id;
+                }
+            }
+
+            if (!empty($countries)) {
+                $sample_oda = array(
+                    array('United Arab Emirates', 'Aramex', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', 0.00, 0.00, 1500.00),
+                    array('United Arab Emirates', 'DHL Express', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', 1800.00, 35.00, 0.00),
+                    array('United States', 'DHL Express', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', 2100.00, 42.00, 0.00),
+                    array('United States', 'FedEx', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', 2150.00, 45.00, 0.00),
+                    array('United Kingdom', 'DHL Express', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', 1850.00, 35.00, 0.00),
+                    array('Australia', 'FedEx', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', 2200.00, 48.00, 0.00)
+                );
+
+                foreach ($sample_oda as $item) {
+                    $c_id = isset($countries[$item[0]]) ? $countries[$item[0]] : reset($countries);
+                    $p_id = isset($partners[$item[1]]) ? $partners[$item[1]] : 0;
+                    $this->db->insert('master_oda_charges', array(
+                        'destination_country_id' => $c_id,
+                        'courier_partner_id'     => $p_id,
+                        'location_type'          => $item[2],
+                        'postal_code'            => $item[3] ? $item[3] : NULL,
+                        'postal_code_from'       => $item[4] ? $item[4] : NULL,
+                        'postal_code_to'         => $item[5] ? $item[5] : NULL,
+                        'city_name'              => $item[6] ? $item[6] : NULL,
+                        'state_name'             => $item[7] ? $item[7] : NULL,
+                        'calculation_type'       => $item[8],
+                        'min_charge'             => $item[9],
+                        'per_kg_rate'            => $item[10],
+                        'flat_charge'            => $item[11],
+                        'status'                 => 'Active',
+                        'created_at'             => date('Y-m-d H:i:s')
+                    ));
+                }
+            }
+        }
+    }
+
+    /**
+     * Get ODA charges for DataTables server-side processing
+     */
+    public function get_oda_charges_datatable($filters, $limit, $start, $search = null, $order_col = 'id', $order_dir = 'DESC') {
+        $this->ensure_oda_charges_schema();
+
+        $this->db->select('o.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->where('o.deleted_at IS NULL');
+
+        $this->_apply_oda_filters($filters);
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('c.country_name', $search);
+            $this->db->or_like('p.partner_name', $search);
+            $this->db->or_like('o.postal_code', $search);
+            $this->db->or_like('o.postal_code_from', $search);
+            $this->db->or_like('o.postal_code_to', $search);
+            $this->db->or_like('o.city_name', $search);
+            $this->db->or_like('o.state_name', $search);
+            $this->db->group_end();
+        }
+
+        // Map column ordering
+        $col_map = array(
+            0 => 'o.id',
+            1 => 'c.country_name',
+            2 => 'p.partner_name',
+            3 => 'o.location_type',
+            4 => 'o.postal_code',
+            5 => 'o.calculation_type',
+            6 => 'o.min_charge',
+            7 => 'o.status'
+        );
+        $order_by_col = isset($col_map[$order_col]) ? $col_map[$order_col] : 'o.id';
+        $this->db->order_by($order_by_col, $order_dir);
+
+        $this->db->limit($limit, $start);
+        $query = $this->db->get();
+        return ($query) ? $query->result() : array();
+    }
+
+    public function count_all_oda_charges($filters = array()) {
+        $this->ensure_oda_charges_schema();
+        $this->db->from('master_oda_charges o');
+        $this->db->where('o.deleted_at IS NULL');
+        $this->_apply_oda_filters($filters);
+        return $this->db->count_all_results();
+    }
+
+    public function count_filtered_oda_charges($filters = array(), $search = null) {
+        $this->ensure_oda_charges_schema();
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->where('o.deleted_at IS NULL');
+
+        $this->_apply_oda_filters($filters);
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('c.country_name', $search);
+            $this->db->or_like('p.partner_name', $search);
+            $this->db->or_like('o.postal_code', $search);
+            $this->db->or_like('o.postal_code_from', $search);
+            $this->db->or_like('o.postal_code_to', $search);
+            $this->db->or_like('o.city_name', $search);
+            $this->db->or_like('o.state_name', $search);
+            $this->db->group_end();
+        }
+        return $this->db->count_all_results();
+    }
+
+    private function _apply_oda_filters($filters) {
+        if (!empty($filters['destination_country_id'])) {
+            $this->db->where('o.destination_country_id', intval($filters['destination_country_id']));
+        }
+        if (isset($filters['courier_partner_id']) && $filters['courier_partner_id'] !== '') {
+            $this->db->where('o.courier_partner_id', intval($filters['courier_partner_id']));
+        }
+        if (!empty($filters['location_type'])) {
+            $this->db->where('o.location_type', $filters['location_type']);
+        }
+        if (!empty($filters['calculation_type'])) {
+            $this->db->where('o.calculation_type', $filters['calculation_type']);
+        }
+        if (!empty($filters['status'])) {
+            $this->db->where('o.status', $filters['status']);
+        }
+    }
+
+    public function get_oda_charge_by_id($id) {
+        $this->ensure_oda_charges_schema();
+        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name');
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->where('o.id', intval($id));
+        $this->db->where('o.deleted_at IS NULL');
+        $query = $this->db->get();
+        return ($query && $query->num_rows() > 0) ? $query->row() : NULL;
+    }
+
+    public function add_oda_charge($data) {
+        $this->ensure_oda_charges_schema();
+        $insert_data = array(
+            'destination_country_id' => intval($data['destination_country_id']),
+            'courier_partner_id'     => intval($data['courier_partner_id']),
+            'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
+            'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
+            'postal_code_from'       => !empty($data['postal_code_from']) ? trim($data['postal_code_from']) : NULL,
+            'postal_code_to'         => !empty($data['postal_code_to']) ? trim($data['postal_code_to']) : NULL,
+            'city_name'              => !empty($data['city_name']) ? trim($data['city_name']) : NULL,
+            'state_name'             => !empty($data['state_name']) ? trim($data['state_name']) : NULL,
+            'calculation_type'       => in_array($data['calculation_type'], array('higher_of', 'flat', 'per_kg')) ? $data['calculation_type'] : 'higher_of',
+            'min_charge'             => floatval($data['min_charge']),
+            'per_kg_rate'            => floatval($data['per_kg_rate']),
+            'flat_charge'            => floatval($data['flat_charge']),
+            'status'                 => (!empty($data['status']) && in_array($data['status'], array('Active', 'Inactive'))) ? $data['status'] : 'Active',
+            'created_by'             => isset($data['created_by']) ? intval($data['created_by']) : NULL,
+            'created_at'             => date('Y-m-d H:i:s'),
+            'updated_at'             => date('Y-m-d H:i:s')
+        );
+
+        $result = $this->db->insert('master_oda_charges', $insert_data);
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Add ODA Charge', 'Country ID: ' . $insert_data['destination_country_id'] . ', Partner: ' . $insert_data['courier_partner_id']);
+        }
+        return $result;
+    }
+
+    public function update_oda_charge($id, $data) {
+        $this->ensure_oda_charges_schema();
+        $update_data = array(
+            'destination_country_id' => intval($data['destination_country_id']),
+            'courier_partner_id'     => intval($data['courier_partner_id']),
+            'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
+            'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
+            'postal_code_from'       => !empty($data['postal_code_from']) ? trim($data['postal_code_from']) : NULL,
+            'postal_code_to'         => !empty($data['postal_code_to']) ? trim($data['postal_code_to']) : NULL,
+            'city_name'              => !empty($data['city_name']) ? trim($data['city_name']) : NULL,
+            'state_name'             => !empty($data['state_name']) ? trim($data['state_name']) : NULL,
+            'calculation_type'       => in_array($data['calculation_type'], array('higher_of', 'flat', 'per_kg')) ? $data['calculation_type'] : 'higher_of',
+            'min_charge'             => floatval($data['min_charge']),
+            'per_kg_rate'            => floatval($data['per_kg_rate']),
+            'flat_charge'            => floatval($data['flat_charge']),
+            'status'                 => (!empty($data['status']) && in_array($data['status'], array('Active', 'Inactive'))) ? $data['status'] : 'Active',
+            'updated_at'             => date('Y-m-d H:i:s')
+        );
+
+        $this->db->where('id', intval($id));
+        $this->db->where('deleted_at IS NULL');
+        $result = $this->db->update('master_oda_charges', $update_data);
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Update ODA Charge', 'ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function delete_oda_charge($id) {
+        $this->ensure_oda_charges_schema();
+        $this->db->where('id', intval($id));
+        $result = $this->db->update('master_oda_charges', array(
+            'deleted_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ));
+        if ($result && isset($this->Audit_model)) {
+            $this->Audit_model->log_activity('Delete ODA Charge (Soft)', 'ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function toggle_oda_charge_status($id) {
+        $this->ensure_oda_charges_schema();
+        $charge = $this->get_oda_charge_by_id($id);
+        if ($charge) {
+            $new_status = ($charge->status === 'Active') ? 'Inactive' : 'Active';
+            $this->db->where('id', intval($id))->update('master_oda_charges', array('status' => $new_status, 'updated_at' => date('Y-m-d H:i:s')));
+            return $new_status;
+        }
+        return FALSE;
+    }
+
+    public function get_all_oda_charges_for_export($filters = array()) {
+        $this->ensure_oda_charges_schema();
+        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name');
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->where('o.deleted_at IS NULL');
+
+        $this->_apply_oda_filters($filters);
+        $this->db->order_by('c.country_name', 'ASC');
+        $this->db->order_by('p.partner_name', 'ASC');
+        $this->db->order_by('o.id', 'ASC');
+        $query = $this->db->get();
+        return ($query) ? $query->result_array() : array();
+    }
+
+    public function bulk_import_oda_charges($records, $strategy = 'update') {
+        $this->ensure_oda_charges_schema();
+
+        // Pre-fetch Country and Partner maps
+        $all_countries = $this->db->select('id, country_name, country_code')->get('countries')->result();
+        $country_map = array();
+        foreach ($all_countries as $c) {
+            $country_map[strtolower(trim($c->country_name))] = $c->id;
+            $country_map[strtolower(trim($c->country_code))] = $c->id;
+        }
+
+        $all_partners = $this->db->select('id, partner_name')->get('courier_partners')->result();
+        $partner_map = array();
+        foreach ($all_partners as $p) {
+            $partner_map[strtolower(trim($p->partner_name))] = $p->id;
+        }
+
+        $inserted = 0;
+        $updated  = 0;
+        $skipped  = 0;
+        $errors   = array();
+
+        foreach ($records as $idx => $row) {
+            $row_num = $idx + 2;
+
+            $country_raw = isset($row['destination_country']) ? trim($row['destination_country']) : (isset($row['country']) ? trim($row['country']) : '');
+            $partner_raw = isset($row['courier_partner']) ? trim($row['courier_partner']) : (isset($row['partner']) ? trim($row['partner']) : '');
+
+            $country_key = strtolower($country_raw);
+            if (!isset($country_map[$country_key])) {
+                $errors[] = "Row {$row_num}: Unknown destination country '{$country_raw}'.";
+                $skipped++;
+                continue;
+            }
+            $dest_country_id = $country_map[$country_key];
+
+            $courier_partner_id = 0; // 0 = All Partners
+            if (!empty($partner_raw) && strtolower($partner_raw) !== 'all' && strtolower($partner_raw) !== 'all partners') {
+                $partner_key = strtolower($partner_raw);
+                if (isset($partner_map[$partner_key])) {
+                    $courier_partner_id = $partner_map[$partner_key];
+                }
+            }
+
+            $loc_type = isset($row['location_type']) ? strtolower(trim($row['location_type'])) : 'pincode';
+            if (!in_array($loc_type, array('pincode', 'pincode_range', 'city'))) {
+                $loc_type = 'pincode';
+            }
+
+            $postal_code      = isset($row['postal_code']) ? trim($row['postal_code']) : NULL;
+            $postal_code_from = isset($row['postal_code_from']) ? trim($row['postal_code_from']) : NULL;
+            $postal_code_to   = isset($row['postal_code_to']) ? trim($row['postal_code_to']) : NULL;
+            $city_name        = isset($row['city_name']) ? trim($row['city_name']) : (isset($row['city']) ? trim($row['city']) : NULL);
+            $state_name       = isset($row['state_name']) ? trim($row['state_name']) : (isset($row['state']) ? trim($row['state']) : NULL);
+
+            $calc_type = isset($row['calculation_type']) ? strtolower(trim($row['calculation_type'])) : 'higher_of';
+            if (!in_array($calc_type, array('higher_of', 'flat', 'per_kg'))) {
+                $calc_type = 'higher_of';
+            }
+
+            $min_charge  = isset($row['min_charge']) ? floatval($row['min_charge']) : 0.00;
+            $per_kg_rate = isset($row['per_kg_rate']) ? floatval($row['per_kg_rate']) : 0.00;
+            $flat_charge = isset($row['flat_charge']) ? floatval($row['flat_charge']) : 0.00;
+            $status      = (isset($row['status']) && in_array(ucfirst(strtolower(trim($row['status']))), array('Active', 'Inactive'))) ? ucfirst(strtolower(trim($row['status']))) : 'Active';
+
+            // Check if existing record matches
+            $this->db->where('destination_country_id', $dest_country_id);
+            $this->db->where('courier_partner_id', $courier_partner_id);
+            $this->db->where('location_type', $loc_type);
+            $this->db->where('deleted_at IS NULL');
+            if ($loc_type === 'pincode') {
+                $this->db->where('postal_code', $postal_code);
+            } elseif ($loc_type === 'pincode_range') {
+                $this->db->where('postal_code_from', $postal_code_from);
+                $this->db->where('postal_code_to', $postal_code_to);
+            } else {
+                $this->db->where('LOWER(city_name)', strtolower($city_name));
+            }
+            $existing = $this->db->get('master_oda_charges')->row();
+
+            $save_data = array(
+                'destination_country_id' => $dest_country_id,
+                'courier_partner_id'     => $courier_partner_id,
+                'location_type'          => $loc_type,
+                'postal_code'            => $postal_code,
+                'postal_code_from'       => $postal_code_from,
+                'postal_code_to'         => $postal_code_to,
+                'city_name'              => $city_name,
+                'state_name'             => $state_name,
+                'calculation_type'       => $calc_type,
+                'min_charge'             => $min_charge,
+                'per_kg_rate'            => $per_kg_rate,
+                'flat_charge'            => $flat_charge,
+                'status'                 => $status,
+                'updated_at'             => date('Y-m-d H:i:s')
+            );
+
+            if ($existing) {
+                if ($strategy === 'skip') {
+                    $skipped++;
+                } else {
+                    $this->db->where('id', $existing->id)->update('master_oda_charges', $save_data);
+                    $updated++;
+                }
+            } else {
+                $save_data['created_at'] = date('Y-m-d H:i:s');
+                $this->db->insert('master_oda_charges', $save_data);
+                $inserted++;
+            }
+        }
+
+        return array(
+            'inserted' => $inserted,
+            'updated'  => $updated,
+            'skipped'  => $skipped,
+            'errors'   => $errors
+        );
+    }
+
+    /**
+     * Core ODA Detection and Rate Calculation Engine
+     * Matches receiver location against active ODA rules.
+     */
+    public function check_oda_status($country_id, $partner_id = 0, $pincode = '', $city = '', $weight = 0) {
+        $this->ensure_oda_charges_schema();
+
+        $country_id = intval($country_id);
+        $partner_id = intval($partner_id);
+        $pincode    = strtoupper(trim($pincode));
+        $city       = trim($city);
+        $weight     = floatval($weight);
+
+        if ($country_id <= 0) {
+            return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+        }
+
+        // Fetch candidate active rules for country & partner (or universal partner_id = 0)
+        $this->db->select('o.*, p.partner_name as courier_partner_name, c.country_name');
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->where('o.destination_country_id', $country_id);
+        $this->db->where('o.status', 'Active');
+        $this->db->where('o.deleted_at IS NULL');
+        if ($partner_id > 0) {
+            $this->db->where_in('o.courier_partner_id', array($partner_id, 0));
+            // Prefer specific partner over universal 0
+            $this->db->order_by('o.courier_partner_id', 'DESC');
+        } else {
+            $this->db->order_by('o.id', 'ASC');
+        }
+
+        $rules = $this->db->get()->result();
+        if (empty($rules)) {
+            return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+        }
+
+        $matched_rule = NULL;
+        $match_reason = '';
+
+        // Priority 1: Exact Pincode Match
+        if (!empty($pincode)) {
+            foreach ($rules as $r) {
+                if ($r->location_type === 'pincode' && !empty($r->postal_code)) {
+                    // Check exact or comma-separated list
+                    $postal_codes = array_map('trim', explode(',', strtoupper($r->postal_code)));
+                    if (in_array($pincode, $postal_codes)) {
+                        $matched_rule = $r;
+                        $match_reason = "Postal code '{$pincode}' is mapped as ODA";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Priority 2: Pincode Range Match (e.g. from 99501 to 99950)
+        if (!$matched_rule && !empty($pincode)) {
+            foreach ($rules as $r) {
+                if ($r->location_type === 'pincode_range' && !empty($r->postal_code_from) && !empty($r->postal_code_to)) {
+                    $from = strtoupper(trim($r->postal_code_from));
+                    $to   = strtoupper(trim($r->postal_code_to));
+
+                    // Numeric comparison if both are numeric, otherwise natural string comparison
+                    if (is_numeric($from) && is_numeric($to) && is_numeric($pincode)) {
+                        $num_pin = floatval($pincode);
+                        if ($num_pin >= floatval($from) && $num_pin <= floatval($to)) {
+                            $matched_rule = $r;
+                            $match_reason = "Postal code '{$pincode}' falls in ODA range [{$from} - {$to}]";
+                            break;
+                        }
+                    } else {
+                        // String prefix / natural comparison
+                        if (strnatcasecmp($pincode, $from) >= 0 && strnatcasecmp($pincode, $to) <= 0) {
+                            $matched_rule = $r;
+                            $match_reason = "Postal code '{$pincode}' matches ODA range [{$from} - {$to}]";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Priority 3: City / Area Name Match
+        if (!$matched_rule && !empty($city)) {
+            $city_lower = strtolower($city);
+            foreach ($rules as $r) {
+                if ($r->location_type === 'city' && !empty($r->city_name)) {
+                    $rule_city = strtolower(trim($r->city_name));
+                    if ($city_lower === $rule_city || strpos($city_lower, $rule_city) !== false || strpos($rule_city, $city_lower) !== false) {
+                        $matched_rule = $r;
+                        $match_reason = "City '{$city}' is categorized as ODA location ({$r->city_name})";
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($matched_rule) {
+            $oda_amount = 0.00;
+            $formula_note = '';
+
+            if ($matched_rule->calculation_type === 'higher_of') {
+                $calc_kg = $weight * floatval($matched_rule->per_kg_rate);
+                $min_c   = floatval($matched_rule->min_charge);
+                if ($calc_kg > $min_c) {
+                    $oda_amount = $calc_kg;
+                    $formula_note = "₹{$matched_rule->per_kg_rate}/kg × {$weight} kg = ₹" . number_format($calc_kg, 2) . " (Higher of min ₹" . number_format($min_c, 2) . ")";
+                } else {
+                    $oda_amount = $min_c;
+                    $formula_note = "Minimum fixed ODA charge ₹" . number_format($min_c, 2) . " applied (vs ₹" . number_format($calc_kg, 2) . " by weight)";
+                }
+            } elseif ($matched_rule->calculation_type === 'flat') {
+                $oda_amount = floatval($matched_rule->flat_charge);
+                $formula_note = "Flat ODA surcharge of ₹" . number_format($oda_amount, 2);
+            } elseif ($matched_rule->calculation_type === 'per_kg') {
+                $oda_amount = $weight * floatval($matched_rule->per_kg_rate);
+                $formula_note = "₹{$matched_rule->per_kg_rate}/kg × {$weight} kg = ₹" . number_format($oda_amount, 2);
+            }
+
+            return array(
+                'is_oda'             => TRUE,
+                'rule_id'            => $matched_rule->id,
+                'partner_name'       => !empty($matched_rule->courier_partner_name) ? $matched_rule->courier_partner_name : 'All Courier Partners',
+                'location_matched'   => $match_reason,
+                'calculation_type'   => $matched_rule->calculation_type,
+                'min_charge'         => floatval($matched_rule->min_charge),
+                'per_kg_rate'        => floatval($matched_rule->per_kg_rate),
+                'flat_charge'        => floatval($matched_rule->flat_charge),
+                'oda_amount'         => round($oda_amount, 2),
+                'formula_note'       => $formula_note
+            );
+        }
+
+        return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+    }
 }

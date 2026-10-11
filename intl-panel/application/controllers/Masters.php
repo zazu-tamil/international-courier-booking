@@ -1783,4 +1783,549 @@ class Masters extends CI_Controller {
 
         redirect('geo-locations');
     }
+
+    // =========================================================================
+    // --- ODA (OUT OF DELIVERY AREA) CHARGES MASTER ---
+    // =========================================================================
+
+    public function oda_charges() {
+        $this->Master_model->ensure_oda_charges_schema();
+        $filters = array(
+            'destination_country_id' => $this->input->post_get('dest_country'),
+            'courier_partner_id'     => $this->input->post_get('partner'),
+            'location_type'          => $this->input->post_get('location_type'),
+            'calculation_type'       => $this->input->post_get('calculation_type'),
+            'status'                 => $this->input->post_get('status')
+        );
+
+        $data['page_title']       = 'ODA (Out of Delivery Area) Charges Master';
+        $data['countries']        = $this->Master_model->get_countries();
+        $data['courier_partners'] = $this->Master_model->get_courier_partners();
+        $data['filters']          = $filters;
+
+        // Statistics
+        $data['total_count']    = $this->Master_model->count_all_oda_charges();
+        $data['active_count']   = $this->Master_model->count_all_oda_charges(array('status' => 'Active'));
+        $data['inactive_count'] = $this->Master_model->count_all_oda_charges(array('status' => 'Inactive'));
+
+        $data['view_path'] = 'masters/oda_charges';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function oda_charges_ajax() {
+        $this->Master_model->ensure_oda_charges_schema();
+        $draw   = intval($this->input->post_get('draw'));
+        $start  = intval($this->input->post_get('start'));
+        $length = intval($this->input->post_get('length'));
+        if ($length <= 0) $length = 10;
+
+        $search_val = '';
+        $search = $this->input->post_get('search');
+        if (is_array($search) && isset($search['value'])) {
+            $search_val = trim($search['value']);
+        }
+
+        $order_col_idx = 0;
+        $order_dir = 'DESC';
+        $order = $this->input->post_get('order');
+        if (is_array($order) && isset($order[0])) {
+            $order_col_idx = intval($order[0]['column']);
+            $order_dir = strtoupper($order[0]['dir']) === 'ASC' ? 'ASC' : 'DESC';
+        }
+
+        $filters = array(
+            'destination_country_id' => $this->input->post_get('dest_country'),
+            'courier_partner_id'     => $this->input->post_get('partner'),
+            'location_type'          => $this->input->post_get('location_type'),
+            'calculation_type'       => $this->input->post_get('calculation_type'),
+            'status'                 => $this->input->post_get('status')
+        );
+
+        $recordsTotal = $this->Master_model->count_all_oda_charges($filters);
+        $recordsFiltered = $this->Master_model->count_filtered_oda_charges($filters, $search_val);
+        $list = $this->Master_model->get_oda_charges_datatable($filters, $length, $start, $search_val, $order_col_idx, $order_dir);
+
+        $data = array();
+        $sno = $start + 1;
+        foreach ($list as $r) {
+            $country_badge = '<strong>' . htmlspecialchars($r->destination_country) . '</strong>';
+            if (!empty($r->destination_country_code)) {
+                $country_badge .= ' <span class="label label-default" style="font-size:10px;">' . htmlspecialchars($r->destination_country_code) . '</span>';
+            }
+
+            $partner_badge = !empty($r->courier_partner_name) 
+                ? '<span class="label label-primary" style="font-size:11px;"><i class="fa fa-truck"></i> ' . htmlspecialchars($r->courier_partner_name) . '</span>'
+                : '<span class="label label-info" style="font-size:11px;"><i class="fa fa-globe"></i> All Partners</span>';
+
+            // Location display
+            $loc_type_badge = '';
+            $loc_detail = '';
+            if ($r->location_type === 'pincode') {
+                $loc_type_badge = '<span class="label label-default">Postal Code</span>';
+                $loc_detail = '<code style="font-size:12px; font-weight:600;">' . htmlspecialchars($r->postal_code) . '</code>';
+            } elseif ($r->location_type === 'pincode_range') {
+                $loc_type_badge = '<span class="label label-warning">Postal Range</span>';
+                $loc_detail = '<code>' . htmlspecialchars($r->postal_code_from) . '</code> <i class="fa fa-arrow-right text-muted"></i> <code>' . htmlspecialchars($r->postal_code_to) . '</code>';
+            } else {
+                $loc_type_badge = '<span class="label label-success">City / Town</span>';
+                $loc_detail = '<strong>' . htmlspecialchars($r->city_name) . '</strong>';
+            }
+
+            if (!empty($r->state_name)) {
+                $loc_detail .= ' <small class="text-muted">(' . htmlspecialchars($r->state_name) . ')</small>';
+            }
+
+            // Calculation formula display
+            $calc_badge = '';
+            $charge_detail = '';
+            if ($r->calculation_type === 'higher_of') {
+                $calc_badge = '<span class="label label-primary">Higher Of</span>';
+                $charge_detail = 'Min: <strong>₹' . number_format($r->min_charge, 2) . '</strong> <span class="text-muted">or</span> <strong>₹' . number_format($r->per_kg_rate, 2) . '/kg</strong>';
+            } elseif ($r->calculation_type === 'flat') {
+                $calc_badge = '<span class="label label-info">Flat Fee</span>';
+                $charge_detail = 'Flat: <strong>₹' . number_format($r->flat_charge, 2) . '</strong>';
+            } else {
+                $calc_badge = '<span class="label label-warning">Per KG</span>';
+                $charge_detail = 'Rate: <strong>₹' . number_format($r->per_kg_rate, 2) . '/kg</strong>';
+            }
+
+            // Status badge
+            $status_class = ($r->status === 'Active') ? 'label-success' : 'label-danger';
+            $status_html = '<a href="javascript:void(0);" onclick="toggleOdaStatus(' . $r->id . ')" class="label ' . $status_class . '" style="cursor:pointer;" title="Click to toggle status">' . $r->status . '</a>';
+
+            // Action buttons
+            $actions = '<div class="btn-group">' .
+                '<button type="button" class="btn btn-xs btn-default" onclick="openEditOdaModal(' . $r->id . ')" title="Edit ODA Rule"><i class="fa fa-pencil text-blue"></i></button>' .
+                '<button type="button" class="btn btn-xs btn-default" onclick="confirmDeleteOda(' . $r->id . ')" title="Soft Delete"><i class="fa fa-trash text-danger"></i></button>' .
+            '</div>';
+
+            $data[] = array(
+                $sno++,
+                $country_badge,
+                $partner_badge,
+                $loc_type_badge,
+                $loc_detail,
+                $calc_badge . '<br>' . $charge_detail,
+                $status_html,
+                $actions
+            );
+        }
+
+        echo json_encode(array(
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $data
+        ));
+        exit;
+    }
+
+    public function get_oda_charge($id) {
+        $record = $this->Master_model->get_oda_charge_by_id($id);
+        if ($record) {
+            echo json_encode(array('status' => 'success', 'data' => $record));
+        } else {
+            echo json_encode(array('status' => 'error', 'message' => 'Record not found.'));
+        }
+        exit;
+    }
+
+    public function save_oda_charge() {
+        $id = $this->input->post('id');
+        $this->form_validation->set_rules('destination_country_id', 'Destination Country', 'required|numeric');
+        $this->form_validation->set_rules('courier_partner_id', 'Courier Partner', 'required|numeric');
+        $this->form_validation->set_rules('location_type', 'Location Type', 'required|in_list[pincode,pincode_range,city]');
+        $this->form_validation->set_rules('calculation_type', 'Calculation Type', 'required|in_list[higher_of,flat,per_kg]');
+
+        $location_type = $this->input->post('location_type');
+        if ($location_type === 'pincode') {
+            $this->form_validation->set_rules('postal_code', 'Postal Code', 'required|trim');
+        } elseif ($location_type === 'pincode_range') {
+            $this->form_validation->set_rules('postal_code_from', 'Postal Code From', 'required|trim');
+            $this->form_validation->set_rules('postal_code_to', 'Postal Code To', 'required|trim');
+        } else {
+            $this->form_validation->set_rules('city_name', 'City / Town Name', 'required|trim');
+        }
+
+        if ($this->form_validation->run() === FALSE) {
+            $err = validation_errors('', '');
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(array('status' => 'error', 'message' => $err));
+                exit;
+            }
+            $this->session->set_flashdata('error', $err);
+            redirect('oda-charges');
+        }
+
+        $post_data = array(
+            'destination_country_id' => $this->input->post('destination_country_id'),
+            'courier_partner_id'     => $this->input->post('courier_partner_id'),
+            'location_type'          => $this->input->post('location_type'),
+            'postal_code'            => $this->input->post('postal_code'),
+            'postal_code_from'       => $this->input->post('postal_code_from'),
+            'postal_code_to'         => $this->input->post('postal_code_to'),
+            'city_name'              => $this->input->post('city_name'),
+            'state_name'             => $this->input->post('state_name'),
+            'calculation_type'       => $this->input->post('calculation_type'),
+            'min_charge'             => $this->input->post('min_charge') ?: 0.00,
+            'per_kg_rate'            => $this->input->post('per_kg_rate') ?: 0.00,
+            'flat_charge'            => $this->input->post('flat_charge') ?: 0.00,
+            'status'                 => $this->input->post('status') ?: 'Active',
+            'created_by'             => $this->session->userdata('user_id')
+        );
+
+        if (!empty($id)) {
+            $res = $this->Master_model->update_oda_charge($id, $post_data);
+            $msg = 'ODA charge rule updated successfully.';
+        } else {
+            $res = $this->Master_model->add_oda_charge($post_data);
+            $msg = 'New ODA charge rule added successfully.';
+        }
+
+        if ($this->input->is_ajax_request()) {
+            echo json_encode(array('status' => $res ? 'success' : 'error', 'message' => $res ? $msg : 'Failed to save ODA rule.'));
+            exit;
+        }
+
+        $this->session->set_flashdata($res ? 'success' : 'error', $res ? $msg : 'Failed to save ODA rule.');
+        redirect('oda-charges');
+    }
+
+    public function delete_oda_charge($id) {
+        $res = $this->Master_model->delete_oda_charge($id);
+        if ($this->input->is_ajax_request()) {
+            echo json_encode(array('status' => $res ? 'success' : 'error', 'message' => $res ? 'ODA rule soft-deleted successfully.' : 'Failed to delete ODA rule.'));
+            exit;
+        }
+        $this->session->set_flashdata($res ? 'success' : 'error', $res ? 'ODA rule soft-deleted successfully.' : 'Failed to delete ODA rule.');
+        redirect('oda-charges');
+    }
+
+    public function toggle_oda_status($id) {
+        $new_status = $this->Master_model->toggle_oda_charge_status($id);
+        if ($new_status) {
+            echo json_encode(array('status' => 'success', 'new_status' => $new_status));
+        } else {
+            echo json_encode(array('status' => 'error', 'message' => 'Failed to update status.'));
+        }
+        exit;
+    }
+
+    public function export_oda_charges() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('memory_limit', '512M');
+
+        $filters = array(
+            'destination_country_id' => $this->input->get('dest_country'),
+            'courier_partner_id'     => $this->input->get('partner'),
+            'location_type'          => $this->input->get('location_type'),
+            'calculation_type'       => $this->input->get('calculation_type'),
+            'status'                 => $this->input->get('status')
+        );
+
+        $records = $this->Master_model->get_all_oda_charges_for_export($filters);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('ODA Charges');
+
+        $headers = array(
+            'A1' => 'ID',
+            'B1' => 'Destination Country',
+            'C1' => 'Courier Partner',
+            'D1' => 'Location Type',
+            'E1' => 'Postal Code',
+            'F1' => 'Postal Code From',
+            'G1' => 'Postal Code To',
+            'H1' => 'City Name',
+            'I1' => 'State Name',
+            'J1' => 'Calculation Type',
+            'K1' => 'Min Charge (INR)',
+            'L1' => 'Per KG Rate (INR)',
+            'M1' => 'Flat Charge (INR)',
+            'N1' => 'Status'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '3C8DBC')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+
+        $row_num = 2;
+        foreach ($records as $r) {
+            $sheet->setCellValue('A' . $row_num, $r['id']);
+            $sheet->setCellValue('B' . $row_num, $r['destination_country']);
+            $sheet->setCellValue('C' . $row_num, !empty($r['courier_partner_name']) ? $r['courier_partner_name'] : 'All Partners');
+            $sheet->setCellValue('D' . $row_num, $r['location_type']);
+            $sheet->setCellValueExplicit('E' . $row_num, $r['postal_code'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('F' . $row_num, $r['postal_code_from'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('G' . $row_num, $r['postal_code_to'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('H' . $row_num, $r['city_name'] ?: '');
+            $sheet->setCellValue('I' . $row_num, $r['state_name'] ?: '');
+            $sheet->setCellValue('J' . $row_num, $r['calculation_type']);
+            $sheet->setCellValue('K' . $row_num, $r['min_charge']);
+            $sheet->setCellValue('L' . $row_num, $r['per_kg_rate']);
+            $sheet->setCellValue('M' . $row_num, $r['flat_charge']);
+            $sheet->setCellValue('N' . $row_num, $r['status']);
+            $row_num++;
+        }
+
+        foreach (range('A', 'N') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'oda_charges_' . date('Y-m-d_His') . '.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function download_oda_template() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Template');
+
+        $headers = array(
+            'A1' => 'Destination Country',
+            'B1' => 'Courier Partner',
+            'C1' => 'Location Type',
+            'D1' => 'Postal Code',
+            'E1' => 'Postal Code From',
+            'F1' => 'Postal Code To',
+            'G1' => 'City Name',
+            'H1' => 'State Name',
+            'I1' => 'Calculation Type',
+            'J1' => 'Min Charge (INR)',
+            'K1' => 'Per KG Rate (INR)',
+            'L1' => 'Flat Charge (INR)',
+            'M1' => 'Status'
+        );
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        $headerStyle = array(
+            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
+            'fill' => array(
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'color' => array('rgb' => '00A65A')
+            ),
+            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+        );
+        $sheet->getStyle('A1:M1')->applyFromArray($headerStyle);
+
+        // Sample rows demonstrating each location type and calculation model
+        $sample_data = array(
+            array('United Arab Emirates', 'Aramex', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', '0.00', '0.00', '1500.00', 'Active'),
+            array('United Arab Emirates', 'DHL Express', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', '1800.00', '35.00', '0.00', 'Active'),
+            array('United States', 'DHL Express', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', '2100.00', '42.00', '0.00', 'Active'),
+            array('United States', 'FedEx', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', '2150.00', '45.00', '0.00', 'Active'),
+            array('United Kingdom', 'DHL Express', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', '1850.00', '35.00', '0.00', 'Active'),
+            array('Australia', 'All Partners', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', '2200.00', '48.00', '0.00', 'Active')
+        );
+
+        $row_num = 2;
+        foreach ($sample_data as $row) {
+            $col_idx = 'A';
+            foreach ($row as $val) {
+                $sheet->setCellValueExplicit($col_idx . $row_num, $val, PHPExcel_Cell_DataType::TYPE_STRING);
+                $col_idx++;
+            }
+            $row_num++;
+        }
+
+        foreach (range('A', 'M') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'oda_charges_template.xls';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+
+    public function import_oda_charges() {
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+        ini_set('memory_limit', '512M');
+        set_time_limit(600);
+
+        if (empty($_FILES['excel_file']['name'])) {
+            $this->session->set_flashdata('error', 'Please choose an Excel or CSV file to import.');
+            redirect('oda-charges');
+        }
+
+        $file_name = $_FILES['excel_file']['name'];
+        $tmp_file  = $_FILES['excel_file']['tmp_name'];
+        $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        $valid_extensions = array('xls', 'xlsx', 'csv');
+        if (!in_array($file_ext, $valid_extensions)) {
+            $this->session->set_flashdata('error', 'Invalid file type. Allowed formats: .xls, .xlsx, .csv');
+            redirect('oda-charges');
+        }
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+
+        try {
+            if ($file_ext === 'csv') {
+                $objReader = PHPExcel_IOFactory::createReader('CSV');
+            } elseif ($file_ext === 'xlsx') {
+                $objReader = PHPExcel_IOFactory::createReader('Excel2007');
+            } else {
+                $objReader = PHPExcel_IOFactory::createReader('Excel5');
+            }
+
+            $objPHPExcel = $objReader->load($tmp_file);
+            $sheet = $objPHPExcel->getActiveSheet();
+            $sheetData = $sheet->toArray(null, true, true, false);
+
+            if (empty($sheetData) || count($sheetData) < 2) {
+                $this->session->set_flashdata('error', 'The uploaded file contains no data rows.');
+                redirect('oda-charges');
+            }
+
+            $header_row = $sheetData[0];
+            $col_map = array();
+
+            foreach ($header_row as $idx => $heading) {
+                if ($heading === null) continue;
+                $norm = strtolower(trim(str_replace(array(' ', '_', '-'), '', $heading)));
+                switch ($norm) {
+                    case 'destinationcountry':
+                    case 'country':
+                    case 'countryname':
+                        $col_map['destination_country'] = $idx;
+                        break;
+                    case 'courierpartner':
+                    case 'partner':
+                    case 'partnername':
+                    case 'courier':
+                        $col_map['courier_partner'] = $idx;
+                        break;
+                    case 'locationtype':
+                    case 'type':
+                        $col_map['location_type'] = $idx;
+                        break;
+                    case 'postalcode':
+                    case 'pincode':
+                    case 'zip':
+                    case 'zipcode':
+                        $col_map['postal_code'] = $idx;
+                        break;
+                    case 'postalcodefrom':
+                    case 'pincodefrom':
+                    case 'zipfrom':
+                    case 'rangefrom':
+                    case 'from':
+                        $col_map['postal_code_from'] = $idx;
+                        break;
+                    case 'postalcodeto':
+                    case 'pincodeto':
+                    case 'zipto':
+                    case 'rangeto':
+                    case 'to':
+                        $col_map['postal_code_to'] = $idx;
+                        break;
+                    case 'cityname':
+                    case 'city':
+                    case 'town':
+                        $col_map['city_name'] = $idx;
+                        break;
+                    case 'statename':
+                    case 'state':
+                    case 'province':
+                        $col_map['state_name'] = $idx;
+                        break;
+                    case 'calculationtype':
+                    case 'calctype':
+                    case 'method':
+                        $col_map['calculation_type'] = $idx;
+                        break;
+                    case 'mincharge':
+                    case 'minchargeinr':
+                    case 'minimumcharge':
+                        $col_map['min_charge'] = $idx;
+                        break;
+                    case 'perkgrate':
+                    case 'perkg':
+                    case 'kgrate':
+                        $col_map['per_kg_rate'] = $idx;
+                        break;
+                    case 'flatcharge':
+                    case 'flatfee':
+                    case 'flatrate':
+                        $col_map['flat_charge'] = $idx;
+                        break;
+                    case 'status':
+                        $col_map['status'] = $idx;
+                        break;
+                }
+            }
+
+            if (!isset($col_map['destination_country'])) {
+                $this->session->set_flashdata('error', 'Missing required column: Destination Country.');
+                redirect('oda-charges');
+            }
+
+            $records = array();
+            for ($i = 1; $i < count($sheetData); $i++) {
+                $row = $sheetData[$i];
+                if (empty(array_filter($row, function($v) { return $v !== null && trim($v) !== ''; }))) {
+                    continue;
+                }
+
+                $record = array();
+                foreach ($col_map as $key => $idx) {
+                    $record[$key] = isset($row[$idx]) ? trim($row[$idx]) : '';
+                }
+                $records[] = $record;
+            }
+
+            $strategy = $this->input->post('strategy') ?: 'update';
+            $result = $this->Master_model->bulk_import_oda_charges($records, $strategy);
+
+            $ins = $result['inserted'];
+            $upd = $result['updated'];
+            $skp = $result['skipped'];
+            $msg = "Import completed! {$ins} rules inserted, {$upd} rules updated" . ($skp > 0 ? ", {$skp} rows skipped." : ".");
+            if (!empty($result['errors'])) {
+                $msg .= " Issues: " . implode(" ", array_slice($result['errors'], 0, 5));
+            }
+
+            $this->Audit_model->log_activity('Import ODA Charges', "Inserted: $ins, Updated: $upd, Skipped: $skp");
+            $this->session->set_flashdata('success', $msg);
+
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Error reading Excel file: ' . $e->getMessage());
+        }
+
+        redirect('oda-charges');
+    }
 }
+

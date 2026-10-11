@@ -521,6 +521,26 @@ class Shipment extends CI_Controller {
         exit;
     }
 
+    // --- AJAX ODA SURCHARGE LOOKUP & DETECTION ---
+    public function check_oda_rate() {
+        $country_id = $this->input->post_get('country_id') ?: $this->input->post_get('destination_country_id');
+        $partner_id = $this->input->post_get('partner_id') ?: $this->input->post_get('courier_partner_id');
+        $pincode    = $this->input->post_get('pincode') ?: $this->input->post_get('receiver_zip');
+        $city       = $this->input->post_get('city') ?: $this->input->post_get('receiver_city');
+        $weight     = $this->input->post_get('weight') ?: $this->input->post_get('chargeable_weight');
+
+        $result = $this->Master_model->check_oda_status($country_id, $partner_id, $pincode, $city, $weight);
+
+        // Resolve ODA charge type ID from additional_charge_types table
+        $oda_type = $this->db->like('charge_name', 'ODA')->get('additional_charge_types')->row();
+        $result['charge_type_id'] = $oda_type ? $oda_type->id : 1;
+        $result['charge_name']    = $oda_type ? $oda_type->charge_name : 'ODA Charges';
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
+    }
+
     // --- DOWNLOAD SAMPLE CONSIGNMENT ITEMS TEMPLATE ---
     public function download_items_template() {
         if ($this->session->userdata('role_id') == 4) {
