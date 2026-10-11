@@ -654,6 +654,9 @@
           </div>
 
           <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-default btn-sm" id="btnToggleSound" title="Toggle sound alerts">
+              <i class="fa fa-bell text-yellow" id="soundIcon"></i>
+            </button>
             <button type="button" class="btn btn-default btn-sm" id="btnRefreshMessages" title="Refresh messages">
               <i class="fa fa-refresh"></i>
             </button>
@@ -701,17 +704,27 @@
 
             <!-- Attachment selected preview -->
             <div class="attachment-preview-bar" id="attachmentPreviewBar">
-              <span><i class="fa fa-paperclip text-blue"></i> <strong id="attachmentFileName"></strong> (<span id="attachmentFileSize"></span>)</span>
-              <button type="button" class="btn btn-xs btn-danger" id="btnRemoveAttachment"><i class="fa fa-times"></i></button>
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden;">
+                <img id="attachmentThumbPreview" src="" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; display: none;">
+                <i class="fa fa-paperclip text-blue" id="attachmentIcon"></i>
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  <strong id="attachmentFileName"></strong> (<span id="attachmentFileSize"></span>)
+                </span>
+              </div>
+              <button type="button" class="btn btn-xs btn-danger" id="btnRemoveAttachment" style="flex-shrink: 0; margin-left: 10px;"><i class="fa fa-times"></i></button>
             </div>
 
             <form id="chatMessageForm" enctype="multipart/form-data">
               <input type="hidden" name="receiver_id" id="receiver_id" value="<?php echo $active_contact_id; ?>">
+              <input type="hidden" name="camera_snapshot" id="chatCameraSnapshot" value="">
               <input type="file" id="chatAttachmentInput" name="attachment" style="display: none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.zip,.txt">
               
               <div class="chat-input-row">
                 <button type="button" class="btn btn-attach" id="btnTriggerAttach" title="Attach file or photo">
                   <i class="fa fa-paperclip" style="font-size: 16px;"></i>
+                </button>
+                <button type="button" class="btn btn-attach" id="btnTriggerCamera" title="Take Photo / Selfie">
+                  <i class="fa fa-camera" style="font-size: 15px;"></i>
                 </button>
                 
                 <textarea name="message" id="chatMessageInput" class="chat-textarea" placeholder="<?php echo ($active_contact_id == 0) ? 'Type team announcement... (Press Enter to broadcast)' : 'Type message... (Press Enter to send, Shift+Enter for new line)'; ?>" rows="1"></textarea>
@@ -730,6 +743,73 @@
   </div>
 </div>
 
+<!-- Camera / Selfie Capture Modal -->
+<div class="modal fade" id="chatCameraModal" tabindex="-1" role="dialog" aria-labelledby="chatCameraModalLabel" data-backdrop="static">
+  <div class="modal-dialog modal-md" role="document">
+    <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div class="modal-header bg-primary" style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+        <h4 class="modal-title" id="chatCameraModalLabel" style="font-weight: 600; font-size: 16px; margin: 0;">
+          <i class="fa fa-camera"></i> Take Photo / Selfie
+        </h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.9; margin: 0; font-size: 22px;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 15px; background: #0f172a; text-align: center;">
+        
+        <!-- Live Camera Viewport -->
+        <div id="cameraViewport" style="position: relative; width: 100%; height: 340px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          <video id="cameraVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 8px;"></video>
+          <canvas id="cameraCanvas" style="display: none;"></canvas>
+          <img id="cameraSnapshotPreview" src="" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+
+          <!-- Camera Loading Notice -->
+          <div id="cameraLoadingNotice" style="position: absolute; color: #fff; text-align: center;">
+            <i class="fa fa-spinner fa-spin fa-2x"></i>
+            <p style="margin-top: 8px; font-size: 13px;">Connecting to camera...</p>
+          </div>
+
+          <!-- Flip camera button overlay -->
+          <button type="button" id="btnFlipCamera" class="btn btn-sm btn-dark" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; font-size: 12px;" title="Switch Front / Rear Camera">
+            <i class="fa fa-refresh"></i> Flip Camera
+          </button>
+        </div>
+
+        <!-- Optional message / caption -->
+        <div id="cameraCaptionWrap" style="margin-top: 12px; display: none;">
+          <input type="text" id="cameraPhotoCaption" class="form-control" placeholder="Add a caption... (optional)" style="border-radius: 20px; font-size: 13px; background: #1e293b; color: #fff; border-color: #334155;">
+        </div>
+
+        <div id="cameraErrorAlert" class="alert alert-danger" style="display: none; margin-top: 12px; font-size: 12px; text-align: left; margin-bottom: 0;"></div>
+      </div>
+
+      <div class="modal-footer" style="background: #f8fafc; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+
+        <!-- Live Capture Controls -->
+        <div id="cameraLiveControls">
+          <button type="button" class="btn btn-primary" id="btnCapturePhoto" style="border-radius: 20px; padding: 6px 22px; font-weight: 600;">
+            <i class="fa fa-circle"></i> Capture Photo
+          </button>
+        </div>
+
+        <!-- Captured Controls -->
+        <div id="cameraCapturedControls" style="display: none; gap: 8px;">
+          <button type="button" class="btn btn-default" id="btnRetakePhoto">
+            <i class="fa fa-repeat"></i> Retake
+          </button>
+          <button type="button" class="btn btn-success" id="btnAttachPhoto">
+            <i class="fa fa-check"></i> Attach Photo
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSendPhotoDirect">
+            <i class="fa fa-paper-plane"></i> Send Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox Modal for Chat Images -->
 <div class="modal fade" id="chatImageModal" tabindex="-1" role="dialog">
   <div class="modal-dialog modal-lg" style="text-align: center; margin-top: 50px;">
@@ -742,6 +822,8 @@
 
 <script>
   $(document).ready(function() {
+    window._isInActiveChatView = true;
+
     var isObserving = <?php echo $is_observing_thread ? 'true' : 'false'; ?>;
     var observeU1 = <?php echo $observe_u1; ?>;
     var observeU2 = <?php echo $observe_u2; ?>;
@@ -751,6 +833,57 @@
     var lastMessageId = 0;
     var isPolling = false;
     var pollInterval = null;
+
+    // Sound alert toggle setting
+    var soundEnabled = (localStorage.getItem('chat_sound_enabled') !== 'false');
+    function updateSoundIcon() {
+      if (soundEnabled) {
+        $('#soundIcon').removeClass('fa-bell-slash text-muted').addClass('fa-bell text-yellow');
+        $('#btnToggleSound').attr('title', 'Sound Alerts: Enabled (Click to mute)');
+      } else {
+        $('#soundIcon').removeClass('fa-bell text-yellow').addClass('fa-bell-slash text-muted');
+        $('#btnToggleSound').attr('title', 'Sound Alerts: Muted (Click to enable)');
+      }
+    }
+    updateSoundIcon();
+
+    $('#btnToggleSound').click(function() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('chat_sound_enabled', soundEnabled ? 'true' : 'false');
+      updateSoundIcon();
+      if (soundEnabled && window.playChatNotificationChime) {
+        window.playChatNotificationChime();
+      }
+    });
+
+    // Window focus & title flashing on new message
+    var originalDocumentTitle = document.title;
+    var titleInterval = null;
+    var isWindowFocused = true;
+
+    $(window).on('focus', function() {
+      isWindowFocused = true;
+      if (titleInterval) {
+        clearInterval(titleInterval);
+        titleInterval = null;
+        document.title = originalDocumentTitle;
+      }
+    }).on('blur', function() {
+      isWindowFocused = false;
+    });
+
+    function notifyIncomingMessage() {
+      if (window.playChatNotificationChime) {
+        window.playChatNotificationChime();
+      }
+      if (!isWindowFocused && !titleInterval) {
+        var isAlt = false;
+        titleInterval = setInterval(function() {
+          document.title = isAlt ? '💬 New Message!' : originalDocumentTitle;
+          isAlt = !isAlt;
+        }, 1200);
+      }
+    }
 
     // Auto-scroll messages body to bottom
     function scrollToBottom(smooth) {
@@ -796,8 +929,14 @@
 
       // Attachment preview
       if (msg.attachment) {
-        if (msg.is_image) {
-          contentHtml += '<img src="' + msg.attachment_url + '" class="chat-attachment-img zoomable-chat-img" data-full="' + msg.attachment_url + '" alt="Attachment">';
+        var isImg = (msg.is_image === true || msg.is_image === 1 || msg.is_image === '1') || (msg.attachment_type && msg.attachment_type.indexOf('image/') === 0);
+        if (isImg) {
+          contentHtml += '<div style="margin-top: 6px; position: relative;">' +
+            '<img src="' + msg.attachment_url + '" class="chat-attachment-img zoomable-chat-img" data-full="' + msg.attachment_url + '" alt="Selfie Photo" style="min-width: 120px; min-height: 80px; background: #e2e8f0; display: block; border-radius: 8px; object-fit: cover;">' +
+            '<div style="margin-top: 3px; font-size: 11px; opacity: 0.85;">' +
+              '<a href="' + msg.download_url + '" target="_blank" style="color: inherit; text-decoration: underline;" title="Download full image"><i class="fa fa-download"></i> ' + (msg.formatted_size || 'Download') + '</a>' +
+            '</div>' +
+          '</div>';
         } else {
           var fileIcon = 'fa-file-o';
           var ext = msg.attachment_name ? msg.attachment_name.split('.').pop().toLowerCase() : '';
@@ -872,14 +1011,23 @@
                 $('#chatMessagesContainer').empty();
               }
 
+              var hasIncomingMessage = false;
               $.each(res.messages, function(i, m) {
                 if (parseInt(m.id) > lastMessageId) {
                   lastMessageId = parseInt(m.id);
+                  if (!m.is_mine) {
+                    hasIncomingMessage = true;
+                  }
                 }
                 $('#chatMessagesContainer').append(renderMessageBubble(m));
               });
 
               scrollToBottom(!isIncremental ? false : true);
+
+              // Play notification chime & flash title for incoming messages during live poll
+              if (isIncremental && hasIncomingMessage) {
+                notifyIncomingMessage();
+              }
             }
           }
         },
@@ -917,7 +1065,198 @@
       }
     });
 
-    // Attachment trigger
+    // -------------------------------------------------------------
+    // CAMERA & SELFIE CAPTURE ENGINE
+    // -------------------------------------------------------------
+    var cameraStream = null;
+    var currentFacingMode = 'user'; // 'user' (selfie/front) or 'environment' (rear)
+    var capturedBlob = null;
+    var capturedDataUrl = null;
+
+    $('#btnTriggerCamera').click(function() {
+      $('#chatCameraModal').modal('show');
+    });
+
+    $('#chatCameraModal').on('shown.bs.modal', function() {
+      startCamera();
+    });
+
+    $('#chatCameraModal').on('hidden.bs.modal', function() {
+      stopCamera();
+      resetCameraState();
+    });
+
+    function startCamera() {
+      $('#cameraLoadingNotice').show();
+      $('#cameraErrorAlert').hide();
+      $('#cameraVideo').show();
+      $('#cameraSnapshotPreview').hide();
+      $('#cameraLiveControls').show();
+      $('#cameraCapturedControls').hide();
+      $('#cameraCaptionWrap').hide();
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        $('#cameraLoadingNotice').hide();
+        $('#cameraErrorAlert').html('<i class="fa fa-exclamation-triangle"></i> Camera is not supported by your browser or requires a secure (HTTPS or localhost) connection.').show();
+        return;
+      }
+
+      var constraints = {
+        video: {
+          facingMode: currentFacingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(function(stream) {
+          cameraStream = stream;
+          var video = document.getElementById('cameraVideo');
+          video.srcObject = stream;
+          video.onloadedmetadata = function() {
+            $('#cameraLoadingNotice').hide();
+            video.play();
+            if (currentFacingMode === 'user') {
+              $(video).css('transform', 'scaleX(-1)');
+            } else {
+              $(video).css('transform', 'none');
+            }
+          };
+        })
+        .catch(function(err) {
+          $('#cameraLoadingNotice').hide();
+          var errMsg = 'Unable to access camera. Please allow camera permissions in your browser.';
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            errMsg = 'Camera permission was denied. Please allow camera access in your browser address bar.';
+          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            errMsg = 'No camera hardware found on this device.';
+          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            errMsg = 'Camera is currently in use by another application.';
+          }
+          $('#cameraErrorAlert').html('<i class="fa fa-exclamation-triangle"></i> ' + errMsg).show();
+        });
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(function(track) {
+          track.stop();
+        });
+        cameraStream = null;
+      }
+      var video = document.getElementById('cameraVideo');
+      if (video) {
+        video.srcObject = null;
+      }
+    }
+
+    function resetCameraState() {
+      capturedBlob = null;
+      capturedDataUrl = null;
+      $('#cameraPhotoCaption').val('');
+      $('#cameraSnapshotPreview').attr('src', '').hide();
+      $('#cameraVideo').show();
+      $('#cameraLiveControls').show();
+      $('#cameraCapturedControls').hide();
+      $('#cameraCaptionWrap').hide();
+    }
+
+    // Flip Camera button
+    $('#btnFlipCamera').click(function() {
+      currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+      stopCamera();
+      startCamera();
+    });
+
+    // Capture Photo / Selfie
+    $('#btnCapturePhoto').click(function() {
+      var video = document.getElementById('cameraVideo');
+      var canvas = document.getElementById('cameraCanvas');
+      if (!video || !video.videoWidth) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      var ctx = canvas.getContext('2d');
+
+      // Mirror horizontally if front/selfie camera
+      if (currentFacingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      $('#cameraSnapshotPreview').attr('src', capturedDataUrl).show();
+      $(video).hide();
+
+      canvas.toBlob(function(blob) {
+        capturedBlob = blob;
+      }, 'image/jpeg', 0.9);
+
+      stopCamera();
+
+      $('#cameraLiveControls').hide();
+      $('#cameraCapturedControls').css('display', 'flex');
+      $('#cameraCaptionWrap').show();
+    });
+
+    // Retake Photo
+    $('#btnRetakePhoto').click(function() {
+      resetCameraState();
+      startCamera();
+    });
+
+    // Attach Photo to Main Composer
+    $('#btnAttachPhoto').click(function() {
+      if (!capturedDataUrl) return;
+
+      var caption = $('#cameraPhotoCaption').val().trim();
+      if (caption && !$('#chatMessageInput').val().trim()) {
+        $('#chatMessageInput').val(caption);
+      }
+
+      applyCapturedPhotoToComposer();
+      $('#chatCameraModal').modal('hide');
+    });
+
+    // Send Photo Directly from Modal
+    $('#btnSendPhotoDirect').click(function() {
+      if (!capturedDataUrl) return;
+
+      var caption = $('#cameraPhotoCaption').val().trim();
+      applyCapturedPhotoToComposer();
+
+      if (caption) {
+        $('#chatMessageInput').val(caption);
+      }
+
+      $('#chatCameraModal').modal('hide');
+      $('#chatMessageForm').submit();
+    });
+
+    function applyCapturedPhotoToComposer() {
+      $('#chatCameraSnapshot').val(capturedDataUrl);
+      var sizeKb = Math.round((capturedDataUrl.length * 0.75) / 1024);
+      $('#attachmentFileName').text('Selfie_Photo_' + (new Date()).toLocaleTimeString().replace(/[^0-9]/g, '') + '.jpg');
+      $('#attachmentFileSize').text(sizeKb + ' KB');
+      $('#attachmentThumbPreview').attr('src', capturedDataUrl).show();
+      $('#attachmentIcon').hide();
+      $('#attachmentPreviewBar').css('display', 'flex');
+
+      // Also set into input files via DataTransfer if supported
+      try {
+        if (capturedBlob && window.DataTransfer) {
+          var dt = new DataTransfer();
+          var file = new File([capturedBlob], 'selfie_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+          dt.items.add(file);
+          document.getElementById('chatAttachmentInput').files = dt.files;
+        }
+      } catch(e) {}
+    }
+
+    // Attachment trigger (File)
     $('#btnTriggerAttach').click(function() {
       $('#chatAttachmentInput').click();
     });
@@ -928,6 +1267,21 @@
         var sizeStr = (file.size > 1048576) ? (file.size / 1048576).toFixed(1) + ' MB' : (file.size / 1024).toFixed(1) + ' KB';
         $('#attachmentFileName').text(file.name);
         $('#attachmentFileSize').text(sizeStr);
+        $('#chatCameraSnapshot').val('');
+        
+        // Show image thumbnail if image
+        if (file.type && file.type.indexOf('image/') !== -1) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            $('#attachmentThumbPreview').attr('src', e.target.result).show();
+            $('#attachmentIcon').hide();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          $('#attachmentThumbPreview').attr('src', '').hide();
+          $('#attachmentIcon').show();
+        }
+
         $('#attachmentPreviewBar').css('display', 'flex');
       } else {
         $('#attachmentPreviewBar').hide();
@@ -936,7 +1290,12 @@
 
     $('#btnRemoveAttachment').click(function() {
       $('#chatAttachmentInput').val('');
+      $('#chatCameraSnapshot').val('');
+      $('#attachmentThumbPreview').attr('src', '').hide();
+      $('#attachmentIcon').show();
       $('#attachmentPreviewBar').hide();
+      capturedBlob = null;
+      capturedDataUrl = null;
     });
 
     // Send Message Form Submit
@@ -945,8 +1304,9 @@
       var msg = $('#chatMessageInput').val().trim();
       var fileInput = document.getElementById('chatAttachmentInput');
       var hasFile = fileInput.files && fileInput.files.length > 0;
+      var hasCameraSnapshot = !!$('#chatCameraSnapshot').val();
 
-      if (!msg && !hasFile) return;
+      if (!msg && !hasFile && !hasCameraSnapshot) return;
 
       var formData = new FormData(this);
       formData.append('<?php echo $this->security->get_csrf_token_name(); ?>', '<?php echo $this->security->get_csrf_hash(); ?>');
@@ -965,7 +1325,12 @@
           if (res.status === 'success' && res.message) {
             $('#chatMessageInput').val('').css('height', 'auto');
             $('#chatAttachmentInput').val('');
+            $('#chatCameraSnapshot').val('');
+            $('#attachmentThumbPreview').attr('src', '').hide();
+            $('#attachmentIcon').show();
             $('#attachmentPreviewBar').hide();
+            capturedBlob = null;
+            capturedDataUrl = null;
 
             if ($('#chatMessagesContainer .chat-empty-state').length) {
               $('#chatMessagesContainer').empty();

@@ -63,11 +63,14 @@ class Chat extends CI_Controller {
         } else {
             $data['active_contact_id'] = intval($contact_id);
 
-            // If regular staff tries to view a contact that is Super Admin, block it (invisible Super Admin)
+            // If regular staff tries to view a contact that is Super Admin, allow only if Super Admin has messaged them
             if ($data['active_contact_id'] > 0) {
                 $contact_info = $this->Chat_model->get_contact_info($data['active_contact_id']);
                 if ($contact_info && $contact_info->role_id == 1 && !$is_superadmin) {
-                    redirect('chat');
+                    $has_messages = $this->Chat_model->has_messages_between($data['active_contact_id'], $current_user_id);
+                    if (!$has_messages) {
+                        redirect('chat');
+                    }
                 }
                 $data['active_contact'] = $contact_info;
             } else {
@@ -134,12 +137,15 @@ class Chat extends CI_Controller {
         if ($is_observing) {
             $messages = $this->Chat_model->get_conversation_messages($u1, $u2, $last_id);
         } else {
-            // Guard: non-superadmin cannot query Super Admin messages directly
+            // Guard: non-superadmin cannot query Super Admin messages unless Super Admin messaged them
             if ($contact_id > 0 && !$is_superadmin) {
                 $chk = $this->Chat_model->get_contact_info($contact_id);
                 if ($chk && $chk->role_id == 1) {
-                    echo json_encode(array('status' => 'error', 'message' => 'Access denied.'));
-                    exit;
+                    $has_messages = $this->Chat_model->has_messages_between($contact_id, $current_user_id);
+                    if (!$has_messages) {
+                        echo json_encode(array('status' => 'error', 'message' => 'Access denied.'));
+                        exit;
+                    }
                 }
             }
             $messages = $this->Chat_model->get_messages($current_user_id, $contact_id, $last_id);
@@ -170,8 +176,12 @@ class Chat extends CI_Controller {
             if (!empty($m->attachment)) {
                 $m->attachment_url = base_url('assets/chat_attachments/' . $m->attachment);
                 $m->download_url = site_url('chat/download/' . $m->id);
-                $ext = strtolower(pathinfo($m->attachment_name, PATHINFO_EXTENSION));
-                $m->is_image = in_array($ext, array('jpg', 'jpeg', 'png', 'gif', 'webp'));
+                $ext = strtolower(pathinfo($m->attachment, PATHINFO_EXTENSION));
+                if (empty($ext) && !empty($m->attachment_name)) {
+                    $ext = strtolower(pathinfo($m->attachment_name, PATHINFO_EXTENSION));
+                }
+                $is_img_type = (!empty($m->attachment_type) && strpos($m->attachment_type, 'image/') === 0);
+                $m->is_image = $is_img_type || in_array($ext, array('jpg', 'jpeg', 'png', 'gif', 'webp'));
                 
                 // Format file size
                 if ($m->attachment_size > 1048576) {
@@ -179,7 +189,7 @@ class Chat extends CI_Controller {
                 } elseif ($m->attachment_size > 1024) {
                     $m->formatted_size = round($m->attachment_size / 1024, 1) . ' KB';
                 } else {
-                    $m->formatted_size = $m->attachment_size . ' B';
+                    $m->formatted_size = ($m->attachment_size > 0 ? $m->attachment_size : '1') . ' B';
                 }
             }
         }
@@ -228,7 +238,8 @@ class Chat extends CI_Controller {
             }
         }
 
-        $has_attachment = (!empty($_FILES['attachment']['name']));
+        $camera_snapshot = $this->input->post('camera_snapshot');
+        $has_attachment = (!empty($_FILES['attachment']['name']) || !empty($camera_snapshot));
 
         if (empty($message_text) && !$has_attachment) {
             echo json_encode(array('status' => 'error', 'message' => 'Cannot send an empty message.'));
@@ -240,12 +251,12 @@ class Chat extends CI_Controller {
         $attachment_size = NULL;
         $attachment_type = NULL;
 
-        if ($has_attachment) {
-            $upload_path = './assets/chat_attachments/';
-            if (!is_dir($upload_path)) {
-                mkdir($upload_path, 0777, TRUE);
-            }
+        $upload_path = './assets/chat_attachments/';
+        if (!is_dir($upload_path)) {
+            mkdir($upload_path, 0777, TRUE);
+        }
 
+        if (!empty($_FILES['attachment']['name'])) {
             $config['upload_path']   = $upload_path;
             $config['allowed_types'] = 'jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|csv|zip|txt';
             $config['max_size']      = 15360; // 15MB
@@ -263,6 +274,23 @@ class Chat extends CI_Controller {
             $attachment_orig_name = $upload_data['orig_name'];
             $attachment_size      = $upload_data['file_size'] * 1024;
             $attachment_type      = $upload_data['file_type'];
+        } elseif (!empty($camera_snapshot)) {
+            // Process camera / selfie snapshot data URI
+            if (preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,/', $camera_snapshot, $matches)) {
+                $ext = ($matches[1] == 'jpeg') ? 'jpg' : $matches[1];
+                $data = substr($camera_snapshot, strpos($camera_snapshot, ',') + 1);
+                $decoded = base64_decode($data);
+                if ($decoded !== FALSE) {
+                    $filename = 'selfie_' . md5(uniqid(mt_rand(), true)) . '.' . $ext;
+                    $full_filepath = $upload_path . $filename;
+                    if (file_put_contents($full_filepath, $decoded)) {
+                        $attachment_file      = $filename;
+                        $attachment_orig_name = 'selfie_' . date('Ymd_His') . '.' . $ext;
+                        $attachment_size      = strlen($decoded);
+                        $attachment_type      = 'image/' . $matches[1];
+                    }
+                }
+            }
         }
 
         $message_data = array(
@@ -285,8 +313,12 @@ class Chat extends CI_Controller {
             if (!empty($saved_msg->attachment)) {
                 $saved_msg->attachment_url = base_url('assets/chat_attachments/' . $saved_msg->attachment);
                 $saved_msg->download_url = site_url('chat/download/' . $saved_msg->id);
-                $ext = strtolower(pathinfo($saved_msg->attachment_name, PATHINFO_EXTENSION));
-                $saved_msg->is_image = in_array($ext, array('jpg', 'jpeg', 'png', 'gif', 'webp'));
+                $ext = strtolower(pathinfo($saved_msg->attachment, PATHINFO_EXTENSION));
+                if (empty($ext) && !empty($saved_msg->attachment_name)) {
+                    $ext = strtolower(pathinfo($saved_msg->attachment_name, PATHINFO_EXTENSION));
+                }
+                $is_img_type = (!empty($saved_msg->attachment_type) && strpos($saved_msg->attachment_type, 'image/') === 0);
+                $saved_msg->is_image = $is_img_type || in_array($ext, array('jpg', 'jpeg', 'png', 'gif', 'webp'));
                 $saved_msg->formatted_size = round($saved_msg->attachment_size / 1024, 1) . ' KB';
             }
 

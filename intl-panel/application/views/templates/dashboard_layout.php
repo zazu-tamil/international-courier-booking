@@ -258,10 +258,54 @@
   });
 </script>
 
-<?php if ($this->session->userdata('role_id') == 1): // Active for Super Admin ?>
+<?php if ($this->session->userdata('role_id') && $this->session->userdata('role_id') != 4): // Active for all internal staff ?>
 <script>
+  // Global Notification Sound Synthesizer using Web Audio API
+  window.playChatNotificationChime = function() {
+    try {
+      if (localStorage.getItem('chat_sound_enabled') === 'false') return;
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      var ctx = window._chatAudioCtx || new AudioContext();
+      window._chatAudioCtx = ctx;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      var now = ctx.currentTime;
+      // Tone 1: 587.33 Hz (D5)
+      var osc1 = ctx.createOscillator();
+      var gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.2, now + 0.03);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.25);
+
+      // Tone 2: 880 Hz (A5)
+      var osc2 = ctx.createOscillator();
+      var gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, now + 0.12);
+      gain2.gain.setValueAtTime(0, now + 0.12);
+      gain2.gain.linearRampToValueAtTime(0.25, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.45);
+    } catch(e) {
+      // Silent catch if audio not permitted
+    }
+  };
+
   // Global Internal Chat Unread Poller & Online Heartbeat
   (function() {
+    var lastTotalUnread = -1;
+
     function updateChatBadges() {
       $.ajax({
         url: '<?php echo site_url("chat/unread-count"); ?>',
@@ -271,6 +315,15 @@
         success: function(res) {
           if (res && res.status === 'success') {
             var count = parseInt(res.total_unread) || 0;
+            // Play sound if new message arrived while not on chat page
+            if (lastTotalUnread !== -1 && count > lastTotalUnread) {
+              // If not already inside the active chat view
+              if (!window._isInActiveChatView) {
+                window.playChatNotificationChime();
+              }
+            }
+            lastTotalUnread = count;
+
             if (count > 0) {
               var displayCount = count > 99 ? '99+' : count;
               $('.chat-global-unread-badge').text(displayCount).show();

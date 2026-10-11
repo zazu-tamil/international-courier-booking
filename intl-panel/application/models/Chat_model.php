@@ -62,6 +62,14 @@ class Chat_model extends CI_Model {
      */
     public function update_heartbeat($user_id) {
         if ($this->has_last_active) {
+            // Super Admin never logs heartbeat to maintain complete offline / stealth status
+            $this->db->select('role_id');
+            $this->db->where('id', $user_id);
+            $user_row = $this->db->get('users')->row();
+            if ($user_row && $user_row->role_id == 1) {
+                return;
+            }
+
             $this->db->where('id', $user_id);
             $this->db->update('users', array('last_active' => date('Y-m-d H:i:s')));
         }
@@ -89,9 +97,15 @@ class Chat_model extends CI_Model {
         $this->db->where('u.status', 'Active');
         $this->db->where('u.deleted_at IS NULL', NULL, FALSE);
 
-        // FEATURE 1: Super admin is invisible to all regular staff!
+        // FEATURE 1: Super admin is invisible to all regular staff by default,
+        // UNLESS Super Admin has sent a message to this staff member!
         if (!$is_superadmin) {
-            $this->db->where('u.role_id !=', 1);
+            $this->db->group_start();
+                $this->db->where('u.role_id !=', 1);
+                if ($this->has_chat_table) {
+                    $this->db->or_where("u.id IN (SELECT sender_id FROM internal_chat_messages WHERE receiver_id = " . intval($current_user_id) . ")", NULL, FALSE);
+                }
+            $this->db->group_end();
         }
         
         $query = $this->db->get();
@@ -141,8 +155,9 @@ class Chat_model extends CI_Model {
             }
 
             // Online status (active within last 2 minutes)
+            // Super Admin (role_id == 1) NEVER shows online; always stays offline in stealth mode
             $is_online = FALSE;
-            if (!empty($c->last_active)) {
+            if ($c->role_id != 1 && !empty($c->last_active)) {
                 $last_active_time = strtotime($c->last_active);
                 if (time() - $last_active_time <= 120) {
                     $is_online = TRUE;
@@ -200,8 +215,9 @@ class Chat_model extends CI_Model {
         $contact = $query->row();
 
         if ($contact) {
+            // Super Admin (role_id == 1) NEVER shows online; always stays offline in stealth mode
             $is_online = FALSE;
-            if (!empty($contact->last_active)) {
+            if ($contact->role_id != 1 && !empty($contact->last_active)) {
                 if (time() - strtotime($contact->last_active) <= 120) {
                     $is_online = TRUE;
                 }
@@ -471,5 +487,18 @@ class Chat_model extends CI_Model {
 
         $query = $this->db->get();
         return $query ? $query->result() : array();
+    }
+
+    /**
+     * Check if any messages exist between two users
+     */
+    public function has_messages_between($u1, $u2) {
+        if (!$this->has_chat_table) {
+            return FALSE;
+        }
+        $u1 = intval($u1);
+        $u2 = intval($u2);
+        $this->db->where("((sender_id = {$u1} AND receiver_id = {$u2}) OR (sender_id = {$u2} AND receiver_id = {$u1}))", NULL, FALSE);
+        return ($this->db->count_all_results('internal_chat_messages') > 0);
     }
 }
