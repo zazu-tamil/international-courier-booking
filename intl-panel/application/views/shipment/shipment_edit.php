@@ -1147,11 +1147,12 @@
     window.checkOdaRate = function() {
       clearTimeout(odaCheckTimer);
       odaCheckTimer = setTimeout(function() {
-        var countryId = $('#destination_country_id').val() || $('#receiver_country_id').val();
-        var partnerId = $('#courier_partner_id').val() || 0;
-        var zip       = $('#receiver_zip').val() ? $('#receiver_zip').val().trim() : '';
-        var city      = $('#receiver_city').val() ? $('#receiver_city').val().trim() : '';
-        var weight    = $('#chargeable_weight_val').val() || 0;
+        var countryId   = $('#destination_country_id').val() || $('#receiver_country_id').val();
+        var partnerId   = $('#courier_partner_id').val() || 0;
+        var serviceType = $('#service_type').val() || '';
+        var zip         = $('#receiver_zip').val() ? $('#receiver_zip').val().trim() : '';
+        var city        = $('#receiver_city').val() ? $('#receiver_city').val().trim() : '';
+        var weight      = $('#chargeable_weight_val').val() || 0;
 
         if (!countryId || (!zip && !city)) {
           $('#tab2_oda_alert').slideUp();
@@ -1165,6 +1166,7 @@
           data: {
             country_id: countryId,
             partner_id: partnerId,
+            service_type: serviceType,
             pincode: zip,
             city: city,
             weight: weight,
@@ -1248,7 +1250,7 @@
       checkOdaRate();
     });
 
-    $('#courier_partner_id').change(function() {
+    $('#courier_partner_id, #service_type').change(function() {
       checkOdaRate();
     });
 

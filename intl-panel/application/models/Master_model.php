@@ -1076,6 +1076,18 @@ class Master_model extends CI_Model {
             $this->db->query($create_sql);
         }
 
+        // Ensure service_type column exists
+        $col_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'service_type'");
+        if (!$col_check || $col_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `service_type` VARCHAR(50) NOT NULL DEFAULT 'All' AFTER `courier_partner_id`, ADD KEY `idx_oda_service_type` (`service_type`)");
+        }
+
+        // Ensure geo_location_id column exists
+        $geo_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'geo_location_id'");
+        if (!$geo_check || $geo_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `geo_location_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `location_type`, ADD KEY `idx_oda_geo_location_id` (`geo_location_id`)");
+        }
+
         // Seed initial sample ODA entries if empty
         $count = $this->db->where('deleted_at IS NULL')->count_all_results('master_oda_charges');
         if ($count == 0) {
@@ -1096,12 +1108,12 @@ class Master_model extends CI_Model {
 
             if (!empty($countries)) {
                 $sample_oda = array(
-                    array('United Arab Emirates', 'Aramex', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', 0.00, 0.00, 1500.00),
-                    array('United Arab Emirates', 'DHL Express', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', 1800.00, 35.00, 0.00),
-                    array('United States', 'DHL Express', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', 2100.00, 42.00, 0.00),
-                    array('United States', 'FedEx', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', 2150.00, 45.00, 0.00),
-                    array('United Kingdom', 'DHL Express', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', 1850.00, 35.00, 0.00),
-                    array('Australia', 'FedEx', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', 2200.00, 48.00, 0.00)
+                    array('United Arab Emirates', 'Aramex', 'All', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', 0.00, 0.00, 1500.00),
+                    array('United Arab Emirates', 'DHL Express', 'Express', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', 1800.00, 35.00, 0.00),
+                    array('United States', 'DHL Express', 'All', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', 2100.00, 42.00, 0.00),
+                    array('United States', 'FedEx', 'All', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', 2150.00, 45.00, 0.00),
+                    array('United Kingdom', 'DHL Express', 'All', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', 1850.00, 35.00, 0.00),
+                    array('Australia', 'FedEx', 'All', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', 2200.00, 48.00, 0.00)
                 );
 
                 foreach ($sample_oda as $item) {
@@ -1110,16 +1122,17 @@ class Master_model extends CI_Model {
                     $this->db->insert('master_oda_charges', array(
                         'destination_country_id' => $c_id,
                         'courier_partner_id'     => $p_id,
-                        'location_type'          => $item[2],
-                        'postal_code'            => $item[3] ? $item[3] : NULL,
-                        'postal_code_from'       => $item[4] ? $item[4] : NULL,
-                        'postal_code_to'         => $item[5] ? $item[5] : NULL,
-                        'city_name'              => $item[6] ? $item[6] : NULL,
-                        'state_name'             => $item[7] ? $item[7] : NULL,
-                        'calculation_type'       => $item[8],
-                        'min_charge'             => $item[9],
-                        'per_kg_rate'            => $item[10],
-                        'flat_charge'            => $item[11],
+                        'service_type'           => $item[2],
+                        'location_type'          => $item[3],
+                        'postal_code'            => $item[4] ? $item[4] : NULL,
+                        'postal_code_from'       => $item[5] ? $item[5] : NULL,
+                        'postal_code_to'         => $item[6] ? $item[6] : NULL,
+                        'city_name'              => $item[7] ? $item[7] : NULL,
+                        'state_name'             => $item[8] ? $item[8] : NULL,
+                        'calculation_type'       => $item[9],
+                        'min_charge'             => $item[10],
+                        'per_kg_rate'            => $item[11],
+                        'flat_charge'            => $item[12],
                         'status'                 => 'Active',
                         'created_at'             => date('Y-m-d H:i:s')
                     ));
@@ -1134,10 +1147,11 @@ class Master_model extends CI_Model {
     public function get_oda_charges_datatable($filters, $limit, $start, $search = null, $order_col = 'id', $order_dir = 'DESC') {
         $this->ensure_oda_charges_schema();
 
-        $this->db->select('o.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name');
+        $this->db->select('o.*, c.country_name as destination_country, c.country_code as destination_country_code, p.partner_name as courier_partner_name, g.district_name as geo_district_name, g.postal_name as geo_postal_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
         $this->db->where('o.deleted_at IS NULL');
 
         $this->_apply_oda_filters($filters);
@@ -1146,11 +1160,14 @@ class Master_model extends CI_Model {
             $this->db->group_start();
             $this->db->like('c.country_name', $search);
             $this->db->or_like('p.partner_name', $search);
+            $this->db->or_like('o.service_type', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
             $this->db->or_like('o.city_name', $search);
             $this->db->or_like('o.state_name', $search);
+            $this->db->or_like('g.postal_name', $search);
+            $this->db->or_like('g.district_name', $search);
             $this->db->group_end();
         }
 
@@ -1159,11 +1176,12 @@ class Master_model extends CI_Model {
             0 => 'o.id',
             1 => 'c.country_name',
             2 => 'p.partner_name',
-            3 => 'o.location_type',
-            4 => 'o.postal_code',
-            5 => 'o.calculation_type',
-            6 => 'o.min_charge',
-            7 => 'o.status'
+            3 => 'o.service_type',
+            4 => 'o.location_type',
+            5 => 'o.postal_code',
+            6 => 'o.calculation_type',
+            7 => 'o.status',
+            8 => 'o.id'
         );
         $order_by_col = isset($col_map[$order_col]) ? $col_map[$order_col] : 'o.id';
         $this->db->order_by($order_by_col, $order_dir);
@@ -1186,6 +1204,7 @@ class Master_model extends CI_Model {
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
         $this->db->where('o.deleted_at IS NULL');
 
         $this->_apply_oda_filters($filters);
@@ -1194,11 +1213,14 @@ class Master_model extends CI_Model {
             $this->db->group_start();
             $this->db->like('c.country_name', $search);
             $this->db->or_like('p.partner_name', $search);
+            $this->db->or_like('o.service_type', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
             $this->db->or_like('o.city_name', $search);
             $this->db->or_like('o.state_name', $search);
+            $this->db->or_like('g.postal_name', $search);
+            $this->db->or_like('g.district_name', $search);
             $this->db->group_end();
         }
         return $this->db->count_all_results();
@@ -1210,6 +1232,9 @@ class Master_model extends CI_Model {
         }
         if (isset($filters['courier_partner_id']) && $filters['courier_partner_id'] !== '') {
             $this->db->where('o.courier_partner_id', intval($filters['courier_partner_id']));
+        }
+        if (!empty($filters['service_type']) && $filters['service_type'] !== 'All') {
+            $this->db->where('o.service_type', $filters['service_type']);
         }
         if (!empty($filters['location_type'])) {
             $this->db->where('o.location_type', $filters['location_type']);
@@ -1224,14 +1249,79 @@ class Master_model extends CI_Model {
 
     public function get_oda_charge_by_id($id) {
         $this->ensure_oda_charges_schema();
-        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name');
+        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.state_name as geo_state_name, g.district_name as geo_district_name, g.postal_name as geo_postal_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
         $this->db->where('o.id', intval($id));
         $this->db->where('o.deleted_at IS NULL');
         $query = $this->db->get();
         return ($query && $query->num_rows() > 0) ? $query->row() : NULL;
+    }
+
+    /**
+     * Search verified geo locations from 01_geo_location_info
+     */
+    public function search_geo_locations($q = '', $country_id = null, $limit = 30) {
+        $this->db->select('g.id, g.country_name, g.country_code, g.country_code3, g.state_name, g.state_code, g.district_name, g.city_name, g.postal_code, g.postal_name, g.latitude, g.longitude');
+        $this->db->from('01_geo_location_info g');
+        $this->db->where('g.is_active', 1);
+
+        $has_country_filter = false;
+        if (!empty($country_id)) {
+            $country = $this->db->get_where('countries', array('id' => intval($country_id)))->row();
+            if ($country) {
+                $has_country_filter = true;
+                $this->db->group_start();
+                $this->db->where('g.country_name', $country->country_name);
+                if (!empty($country->iso_code)) {
+                    $this->db->or_where('g.country_code3', $country->iso_code);
+                    $this->db->or_where('g.country_code', $country->iso_code);
+                }
+                $this->db->group_end();
+            }
+        }
+
+        if (!empty($q)) {
+            $this->db->group_start();
+            $this->db->like('g.postal_code', $q);
+            $this->db->or_like('g.city_name', $q);
+            $this->db->or_like('g.state_name', $q);
+            $this->db->or_like('g.postal_name', $q);
+            $this->db->or_like('g.district_name', $q);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('g.country_name', 'ASC');
+        $this->db->order_by('g.city_name', 'ASC');
+        $this->db->limit($limit);
+        $query = $this->db->get();
+        $results = ($query) ? $query->result() : array();
+
+        // If specific country was selected but returned 0 results and $q was provided,
+        // fallback to searching all countries so user still finds matching location
+        if (empty($results) && $has_country_filter && !empty($q)) {
+            $this->db->select('g.id, g.country_name, g.country_code, g.country_code3, g.state_name, g.state_code, g.district_name, g.city_name, g.postal_code, g.postal_name, g.latitude, g.longitude');
+            $this->db->from('01_geo_location_info g');
+            $this->db->where('g.is_active', 1);
+            $this->db->group_start();
+            $this->db->like('g.postal_code', $q);
+            $this->db->or_like('g.city_name', $q);
+            $this->db->or_like('g.state_name', $q);
+            $this->db->or_like('g.postal_name', $q);
+            $this->db->or_like('g.district_name', $q);
+            $this->db->group_end();
+            $this->db->order_by('g.country_name', 'ASC');
+            $this->db->order_by('g.city_name', 'ASC');
+            $this->db->limit($limit);
+            $fb_query = $this->db->get();
+            if ($fb_query && $fb_query->num_rows() > 0) {
+                return $fb_query->result();
+            }
+        }
+
+        return $results;
     }
 
     public function add_oda_charge($data) {
@@ -1239,7 +1329,9 @@ class Master_model extends CI_Model {
         $insert_data = array(
             'destination_country_id' => intval($data['destination_country_id']),
             'courier_partner_id'     => intval($data['courier_partner_id']),
+            'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
+            'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
             'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
             'postal_code_from'       => !empty($data['postal_code_from']) ? trim($data['postal_code_from']) : NULL,
             'postal_code_to'         => !empty($data['postal_code_to']) ? trim($data['postal_code_to']) : NULL,
@@ -1257,7 +1349,7 @@ class Master_model extends CI_Model {
 
         $result = $this->db->insert('master_oda_charges', $insert_data);
         if ($result && isset($this->Audit_model)) {
-            $this->Audit_model->log_activity('Add ODA Charge', 'Country ID: ' . $insert_data['destination_country_id'] . ', Partner: ' . $insert_data['courier_partner_id']);
+            $this->Audit_model->log_activity('Add ODA Charge', 'Country ID: ' . $insert_data['destination_country_id'] . ', Partner: ' . $insert_data['courier_partner_id'] . ', Service: ' . $insert_data['service_type']);
         }
         return $result;
     }
@@ -1267,7 +1359,9 @@ class Master_model extends CI_Model {
         $update_data = array(
             'destination_country_id' => intval($data['destination_country_id']),
             'courier_partner_id'     => intval($data['courier_partner_id']),
+            'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
+            'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
             'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
             'postal_code_from'       => !empty($data['postal_code_from']) ? trim($data['postal_code_from']) : NULL,
             'postal_code_to'         => !empty($data['postal_code_to']) ? trim($data['postal_code_to']) : NULL,
@@ -1316,10 +1410,11 @@ class Master_model extends CI_Model {
 
     public function get_all_oda_charges_for_export($filters = array()) {
         $this->ensure_oda_charges_schema();
-        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name');
+        $this->db->select('o.*, c.country_name as destination_country, p.partner_name as courier_partner_name, g.postal_name as geo_postal_name, g.district_name as geo_district_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
         $this->db->where('o.deleted_at IS NULL');
 
         $this->_apply_oda_filters($filters);
@@ -1329,7 +1424,6 @@ class Master_model extends CI_Model {
         $query = $this->db->get();
         return ($query) ? $query->result_array() : array();
     }
-
     public function bulk_import_oda_charges($records, $strategy = 'update') {
         $this->ensure_oda_charges_schema();
 
@@ -1374,16 +1468,34 @@ class Master_model extends CI_Model {
                 }
             }
 
+            $service_type = isset($row['service_type']) ? trim($row['service_type']) : (isset($row['service']) ? trim($row['service']) : 'All');
+            if (empty($service_type)) {
+                $service_type = 'All';
+            }
+
             $loc_type = isset($row['location_type']) ? strtolower(trim($row['location_type'])) : 'pincode';
             if (!in_array($loc_type, array('pincode', 'pincode_range', 'city'))) {
                 $loc_type = 'pincode';
             }
 
+            $geo_location_id  = !empty($row['geo_location_id']) ? intval($row['geo_location_id']) : NULL;
             $postal_code      = isset($row['postal_code']) ? trim($row['postal_code']) : NULL;
             $postal_code_from = isset($row['postal_code_from']) ? trim($row['postal_code_from']) : NULL;
             $postal_code_to   = isset($row['postal_code_to']) ? trim($row['postal_code_to']) : NULL;
             $city_name        = isset($row['city_name']) ? trim($row['city_name']) : (isset($row['city']) ? trim($row['city']) : NULL);
             $state_name       = isset($row['state_name']) ? trim($row['state_name']) : (isset($row['state']) ? trim($row['state']) : NULL);
+
+            // Auto-link to 01_geo_location_info if postal_code provided and geo_location_id missing
+            if (empty($geo_location_id) && !empty($postal_code)) {
+                $this->db->select('id');
+                $this->db->from('01_geo_location_info');
+                $this->db->where('postal_code', $postal_code);
+                $this->db->where('is_active', 1);
+                $geo_match = $this->db->limit(1)->get()->row();
+                if ($geo_match) {
+                    $geo_location_id = $geo_match->id;
+                }
+            }
 
             $calc_type = isset($row['calculation_type']) ? strtolower(trim($row['calculation_type'])) : 'higher_of';
             if (!in_array($calc_type, array('higher_of', 'flat', 'per_kg'))) {
@@ -1398,6 +1510,7 @@ class Master_model extends CI_Model {
             // Check if existing record matches
             $this->db->where('destination_country_id', $dest_country_id);
             $this->db->where('courier_partner_id', $courier_partner_id);
+            $this->db->where('service_type', $service_type);
             $this->db->where('location_type', $loc_type);
             $this->db->where('deleted_at IS NULL');
             if ($loc_type === 'pincode') {
@@ -1413,7 +1526,9 @@ class Master_model extends CI_Model {
             $save_data = array(
                 'destination_country_id' => $dest_country_id,
                 'courier_partner_id'     => $courier_partner_id,
+                'service_type'           => $service_type,
                 'location_type'          => $loc_type,
+                'geo_location_id'        => $geo_location_id,
                 'postal_code'            => $postal_code,
                 'postal_code_from'       => $postal_code_from,
                 'postal_code_to'         => $postal_code_to,
@@ -1451,36 +1566,90 @@ class Master_model extends CI_Model {
 
     /**
      * Core ODA Detection and Rate Calculation Engine
-     * Matches receiver location against active ODA rules.
+     * Matches receiver location against active ODA rules, taking into account
+     * destination country, courier partner, service type, and 01_geo_location_info.
      */
-    public function check_oda_status($country_id, $partner_id = 0, $pincode = '', $city = '', $weight = 0) {
+    public function check_oda_status($country_id, $partner_id = 0, $pincode = '', $city = '', $weight = 0, $service_type = '') {
         $this->ensure_oda_charges_schema();
 
-        $country_id = intval($country_id);
-        $partner_id = intval($partner_id);
-        $pincode    = strtoupper(trim($pincode));
-        $city       = trim($city);
-        $weight     = floatval($weight);
+        $country_id   = intval($country_id);
+        $partner_id   = intval($partner_id);
+        $pincode      = strtoupper(trim($pincode));
+        $city         = trim($city);
+        $weight       = floatval($weight);
+        $service_type = trim($service_type);
 
         if ($country_id <= 0) {
             return array('is_oda' => FALSE, 'oda_amount' => 0.00);
         }
 
+        // Enrich location information using 01_geo_location_info if available
+        $geo_record = NULL;
+        if (!empty($pincode) || !empty($city)) {
+            $this->db->select('g.id, g.country_name, g.country_code, g.state_name, g.city_name, g.postal_code');
+            $this->db->from('01_geo_location_info g');
+            $this->db->where('g.is_active', 1);
+
+            $country = $this->db->get_where('countries', array('id' => $country_id))->row();
+            if ($country) {
+                $this->db->group_start();
+                $this->db->where('g.country_name', $country->country_name);
+                if (!empty($country->iso_code)) {
+                    $this->db->or_where('g.country_code', $country->iso_code);
+                }
+                $this->db->group_end();
+            }
+
+            if (!empty($pincode) && !empty($city)) {
+                $this->db->group_start();
+                $this->db->where('g.postal_code', $pincode);
+                $this->db->or_like('g.city_name', $city);
+                $this->db->group_end();
+            } elseif (!empty($pincode)) {
+                $this->db->where('g.postal_code', $pincode);
+            } elseif (!empty($city)) {
+                $this->db->like('g.city_name', $city);
+            }
+
+            $geo_record = $this->db->limit(1)->get()->row();
+            if ($geo_record) {
+                if (empty($city) && !empty($geo_record->city_name)) {
+                    $city = $geo_record->city_name;
+                }
+                if (empty($pincode) && !empty($geo_record->postal_code)) {
+                    $pincode = strtoupper(trim($geo_record->postal_code));
+                }
+            }
+        }
+
         // Fetch candidate active rules for country & partner (or universal partner_id = 0)
-        $this->db->select('o.*, p.partner_name as courier_partner_name, c.country_name');
+        $this->db->select('o.*, p.partner_name as courier_partner_name, c.country_name, g.postal_name as geo_postal_name, g.district_name as geo_district_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
         $this->db->where('o.destination_country_id', $country_id);
         $this->db->where('o.status', 'Active');
         $this->db->where('o.deleted_at IS NULL');
+
         if ($partner_id > 0) {
             $this->db->where_in('o.courier_partner_id', array($partner_id, 0));
-            // Prefer specific partner over universal 0
-            $this->db->order_by('o.courier_partner_id', 'DESC');
-        } else {
-            $this->db->order_by('o.id', 'ASC');
         }
+
+        if (!empty($service_type) && strtolower($service_type) !== 'all') {
+            $this->db->where_in('o.service_type', array($service_type, 'All', ''));
+        }
+
+        // Priority ordering:
+        // 1. Specific courier partner before universal 0
+        // 2. Specific service_type before 'All'
+        if ($partner_id > 0) {
+            $this->db->order_by('o.courier_partner_id', 'DESC');
+        }
+        if (!empty($service_type) && strtolower($service_type) !== 'all') {
+            $this->db->order_by("CASE WHEN o.service_type = ".$this->db->escape($service_type)." THEN 1 ELSE 2 END", 'ASC', FALSE);
+        }
+        $this->db->order_by('o.id', 'ASC');
 
         $rules = $this->db->get()->result();
         if (empty($rules)) {
@@ -1490,8 +1659,19 @@ class Master_model extends CI_Model {
         $matched_rule = NULL;
         $match_reason = '';
 
+        // Priority 0: Exact Geo Location ID Match (linked from 01_geo_location_info)
+        if ($geo_record && !empty($geo_record->id)) {
+            foreach ($rules as $r) {
+                if (!empty($r->geo_location_id) && intval($r->geo_location_id) === intval($geo_record->id)) {
+                    $matched_rule = $r;
+                    $match_reason = "Verified Geo Location match [ID #{$geo_record->id}: {$geo_record->city_name}, {$geo_record->postal_code}]";
+                    break;
+                }
+            }
+        }
+
         // Priority 1: Exact Pincode Match
-        if (!empty($pincode)) {
+        if (!$matched_rule && !empty($pincode)) {
             foreach ($rules as $r) {
                 if ($r->location_type === 'pincode' && !empty($r->postal_code)) {
                     // Check exact or comma-separated list
@@ -1572,6 +1752,8 @@ class Master_model extends CI_Model {
             return array(
                 'is_oda'             => TRUE,
                 'rule_id'            => $matched_rule->id,
+                'service_type'       => !empty($matched_rule->service_type) ? $matched_rule->service_type : 'All',
+                'geo_location_id'    => !empty($matched_rule->geo_location_id) ? $matched_rule->geo_location_id : NULL,
                 'partner_name'       => !empty($matched_rule->courier_partner_name) ? $matched_rule->courier_partner_name : 'All Courier Partners',
                 'location_matched'   => $match_reason,
                 'calculation_type'   => $matched_rule->calculation_type,

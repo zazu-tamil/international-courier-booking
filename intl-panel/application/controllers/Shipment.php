@@ -523,13 +523,14 @@ class Shipment extends CI_Controller {
 
     // --- AJAX ODA SURCHARGE LOOKUP & DETECTION ---
     public function check_oda_rate() {
-        $country_id = $this->input->post_get('country_id') ?: $this->input->post_get('destination_country_id');
-        $partner_id = $this->input->post_get('partner_id') ?: $this->input->post_get('courier_partner_id');
-        $pincode    = $this->input->post_get('pincode') ?: $this->input->post_get('receiver_zip');
-        $city       = $this->input->post_get('city') ?: $this->input->post_get('receiver_city');
-        $weight     = $this->input->post_get('weight') ?: $this->input->post_get('chargeable_weight');
+        $country_id   = $this->input->post_get('country_id') ?: $this->input->post_get('destination_country_id');
+        $partner_id   = $this->input->post_get('partner_id') ?: $this->input->post_get('courier_partner_id');
+        $pincode      = $this->input->post_get('pincode') ?: $this->input->post_get('receiver_zip');
+        $city         = $this->input->post_get('city') ?: $this->input->post_get('receiver_city');
+        $weight       = $this->input->post_get('weight') ?: $this->input->post_get('chargeable_weight');
+        $service_type = $this->input->post_get('service_type');
 
-        $result = $this->Master_model->check_oda_status($country_id, $partner_id, $pincode, $city, $weight);
+        $result = $this->Master_model->check_oda_status($country_id, $partner_id, $pincode, $city, $weight, $service_type);
 
         // Resolve ODA charge type ID from additional_charge_types table
         $oda_type = $this->db->like('charge_name', 'ODA')->get('additional_charge_types')->row();

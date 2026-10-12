@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/font-awesome/css/font-awesome.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/Ionicons/css/ionicons.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/datatables.net-bs/css/dataTables.bootstrap.min.css'); ?>">
+  <link rel="stylesheet" href="<?php echo base_url('asset/bower_components/select2/dist/css/select2.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/dist/css/AdminLTE.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/dist/css/skins/skin-blue-light.min.css'); ?>">
   <link rel="stylesheet" href="<?php echo base_url('asset/time-line.css'); ?>">
@@ -38,6 +39,36 @@
     .info-box {
       border-radius: 8px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    /* Select2 AdminLTE Enhancements */
+    .select2-container--default .select2-selection--single {
+      height: 34px !important;
+      border: 1px solid #d2d6de !important;
+      border-radius: 4px !important;
+      padding: 6px 12px !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      line-height: 20px !important;
+      padding-left: 0 !important;
+      color: #333 !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 32px !important;
+      right: 6px !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__clear {
+      margin-right: 20px !important;
+      color: #dd4b39 !important;
+      font-size: 16px !important;
+    }
+    .select2-dropdown {
+      border-color: #3c8dbc !important;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15) !important;
+      z-index: 99999 !important;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+      background-color: #3c8dbc !important;
     }
   </style>
 
@@ -103,16 +134,14 @@
             <a href="<?php echo site_url('shipments'); ?>"><i class="fa fa-cubes"></i> <span>Shipment Bookings</span></a>
           </li>
 
-          <!-- <?php if ($this->session->userdata('role_id') == 1): // Visible for Super Admin (change to != 4 when ready for all staff) ?>
-          <li class="<?php echo ($this->uri->segment(1) == 'chat') ? 'active' : ''; ?>">
+           <li class="<?php echo ($this->uri->segment(1) == 'chat') ? 'active' : ''; ?>">
             <a href="<?php echo site_url('chat'); ?>">
               <i class="fa fa-comments"></i> <span>Internal Chat</span>
               <span class="pull-right-container">
                 <span class="label label-primary pull-right chat-sidebar-unread-badge" style="display:none; font-size:11px; border-radius:10px;">0</span>
               </span>
             </a>
-          </li>
-          <?php endif; ?> -->
+          </li> 
 
           <?php if ($this->session->userdata('role_id') != 3): // Hide for Franchise Users ?>
             <li class="<?php echo ($this->uri->segment(1) == 'kyc-requests') ? 'active' : ''; ?>">
@@ -235,6 +264,7 @@
 
 <!-- Scripts -->
 <script src="<?php echo base_url('asset/bower_components/bootstrap/dist/js/bootstrap.min.js'); ?>"></script>
+<script src="<?php echo base_url('asset/bower_components/select2/dist/js/select2.full.min.js'); ?>"></script>
 <script src="<?php echo base_url('asset/bower_components/datatables.net/js/jquery.dataTables.min.js'); ?>"></script>
 <script src="<?php echo base_url('asset/bower_components/datatables.net-bs/js/dataTables.bootstrap.min.js'); ?>"></script>
 <script src="<?php echo base_url('asset/bower_components/jquery-slimscroll/jquery.slimscroll.min.js'); ?>"></script>

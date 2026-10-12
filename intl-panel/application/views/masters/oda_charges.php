@@ -97,7 +97,7 @@
 
       <!-- Filter Bar -->
       <div class="box-body" style="background-color: #fcfcfc; border-bottom: 1px solid #f0f0f0; padding: 15px;">
-        <form id="odaFilterForm" class="row" method="get" action="<?php echo site_url('oda-charges'); ?>">
+        <?php echo form_open('oda-charges', array('id' => 'odaFilterForm', 'class' => 'row', 'method' => 'post')); ?>
           <div class="col-md-3 col-sm-6 form-group">
             <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Destination Country</label>
             <select name="dest_country" id="filter_dest_country" class="form-control input-sm select2" style="width: 100%;">
@@ -120,6 +120,21 @@
                   <?php echo htmlspecialchars($p->partner_name); ?>
                 </option>
               <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="col-md-2 col-sm-6 form-group">
+            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Service Type</label>
+            <select name="service_type" id="filter_service_type" class="form-control input-sm select2" style="width: 100%;">
+              <option value="">All Service Types</option>
+              <option value="All" <?php echo (!empty($filters['service_type']) && $filters['service_type'] === 'All') ? 'selected' : ''; ?>>Universal (All Services)</option>
+              <?php if (!empty($service_types)): ?>
+                <?php foreach ($service_types as $st): ?>
+                  <option value="<?php echo htmlspecialchars($st->service_name); ?>" <?php echo (!empty($filters['service_type']) && $filters['service_type'] == $st->service_name) ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($st->service_name); ?>
+                  </option>
+                <?php endforeach; ?>
+              <?php endif; ?>
             </select>
           </div>
 
@@ -152,15 +167,20 @@
             </select>
           </div>
 
-          <div class="col-md-2 col-sm-12 form-group" style="padding-top: 22px;">
+          <div class="col-md-12 form-group" style="margin-bottom: 0; padding-top: 5px;">
             <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 600;">
-              <i class="fa fa-filter"></i> Filter
+              <i class="fa fa-filter"></i> Apply Filter
             </button>
             <a href="<?php echo site_url('oda-charges'); ?>" class="btn btn-default btn-sm" title="Clear all search filters">
-              <i class="fa fa-refresh"></i> Reset
+              <i class="fa fa-refresh"></i> Reset Filters
             </a>
+            <?php if (!empty(array_filter($filters))): ?>
+              <span class="label label-warning" style="margin-left: 8px; font-size: 11px; padding: 4px 8px; border-radius: 3px;">
+                <i class="fa fa-filter"></i> Filters Active
+              </span>
+            <?php endif; ?>
           </div>
-        </form>
+        <?php echo form_close(); ?>
       </div>
 
       <!-- Data Table -->
@@ -171,6 +191,7 @@
               <th style="width: 45px; text-align: center;">S.No</th>
               <th>Destination Country</th>
               <th>Courier Partner</th>
+              <th>Service Type</th>
               <th>Type</th>
               <th>Location / Area / Code</th>
               <th>Calculation Method &amp; Charges</th>
@@ -209,43 +230,36 @@
         <div class="modal-body" style="padding: 20px 25px; background: #fafbfc;">
           <div id="modalAlertBox" style="display:none;"></div>
 
-          <!-- Section 1: Destination & Provider Mapping -->
+          <!-- Section 1: Location Definition & Geo Location Info Integration -->
           <div class="panel panel-default" style="border-radius: 6px; border: 1px solid #e0e6ed; box-shadow: none;">
             <div class="panel-heading" style="background: #f4f6f9; font-weight: 600; font-size: 13px; color: #475569;">
-              <i class="fa fa-globe text-primary"></i> 1. Destination &amp; Courier Service Provider
+              <i class="fa fa-map-marker text-success"></i> 1. Location Identification &amp; Geo Location Integration
             </div>
             <div class="panel-body">
-              <div class="row">
-                <div class="col-md-6 form-group">
-                  <label>Destination Country <span class="text-danger">*</span></label>
-                  <select name="destination_country_id" id="modal_country_id" class="form-control select2" style="width: 100%;" required>
-                    <option value="">Select Destination Country</option>
-                    <?php foreach ($countries as $c): ?>
-                      <option value="<?php echo $c->id; ?>"><?php echo htmlspecialchars($c->country_name); ?> (<?php echo $c->country_code; ?>)</option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
 
-                <div class="col-md-6 form-group">
-                  <label>Courier Partner <span class="text-danger">*</span></label>
-                  <select name="courier_partner_id" id="modal_partner_id" class="form-control select2" style="width: 100%;" required>
-                    <option value="0">All Courier Partners (Universal Surcharge)</option>
-                    <?php foreach ($courier_partners as $p): ?>
-                      <option value="<?php echo $p->id; ?>"><?php echo htmlspecialchars($p->partner_name); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                  <small class="text-muted">Select specific partner or keep universal for all couriers.</small>
+              <!-- Geo Location Info AJAX Lookup Box -->
+              <input type="hidden" name="geo_location_id" id="modal_geo_location_id" value="">
+              <div class="well well-sm" style="background: #eef7fc; border: 1px dashed #3c8dbc; border-radius: 6px; margin-bottom: 15px;">
+                <label style="color: #20638f; font-size: 12px; font-weight: 600; margin-bottom: 4px; display: block;">
+                  <i class="fa fa-map-pin text-primary"></i> Search &amp; Auto-fill from Geo Location Database (table: geo_location_info)
+                </label>
+                <div class="row">
+                  <div class="col-sm-9 form-group" style="margin-bottom: 5px;">
+                    <select id="modal_geo_search" class="form-control" style="width: 100%;">
+                    </select>
+                    <small class="text-muted">Selecting an entry will auto-fill Postal Code, City, State, and link the Geo ID.</small>
+                  </div>
+                  <div class="col-sm-3 form-group" style="margin-bottom: 5px;">
+                    <button type="button" class="btn btn-default btn-sm btn-block" onclick="clearGeoSelection()" style="margin-top: 1px;">
+                      <i class="fa fa-times text-danger"></i> Unlink Geo
+                    </button>
+                    <div id="geo_linked_badge" style="display:none; margin-top: 4px;">
+                      <span class="label label-info" style="font-size: 11px; display: block; text-align: center;"><i class="fa fa-link"></i> <span id="geo_linked_text">Linked</span></span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Section 2: Location Definition -->
-          <div class="panel panel-default" style="border-radius: 6px; border: 1px solid #e0e6ed; box-shadow: none;">
-            <div class="panel-heading" style="background: #f4f6f9; font-weight: 600; font-size: 13px; color: #475569;">
-              <i class="fa fa-map-marker text-success"></i> 2. Location Identification Type
-            </div>
-            <div class="panel-body">
               <div class="row">
                 <div class="col-md-12 form-group">
                   <label style="margin-bottom: 8px;">How should this Out of Delivery Area be identified? <span class="text-danger">*</span></label>
@@ -304,6 +318,50 @@
                 <div class="col-md-6 form-group">
                   <label>State / Emirate / Region (Optional)</label>
                   <input type="text" name="state_name" id="modal_state_name_3" class="form-control" placeholder="e.g. Dubai or Sharjah">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Destination, Partner & Service Type Mapping -->
+          <div class="panel panel-default" style="border-radius: 6px; border: 1px solid #e0e6ed; box-shadow: none;">
+            <div class="panel-heading" style="background: #f4f6f9; font-weight: 600; font-size: 13px; color: #475569;">
+              <i class="fa fa-globe text-primary"></i> 2. Destination Country, Courier Partner &amp; Service Type
+            </div>
+            <div class="panel-body">
+              <div class="row">
+                <div class="col-md-4 form-group">
+                  <label>Destination Country <span class="text-danger">*</span></label>
+                  <select name="destination_country_id" id="modal_country_id" class="form-control select2" style="width: 100%;" required>
+                    <option value="">Select Destination Country</option>
+                    <?php foreach ($countries as $c): ?>
+                      <option value="<?php echo $c->id; ?>"><?php echo htmlspecialchars($c->country_name); ?> (<?php echo $c->country_code; ?>)</option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <div class="col-md-4 form-group">
+                  <label>Courier Partner <span class="text-danger">*</span></label>
+                  <select name="courier_partner_id" id="modal_partner_id" class="form-control select2" style="width: 100%;" required>
+                    <option value="0">All Courier Partners (Universal)</option>
+                    <?php foreach ($courier_partners as $p): ?>
+                      <option value="<?php echo $p->id; ?>"><?php echo htmlspecialchars($p->partner_name); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <small class="text-muted">Specific partner or universal for all couriers.</small>
+                </div>
+
+                <div class="col-md-4 form-group">
+                  <label>Service Type <span class="text-danger">*</span></label>
+                  <select name="service_type" id="modal_service_type" class="form-control select2" style="width: 100%;" required>
+                    <option value="All">All Services (Universal)</option>
+                    <?php if (!empty($service_types)): ?>
+                      <?php foreach ($service_types as $st): ?>
+                        <option value="<?php echo htmlspecialchars($st->service_name); ?>"><?php echo htmlspecialchars($st->service_name); ?></option>
+                      <?php endforeach; ?>
+                    <?php endif; ?>
+                  </select>
+                  <small class="text-muted">Universal (All) or specific (e.g. Express, Economy).</small>
                 </div>
               </div>
             </div>
@@ -480,10 +538,112 @@
   $(document).ready(function() {
     // Initialize Select2 if present
     if ($.fn.select2) {
-      $('.select2').select2();
+      $('.select2').select2({
+        width: '100%'
+      });
+
+      // Initialize Geo Location Select2 with AJAX (targeting 01_geo_location_info)
+      $('#modal_geo_search').select2({
+        placeholder: 'Search postal code, city, district or click to browse...',
+        allowClear: true,
+        width: '100%',
+        dropdownParent: $('#odaChargeModal'),
+        ajax: {
+          url: '<?php echo site_url("oda-charges/geo-search"); ?>',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            return {
+              q: params.term || '',
+              country_id: $('#modal_country_id').val()
+            };
+          },
+          processResults: function(data) {
+            return {
+              results: data.items || []
+            };
+          },
+          cache: true
+        },
+        minimumInputLength: 0,
+        templateResult: function(item) {
+          if (item.loading) return item.text;
+          if (!item.id) return item.text;
+          var html = '<div style="padding: 4px 2px;">' +
+            '<div style="font-weight: 600; font-size: 13px; color: #1e293b;">' + 
+            (item.city_name || '') + 
+            (item.postal_code && item.postal_code !== '00000' ? ' <span class="label label-primary" style="font-size: 10px; margin-left: 6px; padding: 2px 6px;">' + item.postal_code + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size: 11px; color: #64748b; margin-top: 2px;">' +
+            (item.postal_name ? '<i class="fa fa-map-marker text-muted"></i> ' + item.postal_name + ' &bull; ' : '') +
+            (item.district_name ? item.district_name + ', ' : '') +
+            (item.state_name ? item.state_name + ', ' : '') +
+            '<strong style="color: #0284c7;">' + (item.country_name || '') + '</strong>' +
+            '</div>' +
+            '</div>';
+          return $(html);
+        },
+        templateSelection: function(item) {
+          if (!item.id) return item.text || 'Select Geo Location';
+          return item.text || ((item.city_name || '') + (item.postal_code ? ' (' + item.postal_code + ')' : '') + ', ' + (item.country_name || ''));
+        }
+      }).on('select2:select', function(e) {
+        var item = e.params.data;
+        if (item) {
+          $('#modal_geo_location_id').val(item.id);
+          $('#geo_linked_badge').show();
+          $('#geo_linked_text').text('Geo ID #' + item.id);
+
+          // Auto-fill postal code
+          if (item.postal_code && item.postal_code !== '00000') {
+            $('#modal_postal_code').val(item.postal_code);
+            $('#loc_type_pincode').prop('checked', true);
+            toggleLocationFields();
+          } else if (item.city_name) {
+            $('#modal_city_name').val(item.city_name);
+            $('#loc_type_city').prop('checked', true);
+            toggleLocationFields();
+          }
+
+          if (item.city_name) {
+            $('#modal_city_name').val(item.city_name);
+          }
+
+          // Auto-fill states
+          if (item.state_name) {
+            $('#modal_state_name_1').val(item.state_name);
+            $('#modal_state_name_2').val(item.state_name);
+            $('#modal_state_name_3').val(item.state_name);
+          }
+
+          // If Country not selected or doesn't match, auto-select destination country
+          if (item.country_name) {
+            var matchedVal = null;
+            $('#modal_country_id option').each(function() {
+              var optText = $(this).text().toLowerCase();
+              if (optText.indexOf(item.country_name.toLowerCase()) !== -1) {
+                matchedVal = $(this).val();
+                return false;
+              }
+            });
+            if (matchedVal && matchedVal !== $('#modal_country_id').val()) {
+              $('#modal_country_id').val(matchedVal).trigger('change.select2');
+            }
+          }
+        }
+      }).on('select2:unselect', function() {
+        clearGeoSelection();
+      });
+
+      // When country changes in modal, reset geo search if adding new rule
+      $('#modal_country_id').on('change', function() {
+        if (!$('#oda_id').val() && !$('#modal_geo_location_id').val()) {
+          $('#modal_geo_search').val(null).trigger('change');
+        }
+      });
     }
 
-    // Initialize Server-Side DataTables
+    // Initialize Server-Side DataTables (9 columns)
     odaTable = $('#odaChargesTable').DataTable({
       "processing": true,
       "serverSide": true,
@@ -493,6 +653,7 @@
         "data": function(d) {
           d.dest_country      = $('#filter_dest_country').val();
           d.partner           = $('#filter_partner').val();
+          d.service_type      = $('#filter_service_type').val();
           d.location_type     = $('#filter_location_type').val();
           d.calculation_type  = $('#filter_calculation_type').val();
           d.status            = $('#filter_status').val();
@@ -501,13 +662,14 @@
       },
       "columns": [
         { "data": 0, "orderable": false, "className": "text-center" }, // S.No
-        { "data": 1, "orderable": true },                             // Country
-        { "data": 2, "orderable": true },                             // Partner
-        { "data": 3, "orderable": true },                             // Loc Type
-        { "data": 4, "orderable": false },                            // Location details
-        { "data": 5, "orderable": true },                             // Calculation & charges
-        { "data": 6, "orderable": true, "className": "text-center" }, // Status
-        { "data": 7, "orderable": false, "className": "text-center" } // Actions
+        { "data": 1, "orderable": true },                             // Destination Country
+        { "data": 2, "orderable": true },                             // Courier Partner
+        { "data": 3, "orderable": true },                             // Service Type
+        { "data": 4, "orderable": true },                             // Loc Type
+        { "data": 5, "orderable": false },                            // Location details (includes geo ID)
+        { "data": 6, "orderable": true },                             // Calculation & charges
+        { "data": 7, "orderable": true, "className": "text-center" }, // Status
+        { "data": 8, "orderable": false, "className": "text-center" } // Actions
       ],
       "order": [[1, "asc"]],
       "pageLength": 10,
@@ -569,6 +731,14 @@
       });
     });
   });
+
+  // Clear Geo Location selection and unbind
+  function clearGeoSelection() {
+    $('#modal_geo_location_id').val('');
+    $('#modal_geo_search').empty().trigger('change');
+    $('#geo_linked_badge').hide();
+    $('#geo_linked_text').text('');
+  }
 
   // Toggle Location Input Fields in Modal
   function toggleLocationFields() {
@@ -633,7 +803,10 @@
     if ($.fn.select2) {
       $('#modal_country_id').val('').trigger('change');
       $('#modal_partner_id').val('0').trigger('change');
+      $('#modal_service_type').val('All').trigger('change');
     }
+
+    clearGeoSelection();
 
     $('#loc_type_pincode').prop('checked', true);
     $('#calc_type_higher_of').prop('checked', true);
@@ -660,9 +833,27 @@
           if ($.fn.select2) {
             $('#modal_country_id').val(r.destination_country_id).trigger('change');
             $('#modal_partner_id').val(r.courier_partner_id).trigger('change');
+            $('#modal_service_type').val(r.service_type || 'All').trigger('change');
           } else {
             $('#modal_country_id').val(r.destination_country_id);
             $('#modal_partner_id').val(r.courier_partner_id);
+            $('#modal_service_type').val(r.service_type || 'All');
+          }
+
+          // Geo Location Info pre-fill if linked
+          if (r.geo_location_id) {
+            $('#modal_geo_location_id').val(r.geo_location_id);
+            $('#geo_linked_badge').show();
+            $('#geo_linked_text').text('Geo ID #' + r.geo_location_id);
+
+            var geoLabel = (r.geo_city_name ? r.geo_city_name + ' ' : '') + 
+                           (r.geo_postal_code ? '- ' + r.geo_postal_code + ' ' : '') + 
+                           (r.geo_postal_name ? '(' + r.geo_postal_name + ') ' : '') + 
+                           '[Geo #' + r.geo_location_id + ']';
+            var opt = new Option(geoLabel, r.geo_location_id, true, true);
+            $('#modal_geo_search').empty().append(opt).trigger('change');
+          } else {
+            clearGeoSelection();
           }
 
           // Location Type
