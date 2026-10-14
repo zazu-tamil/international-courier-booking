@@ -17,6 +17,11 @@ class Dashboard extends CI_Controller {
         $role_id = $this->session->userdata('role_id');
         $data['page_title'] = 'Dashboard';
 
+        // Load Master Data for International Rate Calculator Modal
+        $data['countries']        = $this->Master_model->get_countries();
+        $data['courier_partners'] = $this->Master_model->get_courier_partners();
+        $data['service_types']    = $this->Master_model->get_service_types();
+
         if ($role_id == 4) {
             // Customer Dashboard
             $customer_id = $this->session->userdata('customer_id');
@@ -385,4 +390,68 @@ class Dashboard extends CI_Controller {
 
         echo json_encode(['status' => 'success', 'data' => $result]);
     }
+
+    /**
+     * AJAX endpoint for International Rate Calculator Modal on Dashboard
+     */
+    public function calculate_rate_ajax() {
+        $dest_id       = intval($this->input->post('destination_country_id'));
+        $shipment_type = $this->input->post('shipment_type') ?: 'Non-Documents';
+        $actual_weight = floatval($this->input->post('actual_weight'));
+        $length        = floatval($this->input->post('length'));
+        $width         = floatval($this->input->post('width'));
+        $height        = floatval($this->input->post('height'));
+        $partner_id    = intval($this->input->post('courier_partner_id'));
+        $service_type  = $this->input->post('service_type') ?: 'All';
+        $pincode       = trim($this->input->post('pincode'));
+        $city          = trim($this->input->post('city'));
+
+        if (!$dest_id) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('status' => 'error', 'message' => 'Please select a destination country.')));
+            return;
+        }
+
+        // Calculate volumetric weight: (L x W x H) / 5000 (IATA volumetric standard)
+        $volumetric_weight = 0.00;
+        if ($length > 0 && $width > 0 && $height > 0) {
+            $volumetric_weight = round(($length * $width * $height) / 5000, 3);
+        }
+
+        // Chargeable weight is the greater of actual weight or volumetric weight
+        $chargeable_weight = max($actual_weight, $volumetric_weight);
+        if ($chargeable_weight <= 0) {
+            $chargeable_weight = 0.500;
+        }
+
+        $result = $this->Master_model->calculate_international_rate_options(
+            $dest_id,
+            $chargeable_weight,
+            $shipment_type,
+            $partner_id,
+            $service_type,
+            $pincode,
+            $city
+        );
+
+        if ($result['status'] === 'success') {
+            $result['actual_weight']         = $actual_weight;
+            $result['volumetric_weight']     = $volumetric_weight;
+            $result['is_volumetric_applied'] = ($volumetric_weight > $actual_weight && $volumetric_weight > 0);
+            $result['dimensions']            = array(
+                'length' => $length,
+                'width'  => $width,
+                'height' => $height
+            );
+        }
+
+        $result['csrf_token_name'] = $this->security->get_csrf_token_name();
+        $result['csrf_hash']       = $this->security->get_csrf_hash();
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
+    }
 }
+

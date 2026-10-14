@@ -1305,5 +1305,19 @@
       checkOdaRate();
     });
 
+    // Auto-prefill if redirected from International Rate Calculator
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('dest')) {
+      var destVal = urlParams.get('dest');
+      $('#destination_country_id').val(destVal).trigger('change');
+      $('#receiver_country_id').val(destVal).trigger('change');
+    }
+    if (urlParams.has('partner') && urlParams.get('partner') !== '0') {
+      $('#courier_partner_id').val(urlParams.get('partner')).trigger('change');
+    }
+    if (urlParams.has('service')) {
+      $('#service_type').val(urlParams.get('service')).trigger('change');
+    }
+
   });
 </script>

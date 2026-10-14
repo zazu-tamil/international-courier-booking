@@ -1767,4 +1767,147 @@ class Master_model extends CI_Model {
 
         return array('is_oda' => FALSE, 'oda_amount' => 0.00);
     }
+
+    /**
+     * Calculate International Rate Options for Dashboard Modal Calculator
+     */
+    public function calculate_international_rate_options($dest_id, $weight, $shipment_type = 'Documents', $partner_id = 0, $service_type = 'All', $pincode = '', $city = '') {
+        $country = $this->db->get_where('countries', array('id' => intval($dest_id)))->row();
+        if (!$country) {
+            return array('status' => 'error', 'message' => 'Please select a valid destination country.');
+        }
+
+        $weight = floatval($weight);
+        if ($weight <= 0) {
+            $weight = 0.500;
+        }
+
+        // Query active rates in shipping_rates_v2
+        $this->db->select('r.*, p.partner_name');
+        $this->db->from('shipping_rates_v2 r');
+        $this->db->join('courier_partners p', 'p.id = r.courier_partner_id');
+        $this->db->where('r.destination_country_id', intval($dest_id));
+        $this->db->where('r.status', 'Active');
+        $this->db->where('r.deleted_at IS NULL');
+
+        if ($partner_id > 0) {
+            $this->db->where('r.courier_partner_id', intval($partner_id));
+        }
+
+        if (!empty($service_type) && $service_type !== 'All') {
+            $this->db->where('r.service_type', $service_type);
+        }
+
+        // Shipment type matching
+        if (stripos($shipment_type, 'Documents') !== false && stripos($shipment_type, 'Non') === false) {
+            $this->db->like('r.shipment_type', 'Documents');
+            $this->db->not_like('r.shipment_type', 'Non-Documents');
+            $this->db->not_like('r.shipment_type', 'Non Documents');
+        } else {
+            $this->db->like('r.shipment_type', 'Non-Documents');
+        }
+
+        $all_rates = $this->db->get()->result();
+
+        // Group rates by carrier partner + service type
+        $grouped = array();
+        foreach ($all_rates as $r) {
+            $key = $r->courier_partner_id . '_' . $r->service_type;
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = array();
+            }
+            $grouped[$key][] = $r;
+        }
+
+        $quotes = array();
+
+        foreach ($grouped as $key => $rates_list) {
+            // Sort slabs by weight ascending
+            usort($rates_list, function($a, $b) {
+                return floatval($a->weight) <=> floatval($b->weight);
+            });
+
+            $partner_id_curr = $rates_list[0]->courier_partner_id;
+            $partner_name_curr = $rates_list[0]->partner_name;
+            $service_type_curr = $rates_list[0]->service_type;
+
+            // Find smallest slab >= $weight
+            $matched_slab = NULL;
+            foreach ($rates_list as $slab) {
+                if (floatval($slab->weight) >= $weight) {
+                    $matched_slab = $slab;
+                    break;
+                }
+            }
+
+            $base_rate = 0.00;
+            $slab_weight = 0.00;
+            $is_extrapolated = FALSE;
+
+            if ($matched_slab) {
+                $base_rate = floatval($matched_slab->rate);
+                $slab_weight = floatval($matched_slab->weight);
+            } else {
+                // Weight exceeds max configured slab: take highest available slab and extrapolate proportionally
+                $max_slab = end($rates_list);
+                $slab_w = floatval($max_slab->weight);
+                $slab_r = floatval($max_slab->rate);
+                if ($slab_w > 0) {
+                    $per_kg = $slab_r / $slab_w;
+                    $base_rate = round($per_kg * $weight, 2);
+                    $slab_weight = $slab_w;
+                    $is_extrapolated = TRUE;
+                }
+            }
+
+            // ODA Check if receiver pincode or city provided
+            $oda_amount = 0.00;
+            $oda_note = '';
+            $is_oda = FALSE;
+
+            if (!empty($pincode) || !empty($city)) {
+                $oda_check = $this->check_oda_status($dest_id, $partner_id_curr, $pincode, $city, $weight, $service_type_curr);
+                if (!empty($oda_check['is_oda'])) {
+                    $is_oda = TRUE;
+                    $oda_amount = floatval($oda_check['oda_amount']);
+                    $oda_note = !empty($oda_check['formula_note']) ? $oda_check['formula_note'] : 'Out of Delivery Area Surcharge';
+                }
+            }
+
+            // Total is base shipping charges + ODA charge (if applicable)
+            $total = $base_rate + $oda_amount;
+
+            $quotes[] = array(
+                'partner_id'        => $partner_id_curr,
+                'partner_name'      => $partner_name_curr,
+                'service_type'      => $service_type_curr,
+                'base_rate'         => $base_rate,
+                'slab_weight'       => $slab_weight,
+                'is_extrapolated'   => $is_extrapolated,
+                'is_oda'            => $is_oda,
+                'oda_amount'        => $oda_amount,
+                'oda_note'          => $oda_note,
+                'total_charges'     => round($total, 2),
+                'transit_estimate'  => (strtolower($service_type_curr) === 'express') ? '2 - 4 Business Days' : '5 - 8 Business Days'
+            );
+        }
+
+        // Sort quotes by total ascending (best price first)
+        usort($quotes, function($a, $b) {
+            return $a['total_charges'] <=> $b['total_charges'];
+        });
+
+        if (!empty($quotes)) {
+            $quotes[0]['is_cheapest'] = TRUE;
+        }
+
+        return array(
+            'status'              => 'success',
+            'destination_country' => $country->country_name,
+            'country_code'        => $country->country_code,
+            'chargeable_weight'   => $weight,
+            'quotes_count'        => count($quotes),
+            'quotes'              => $quotes
+        );
+    }
 }

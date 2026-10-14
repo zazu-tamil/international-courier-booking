@@ -96,6 +96,13 @@
       </a>
       <div class="navbar-custom-menu">
         <ul class="nav navbar-nav">
+          <?php if ($this->uri->segment(1) == 'dashboard' || empty($this->uri->segment(1))): ?>
+          <li>
+            <a href="javascript:void(0);" id="navRateCalcBtn" class="btn-trigger-rate-calc" onclick="openRateCalculatorModal(event);" title="Open International Rate Calculator" style="font-weight: 600;">
+              <i class="fa fa-calculator text-yellow" style="margin-right: 4px;"></i> <span class="hidden-xs">Rate Calculator</span>
+            </a>
+          </li>
+          <?php endif; ?>
           <?php if ($this->session->userdata('role_id') == 1): // Visible for Super Admin ?>
           <li class="messages-menu">
             <a href="<?php echo site_url('chat'); ?>" title="Internal Staff Chat & Audit Hub" style="position:relative;">
@@ -261,6 +268,11 @@
     <strong>Copyright &copy; 2026 <a href="#"><?php echo defined('COMPANY_NAME') && COMPANY_NAME ? htmlspecialchars(COMPANY_NAME) : 'CourierSyndicate International'; ?></a>.</strong> All rights reserved.
   </footer>
 </div>
+
+<!-- Load International Rate Calculator Modal Partial directly under body to avoid AdminLTE z-index/stacking context issues -->
+<?php if (isset($countries) && !empty($countries)): ?>
+  <?php $this->load->view('dashboard/rate_calculator_modal'); ?>
+<?php endif; ?>
 
 <!-- Scripts -->
 <script src="<?php echo base_url('asset/bower_components/bootstrap/dist/js/bootstrap.min.js'); ?>"></script>

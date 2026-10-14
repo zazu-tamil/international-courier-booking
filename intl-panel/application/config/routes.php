@@ -18,6 +18,7 @@ $route['change-password'] = 'auth/change_password';
 
 // Dashboards
 $route['dashboard'] = 'dashboard/index';
+$route['dashboard/calculate-rate'] = 'dashboard/calculate_rate_ajax';
 
 // Master Data Modules
 $route['branches'] = 'masters/branches';

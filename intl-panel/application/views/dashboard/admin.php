@@ -1,3 +1,29 @@
+<!-- International Rate Calculator Quick Action Banner -->
+<div class="row" style="margin-bottom: 20px;">
+  <div class="col-md-12">
+    <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 8px; padding: 18px 24px; color: #ffffff; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #facc15; flex-shrink: 0; box-shadow: inset 0 0 10px rgba(255,255,255,0.1);">
+          <i class="fa fa-calculator"></i>
+        </div>
+        <div>
+          <h4 style="margin: 0 0 4px 0; font-weight: 700; font-size: 19px; color: #ffffff; letter-spacing: -0.3px;">
+            International Shipping Rate Calculator
+          </h4>
+          <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.4;">
+            Instantly calculate door-to-door tariffs, volumetric weight, compare live carrier quotes (DHL, FedEx, UPS, Aramex) &amp; detect ODA surcharges.
+          </p>
+        </div>
+      </div>
+      <div>
+        <button type="button" id="btnOpenRateCalcModal" class="btn btn-warning btn-trigger-rate-calc" onclick="openRateCalculatorModal(event);" style="font-weight: 700; border-radius: 6px; padding: 10px 22px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.18); border: none;">
+          <i class="fa fa-calculator" style="margin-right: 6px;"></i> Calculate Live Rates
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Info boxes -->
 <div class="row">
   <div class="col-md-3 col-sm-6 col-xs-12">
