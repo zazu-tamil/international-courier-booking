@@ -1782,6 +1782,119 @@ class Master_model extends CI_Model {
     }
 
     /**
+     * Search ODA surcharge records for live suggestion autocomplete
+     * Queries master_oda_charges (filtered by destination country and query term)
+     */
+    public function search_oda_suggestions($country_id, $q = '', $type = 'all', $limit = 30) {
+        $this->ensure_oda_charges_schema();
+
+        $country_id = intval($country_id);
+        $q          = trim($q);
+        $type       = strtolower(trim($type));
+
+        if ($country_id <= 0) {
+            return array();
+        }
+
+        $this->db->select('o.id, o.destination_country_id, o.courier_partner_id, o.service_type, o.location_type, o.postal_code, o.postal_code_from, o.postal_code_to, o.city_name, o.state_name, o.calculation_type, o.min_charge, o.per_kg_rate, o.flat_charge, o.status, p.partner_name, c.country_name, c.country_code, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.district_name as geo_district_name, g.state_name as geo_state_name');
+        $this->db->from('master_oda_charges o');
+        $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
+        $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
+        $this->db->join('01_geo_location_info g', 'g.id = o.geo_location_id', 'left');
+        $this->db->where('o.destination_country_id', $country_id);
+        $this->db->where('o.status', 'Active');
+        $this->db->where('o.deleted_at IS NULL');
+
+        if (!empty($q)) {
+            $this->db->group_start();
+            if ($type === 'zip' || $type === 'pincode') {
+                $this->db->like('o.postal_code', $q);
+                $this->db->or_like('o.postal_code_from', $q);
+                $this->db->or_like('o.postal_code_to', $q);
+                $this->db->or_like('g.postal_code', $q);
+            } elseif ($type === 'city') {
+                $this->db->like('o.city_name', $q);
+                $this->db->or_like('o.state_name', $q);
+                $this->db->or_like('g.city_name', $q);
+                $this->db->or_like('g.district_name', $q);
+                $this->db->or_like('g.postal_name', $q);
+                $this->db->or_like('g.state_name', $q);
+            } else {
+                $this->db->like('o.postal_code', $q);
+                $this->db->or_like('o.postal_code_from', $q);
+                $this->db->or_like('o.postal_code_to', $q);
+                $this->db->or_like('o.city_name', $q);
+                $this->db->or_like('o.state_name', $q);
+                $this->db->or_like('g.postal_code', $q);
+                $this->db->or_like('g.city_name', $q);
+            }
+            $this->db->group_end();
+        }
+
+        // Order by location type, city, and postal code
+        $this->db->order_by('o.location_type', 'ASC');
+        $this->db->order_by('o.city_name', 'ASC');
+        $this->db->order_by('o.postal_code', 'ASC');
+        $this->db->order_by('o.postal_code_from', 'ASC');
+        $this->db->limit($limit);
+
+        $results = $this->db->get()->result();
+        $formatted = array();
+
+        foreach ($results as $r) {
+            $display_zip = '';
+            $value_zip   = '';
+            if ($r->location_type === 'pincode') {
+                $display_zip = !empty($r->postal_code) ? $r->postal_code : ($r->geo_postal_code ?: '');
+                $value_zip   = $display_zip;
+            } elseif ($r->location_type === 'pincode_range') {
+                $from = $r->postal_code_from ?: '';
+                $to   = $r->postal_code_to ?: '';
+                if ($from === $to || empty($to)) {
+                    $display_zip = $from;
+                    $value_zip   = $from;
+                } else {
+                    $display_zip = $from . ' – ' . $to;
+                    $value_zip   = $from;
+                }
+            } else {
+                $display_zip = !empty($r->postal_code) ? $r->postal_code : ($r->geo_postal_code ?: '');
+                $value_zip   = $display_zip;
+            }
+
+            $display_city  = !empty($r->city_name) ? $r->city_name : ($r->geo_city_name ?: ($r->geo_district_name ?: ''));
+            $display_state = !empty($r->state_name) ? $r->state_name : ($r->geo_state_name ?: '');
+
+            $partner_display = !empty($r->partner_name) ? $r->partner_name : 'All Partners';
+            $service_display = (!empty($r->service_type) && strtolower($r->service_type) !== 'all') ? $r->service_type : '';
+
+            $rate_badge = '';
+            if ($r->calculation_type === 'flat') {
+                $rate_badge = 'Flat ₹' . number_format($r->flat_charge, 2);
+            } elseif ($r->calculation_type === 'per_kg') {
+                $rate_badge = '₹' . number_format($r->per_kg_rate, 2) . '/kg';
+            } else {
+                $rate_badge = 'Higher of ₹' . number_format($r->min_charge, 2) . ' or ₹' . number_format($r->per_kg_rate, 2) . '/kg';
+            }
+
+            $formatted[] = array(
+                'id'            => $r->id,
+                'location_type' => $r->location_type,
+                'postal_code'   => $value_zip,
+                'display_zip'   => $display_zip,
+                'city_name'     => $display_city,
+                'state_name'    => $display_state,
+                'partner_name'  => $partner_display,
+                'service_type'  => $service_display,
+                'calc_type'     => $r->calculation_type,
+                'rate_summary'  => $rate_badge
+            );
+        }
+
+        return $formatted;
+    }
+
+    /**
      * Calculate International Rate Options for Dashboard Modal Calculator
      */
     public function calculate_international_rate_options($dest_id, $weight, $shipment_type = 'Documents', $partner_id = 0, $service_type = 'All', $pincode = '', $city = '') {

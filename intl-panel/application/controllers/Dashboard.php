@@ -453,5 +453,38 @@ class Dashboard extends CI_Controller {
             ->set_content_type('application/json')
             ->set_output(json_encode($result));
     }
+
+    /**
+     * AJAX endpoint for ODA location suggestions in Rate Calculator
+     * Returns matching ODA postal codes and cities based on destination country and typed characters
+     */
+    public function oda_suggestions_ajax() {
+        $country_id = intval($this->input->get_post('country_id'));
+        $q          = trim($this->input->get_post('q'));
+        $type       = trim($this->input->get_post('type')) ?: 'all';
+
+        if (!$country_id) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'status'  => 'error',
+                    'message' => 'Please select a destination country first.',
+                    'items'   => array()
+                )));
+            return;
+        }
+
+        $items = $this->Master_model->search_oda_suggestions($country_id, $q, $type, 30);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'status'     => 'success',
+                'country_id' => $country_id,
+                'count'      => count($items),
+                'items'      => $items
+            )));
+    }
 }
+
 

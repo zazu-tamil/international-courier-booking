@@ -19,6 +19,7 @@ $route['change-password'] = 'auth/change_password';
 // Dashboards
 $route['dashboard'] = 'dashboard/index';
 $route['dashboard/calculate-rate'] = 'dashboard/calculate_rate_ajax';
+$route['dashboard/oda-suggestions'] = 'dashboard/oda_suggestions_ajax';
 
 // Master Data Modules
 $route['branches'] = 'masters/branches';

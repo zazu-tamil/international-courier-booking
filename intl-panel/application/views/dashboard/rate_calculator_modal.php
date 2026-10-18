@@ -8,6 +8,46 @@
   .modal-backdrop {
     z-index: 1040 !important;
   }
+  /* ODA Suggestions Dropdown */
+  .oda-suggestions-menu {
+    position: absolute;
+    top: 100%;
+    left: 4px;
+    right: 4px;
+    z-index: 1075;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 2px;
+    display: none;
+  }
+  .oda-sugg-header {
+    padding: 6px 10px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .oda-sugg-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.15s ease-in-out;
+  }
+  .oda-sugg-item:last-child {
+    border-bottom: none;
+  }
+  .oda-sugg-item:hover, .oda-sugg-item.active {
+    background-color: #eff6ff !important;
+  }
 </style>
 <div class="modal fade" id="rateCalculatorModal" tabindex="-1" role="dialog" aria-labelledby="rateCalcModalTitle">
   <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1080px;">
@@ -164,11 +204,32 @@
                       Destination Postal Code / City <span class="text-muted" style="font-weight: normal; text-transform: none;">(For ODA detection)</span>
                     </label>
                     <div class="row" style="margin: 0 -4px;">
-                      <div class="col-xs-6" style="padding: 0 4px;">
-                        <input type="text" id="calc_pincode" class="form-control input-sm" placeholder="ZIP / Postal Code" style="text-transform: uppercase;">
+                      <!-- ZIP / Postal Code with Live Suggestions -->
+                      <div class="col-xs-6" style="padding: 0 4px; position: relative;">
+                        <div class="input-group input-group-sm" style="width: 100%;">
+                          <span class="input-group-addon" style="background: #f1f5f9; color: #64748b; font-size: 11px; padding: 4px 8px;" title="Postal Code"><i class="fa fa-map-pin"></i></span>
+                          <input type="text" id="calc_pincode" class="form-control input-sm" placeholder="ZIP / Postal Code" style="text-transform: uppercase;" autocomplete="off">
+                          <span id="pincode_spinner" class="input-group-addon" style="background: #fff; display: none; padding: 4px 8px;"><i class="fa fa-spinner fa-spin text-primary"></i></span>
+                        </div>
+                        <div id="pincode_suggestions_box" class="oda-suggestions-menu"></div>
                       </div>
-                      <div class="col-xs-6" style="padding: 0 4px;">
-                        <input type="text" id="calc_city" class="form-control input-sm" placeholder="City / Area Name">
+
+                      <!-- City / Area Name with Live Suggestions -->
+                      <div class="col-xs-6" style="padding: 0 4px; position: relative;">
+                        <div class="input-group input-group-sm" style="width: 100%;">
+                          <span class="input-group-addon" style="background: #f1f5f9; color: #64748b; font-size: 11px; padding: 4px 8px;" title="City Name"><i class="fa fa-building-o"></i></span>
+                          <input type="text" id="calc_city" class="form-control input-sm" placeholder="City / Area Name" autocomplete="off">
+                          <span id="city_spinner" class="input-group-addon" style="background: #fff; display: none; padding: 4px 8px;"><i class="fa fa-spinner fa-spin text-primary"></i></span>
+                        </div>
+                        <div id="city_suggestions_box" class="oda-suggestions-menu"></div>
+                      </div>
+                    </div>
+
+                    <!-- Live ODA match preview indicator -->
+                    <div id="calc_oda_preview" style="display: none; margin-top: 6px; font-size: 11px; border-radius: 4px; padding: 6px 10px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa fa-exclamation-triangle text-warning"></i> <strong>ODA Surcharge Rule Matched:</strong> <span id="calc_oda_preview_text"></span></span>
+                        <a href="javascript:void(0);" onclick="$('#calc_oda_preview').hide();" style="color: #92400e; text-decoration: none; font-size: 14px; line-height: 1;">&times;</a>
                       </div>
                     </div>
                   </div>
@@ -343,7 +404,106 @@
     $('#calc_state_results').hide();
     $('#calc_state_empty').hide();
     $('#calc_badge_count').hide();
+    $('#calc_oda_preview').hide();
+    $('.oda-suggestions-menu').hide();
   };
+
+  // ==============================================================
+  // ODA LIVE AUTOCOMPLETE SUGGESTION ENGINE
+  // ==============================================================
+  var odaAjaxTimer = null;
+
+  function fetchOdaSuggestions(type, query, targetBoxId, spinnerId) {
+    var countryId = $('#calc_dest_country').val();
+    var $box = $('#' + targetBoxId);
+    var $spinner = $('#' + spinnerId);
+
+    if (!countryId) {
+      $box.html(
+        '<div style="padding: 10px 12px; font-size: 11px; color: #92400e; background: #fffbeb; text-align: center; border-radius: 4px;">' +
+          '<i class="fa fa-exclamation-triangle text-warning"></i> <strong>Please select Destination Country first</strong> to view ODA surcharge locations.' +
+        '</div>'
+      ).show();
+      return;
+    }
+
+    $spinner.show();
+    if (odaAjaxTimer) clearTimeout(odaAjaxTimer);
+
+    odaAjaxTimer = setTimeout(function() {
+      $.ajax({
+        url: '<?php echo site_url("dashboard/oda-suggestions"); ?>',
+        type: 'GET',
+        data: {
+          country_id: countryId,
+          q: query,
+          type: type
+        },
+        dataType: 'json',
+        success: function(res) {
+          $spinner.hide();
+          if (res && res.status === 'success' && res.items && res.items.length > 0) {
+            renderOdaSuggestions(res.items, type, $box, query);
+          } else {
+            var msg = query 
+              ? 'No ODA records found matching "<strong>' + escapeHtml(query) + '</strong>" for this country.<br><span class="text-success"><i class="fa fa-check-circle"></i> Likely standard delivery (no ODA surcharge).</span>'
+              : 'No ODA records configured for this country.<br><span class="text-success"><i class="fa fa-check-circle"></i> Standard delivery rates apply.</span>';
+            $box.html(
+              '<div style="padding: 10px 12px; font-size: 11px; color: #64748b; text-align: center; line-height: 1.5;">' +
+                msg +
+              '</div>'
+            ).show();
+          }
+        },
+        error: function() {
+          $spinner.hide();
+          $box.hide();
+        }
+      });
+    }, 200);
+  }
+
+  function renderOdaSuggestions(items, type, $box, query) {
+    var html = '<div class="oda-sugg-header">' +
+      '<span><i class="fa fa-map-pin text-warning"></i> ODA Surcharge Records</span>' +
+      '<span class="badge" style="background: #e2e8f0; color: #475569; font-size: 10px;">' + items.length + ' rules</span>' +
+    '</div>';
+
+    $.each(items, function(idx, item) {
+      var isZipType = (type === 'zip');
+      var primary = isZipType ? (item.display_zip || item.postal_code) : (item.city_name || item.display_zip);
+      var secondary = isZipType 
+        ? [item.city_name, item.state_name].filter(Boolean).join(', ')
+        : [item.state_name, (item.display_zip ? 'ZIP: ' + item.display_zip : '')].filter(Boolean).join(' • ');
+
+      html += '<div class="oda-sugg-item" ' +
+        'data-zip="' + escapeHtml(item.postal_code || item.display_zip || '') + '" ' +
+        'data-city="' + escapeHtml(item.city_name || '') + '" ' +
+        'data-state="' + escapeHtml(item.state_name || '') + '" ' +
+        'data-partner="' + escapeHtml(item.partner_name || '') + '" ' +
+        'data-service="' + escapeHtml(item.service_type || '') + '" ' +
+        'data-rate="' + escapeHtml(item.rate_summary || '') + '">' +
+        '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+          '<span style="font-weight: 700; color: #0f172a; font-size: 12px;"><i class="fa ' + (isZipType ? 'fa-map-pin' : 'fa-building-o') + ' text-primary" style="font-size: 10px; margin-right: 4px;"></i>' + escapeHtml(primary) + '</span>' +
+          '<span class="label label-warning" style="font-size: 9px; padding: 2px 5px; font-weight: 700;"><i class="fa fa-exclamation-triangle"></i> ODA</span>' +
+        '</div>' +
+        '<div style="font-size: 11px; color: #64748b; margin-top: 2px; display: flex; justify-content: space-between; align-items: center; gap: 6px;">' +
+          '<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (secondary ? escapeHtml(secondary) : '<span class="text-muted">General area</span>') + '</span>' +
+          '<span class="label label-default" style="font-size: 9px; flex-shrink: 0; background: #e2e8f0; color: #334155;">' + escapeHtml(item.partner_name) + '</span>' +
+        '</div>' +
+        '<div style="font-size: 10px; color: #b45309; margin-top: 2px; font-weight: 600;">' +
+          '<i class="fa fa-tag"></i> ' + escapeHtml(item.rate_summary) +
+        '</div>' +
+      '</div>';
+    });
+
+    $box.html(html).show();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return $('<div>').text(str).html();
+  }
 
   // Run AJAX rate calculation
   window.runRateCalculation = function() {
@@ -546,6 +706,95 @@
     $(document).on('click', '#btnOpenRateCalcModal, #navRateCalcBtn, .btn-trigger-rate-calc', function(e) {
       e.preventDefault();
       window.openRateCalculatorModal(e);
+    });
+
+    // ==============================================================
+    // LIVE SUGGESTION LISTENERS FOR ZIP & CITY INPUTS
+    // ==============================================================
+
+    // ZIP input live typing and focus
+    $('#calc_pincode').on('input focus', function() {
+      var q = $(this).val().trim();
+      fetchOdaSuggestions('zip', q, 'pincode_suggestions_box', 'pincode_spinner');
+    });
+
+    // City input live typing and focus
+    $('#calc_city').on('input focus', function() {
+      var q = $(this).val().trim();
+      fetchOdaSuggestions('city', q, 'city_suggestions_box', 'city_spinner');
+    });
+
+    // Handle suggestion item click (populates inputs and sets preview badge)
+    $(document).on('click', '.oda-sugg-item', function(e) {
+      e.preventDefault();
+      var zip = $(this).attr('data-zip');
+      var city = $(this).attr('data-city');
+      var partner = $(this).attr('data-partner');
+      var rate = $(this).attr('data-rate');
+
+      if (zip) $('#calc_pincode').val(zip);
+      if (city) $('#calc_city').val(city);
+
+      var hintText = (zip ? 'ZIP ' + zip + ' ' : '') + (city ? '(' + city + ') ' : '') + '• Carrier: ' + partner + ' • ' + rate;
+      $('#calc_oda_preview_text').text(hintText);
+      $('#calc_oda_preview').slideDown();
+
+      $('.oda-suggestions-menu').hide();
+    });
+
+    // Keyboard navigation (Arrow Down, Arrow Up, Enter, Escape)
+    $('#calc_pincode, #calc_city').on('keydown', function(e) {
+      var isZip = (this.id === 'calc_pincode');
+      var $box = isZip ? $('#pincode_suggestions_box') : $('#city_suggestions_box');
+      if (!$box.is(':visible')) return;
+
+      var $items = $box.find('.oda-sugg-item');
+      if (!$items.length) return;
+
+      var $active = $items.filter('.active');
+      var idx = $items.index($active);
+
+      if (e.keyCode === 40) { // Arrow Down
+        e.preventDefault();
+        if (idx < $items.length - 1) {
+          $items.removeClass('active');
+          $items.eq(idx + 1).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+        } else {
+          $items.removeClass('active');
+          $items.eq(0).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+        }
+      } else if (e.keyCode === 38) { // Arrow Up
+        e.preventDefault();
+        if (idx > 0) {
+          $items.removeClass('active');
+          $items.eq(idx - 1).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+        } else {
+          $items.removeClass('active');
+          $items.eq($items.length - 1).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+        }
+      } else if (e.keyCode === 13) { // Enter key
+        if ($active.length) {
+          e.preventDefault();
+          $active.trigger('click');
+        }
+      } else if (e.keyCode === 27) { // Escape key
+        $box.hide();
+      }
+    });
+
+    // Clear inputs and ODA preview when Destination Country changes
+    $('#calc_dest_country').on('change', function() {
+      $('#calc_pincode').val('');
+      $('#calc_city').val('');
+      $('#calc_oda_preview').hide();
+      $('.oda-suggestions-menu').hide();
+    });
+
+    // Close suggestion menus when clicking outside
+    $(document).on('click', function(e) {
+      if (!$(e.target).closest('#calc_pincode, #calc_city, .oda-suggestions-menu').length) {
+        $('.oda-suggestions-menu').hide();
+      }
     });
   });
 })();
