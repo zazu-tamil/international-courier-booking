@@ -2239,13 +2239,39 @@ class Masters extends CI_Controller {
         ini_set('memory_limit', '512M');
         set_time_limit(600);
 
-        if (empty($_FILES['excel_file']['name'])) {
+        // Support both 'oda_file' and 'excel_file' input field names
+        $file_key = null;
+        if (!empty($_FILES['oda_file']['name'])) {
+            $file_key = 'oda_file';
+        } elseif (!empty($_FILES['excel_file']['name'])) {
+            $file_key = 'excel_file';
+        }
+
+        if (!$file_key) {
             $this->session->set_flashdata('error', 'Please choose an Excel or CSV file to import.');
             redirect('oda-charges');
         }
 
-        $file_name = $_FILES['excel_file']['name'];
-        $tmp_file  = $_FILES['excel_file']['tmp_name'];
+        // Validate upload error code
+        if ($_FILES[$file_key]['error'] !== UPLOAD_ERR_OK) {
+            $upload_errors = array(
+                UPLOAD_ERR_INI_SIZE   => 'The uploaded file exceeds the upload_max_filesize limit on the server.',
+                UPLOAD_ERR_FORM_SIZE  => 'The uploaded file exceeds the maximum file size specified in the form.',
+                UPLOAD_ERR_PARTIAL    => 'The uploaded file was only partially uploaded.',
+                UPLOAD_ERR_NO_FILE    => 'Please choose an Excel or CSV file to import.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder on the server.',
+                UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+                UPLOAD_ERR_EXTENSION  => 'A PHP extension stopped the file upload.'
+            );
+            $err_msg = isset($upload_errors[$_FILES[$file_key]['error']]) 
+                ? $upload_errors[$_FILES[$file_key]['error']] 
+                : 'File upload error code: ' . $_FILES[$file_key]['error'];
+            $this->session->set_flashdata('error', $err_msg);
+            redirect('oda-charges');
+        }
+
+        $file_name = $_FILES[$file_key]['name'];
+        $tmp_file  = $_FILES[$file_key]['tmp_name'];
         $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
 
         $valid_extensions = array('xls', 'xlsx', 'csv');
@@ -2279,11 +2305,12 @@ class Masters extends CI_Controller {
 
             foreach ($header_row as $idx => $heading) {
                 if ($heading === null) continue;
-                $norm = strtolower(trim(str_replace(array(' ', '_', '-'), '', $heading)));
+                $norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$heading)));
                 switch ($norm) {
                     case 'destinationcountry':
                     case 'country':
                     case 'countryname':
+                    case 'destcountry':
                         $col_map['destination_country'] = $idx;
                         break;
                     case 'courierpartner':
@@ -2343,16 +2370,22 @@ class Masters extends CI_Controller {
                     case 'mincharge':
                     case 'minchargeinr':
                     case 'minimumcharge':
+                    case 'minimumchargeinr':
                         $col_map['min_charge'] = $idx;
                         break;
                     case 'perkgrate':
+                    case 'perkgrateinr':
                     case 'perkg':
+                    case 'perkginr':
                     case 'kgrate':
                         $col_map['per_kg_rate'] = $idx;
                         break;
                     case 'flatcharge':
+                    case 'flatchargeinr':
                     case 'flatfee':
+                    case 'flatfeeinr':
                     case 'flatrate':
+                    case 'flatrateinr':
                         $col_map['flat_charge'] = $idx;
                         break;
                     case 'status':

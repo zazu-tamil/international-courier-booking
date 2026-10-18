@@ -1431,14 +1431,19 @@ class Master_model extends CI_Model {
         $all_countries = $this->db->select('id, country_name, country_code')->get('countries')->result();
         $country_map = array();
         foreach ($all_countries as $c) {
-            $country_map[strtolower(trim($c->country_name))] = $c->id;
-            $country_map[strtolower(trim($c->country_code))] = $c->id;
+            $c_name_lower = strtolower(trim($c->country_name));
+            $c_code_lower = strtolower(trim($c->country_code));
+            $country_map[$c_name_lower] = $c->id;
+            $country_map[$c_code_lower] = $c->id;
+            $country_map[preg_replace('/[^a-z0-9]/', '', $c_name_lower)] = $c->id;
         }
 
         $all_partners = $this->db->select('id, partner_name')->get('courier_partners')->result();
         $partner_map = array();
         foreach ($all_partners as $p) {
-            $partner_map[strtolower(trim($p->partner_name))] = $p->id;
+            $p_name_lower = strtolower(trim($p->partner_name));
+            $partner_map[$p_name_lower] = $p->id;
+            $partner_map[preg_replace('/[^a-z0-9]/', '', $p_name_lower)] = $p->id;
         }
 
         $inserted = 0;
@@ -1452,19 +1457,27 @@ class Master_model extends CI_Model {
             $country_raw = isset($row['destination_country']) ? trim($row['destination_country']) : (isset($row['country']) ? trim($row['country']) : '');
             $partner_raw = isset($row['courier_partner']) ? trim($row['courier_partner']) : (isset($row['partner']) ? trim($row['partner']) : '');
 
-            $country_key = strtolower($country_raw);
-            if (!isset($country_map[$country_key])) {
+            $country_key   = strtolower($country_raw);
+            $country_clean = preg_replace('/[^a-z0-9]/', '', $country_key);
+
+            if (isset($country_map[$country_key])) {
+                $dest_country_id = $country_map[$country_key];
+            } elseif ($country_clean && isset($country_map[$country_clean])) {
+                $dest_country_id = $country_map[$country_clean];
+            } else {
                 $errors[] = "Row {$row_num}: Unknown destination country '{$country_raw}'.";
                 $skipped++;
                 continue;
             }
-            $dest_country_id = $country_map[$country_key];
 
             $courier_partner_id = 0; // 0 = All Partners
             if (!empty($partner_raw) && strtolower($partner_raw) !== 'all' && strtolower($partner_raw) !== 'all partners') {
-                $partner_key = strtolower($partner_raw);
+                $partner_key   = strtolower($partner_raw);
+                $partner_clean = preg_replace('/[^a-z0-9]/', '', $partner_key);
                 if (isset($partner_map[$partner_key])) {
                     $courier_partner_id = $partner_map[$partner_key];
+                } elseif ($partner_clean && isset($partner_map[$partner_clean])) {
+                    $courier_partner_id = $partner_map[$partner_clean];
                 }
             }
 
