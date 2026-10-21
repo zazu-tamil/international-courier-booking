@@ -1049,6 +1049,11 @@ class Master_model extends CI_Model {
               `id` INT(11) NOT NULL AUTO_INCREMENT,
               `destination_country_id` INT(11) NOT NULL COMMENT 'References countries.id',
               `courier_partner_id` INT(11) NOT NULL DEFAULT 0 COMMENT 'References courier_partners.id (0 = All Partners)',
+              `service_type` VARCHAR(50) NOT NULL DEFAULT 'All',
+              `tier_zone` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Tier / Zone classification',
+              `courier_mode` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Courier Mode',
+              `commercial_mode` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Commercial Mode',
+              `is_non_deliverable` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Non-Deliverable Location, 0 = Deliverable (ODA)',
               `location_type` ENUM('pincode', 'pincode_range', 'city') NOT NULL DEFAULT 'pincode',
               `postal_code` VARCHAR(30) NULL COMMENT 'Single postal code or exact match',
               `postal_code_from` VARCHAR(30) NULL COMMENT 'Starting postal code in range',
@@ -1067,6 +1072,11 @@ class Master_model extends CI_Model {
               PRIMARY KEY (`id`),
               KEY `idx_oda_dest_country` (`destination_country_id`),
               KEY `idx_oda_partner` (`courier_partner_id`),
+              KEY `idx_oda_service_type` (`service_type`),
+              KEY `idx_oda_tier_zone` (`tier_zone`),
+              KEY `idx_oda_courier_mode` (`courier_mode`),
+              KEY `idx_oda_commercial_mode` (`commercial_mode`),
+              KEY `idx_oda_is_non_deliverable` (`is_non_deliverable`),
               KEY `idx_oda_postal` (`postal_code`),
               KEY `idx_oda_postal_range` (`postal_code_from`, `postal_code_to`),
               KEY `idx_oda_city` (`city_name`),
@@ -1080,6 +1090,30 @@ class Master_model extends CI_Model {
         $col_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'service_type'");
         if (!$col_check || $col_check->num_rows() == 0) {
             $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `service_type` VARCHAR(50) NOT NULL DEFAULT 'All' AFTER `courier_partner_id`, ADD KEY `idx_oda_service_type` (`service_type`)");
+        }
+
+        // Ensure tier_zone column exists
+        $tier_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'tier_zone'");
+        if (!$tier_check || $tier_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `tier_zone` VARCHAR(100) NULL DEFAULT NULL AFTER `service_type`, ADD KEY `idx_oda_tier_zone` (`tier_zone`)");
+        }
+
+        // Ensure courier_mode column exists
+        $cm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'courier_mode'");
+        if (!$cm_check || $cm_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `courier_mode` VARCHAR(100) NULL DEFAULT NULL AFTER `tier_zone`, ADD KEY `idx_oda_courier_mode` (`courier_mode`)");
+        }
+
+        // Ensure commercial_mode column exists
+        $comm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'commercial_mode'");
+        if (!$comm_check || $comm_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `commercial_mode` VARCHAR(100) NULL DEFAULT NULL AFTER `courier_mode`, ADD KEY `idx_oda_commercial_mode` (`commercial_mode`)");
+        }
+
+        // Ensure is_non_deliverable column exists
+        $nd_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'is_non_deliverable'");
+        if (!$nd_check || $nd_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `is_non_deliverable` TINYINT(1) NOT NULL DEFAULT 0 AFTER `commercial_mode`, ADD KEY `idx_oda_is_non_deliverable` (`is_non_deliverable`)");
         }
 
         // Ensure geo_location_id column exists
@@ -1108,12 +1142,12 @@ class Master_model extends CI_Model {
 
             if (!empty($countries)) {
                 $sample_oda = array(
-                    array('United Arab Emirates', 'Aramex', 'All', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', 0.00, 0.00, 1500.00),
-                    array('United Arab Emirates', 'DHL Express', 'Express', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', 1800.00, 35.00, 0.00),
-                    array('United States', 'DHL Express', 'All', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', 2100.00, 42.00, 0.00),
-                    array('United States', 'FedEx', 'All', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', 2150.00, 45.00, 0.00),
-                    array('United Kingdom', 'DHL Express', 'All', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', 1850.00, 35.00, 0.00),
-                    array('Australia', 'FedEx', 'All', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', 2200.00, 48.00, 0.00)
+                    array('United Arab Emirates', 'Aramex', 'All', 'Tier 1', 'Air', 'All', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', 0.00, 0.00, 1500.00),
+                    array('United Arab Emirates', 'DHL Express', 'Express', 'Zone A', 'Express', 'Commercial', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', 1800.00, 35.00, 0.00),
+                    array('United States', 'DHL Express', 'All', 'Zone 4', 'Express', 'Non-Commercial', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', 2100.00, 42.00, 0.00),
+                    array('United States', 'FedEx', 'All', 'Remote Zone', 'Surface', 'Commercial', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', 2150.00, 45.00, 0.00),
+                    array('United Kingdom', 'DHL Express', 'All', 'Zone 2', 'Air', 'All', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', 1850.00, 35.00, 0.00),
+                    array('Australia', 'FedEx', 'All', 'Outback Tier 3', 'Economy', 'Commercial', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', 2200.00, 48.00, 0.00)
                 );
 
                 foreach ($sample_oda as $item) {
@@ -1123,16 +1157,19 @@ class Master_model extends CI_Model {
                         'destination_country_id' => $c_id,
                         'courier_partner_id'     => $p_id,
                         'service_type'           => $item[2],
-                        'location_type'          => $item[3],
-                        'postal_code'            => $item[4] ? $item[4] : NULL,
-                        'postal_code_from'       => $item[5] ? $item[5] : NULL,
-                        'postal_code_to'         => $item[6] ? $item[6] : NULL,
-                        'city_name'              => $item[7] ? $item[7] : NULL,
-                        'state_name'             => $item[8] ? $item[8] : NULL,
-                        'calculation_type'       => $item[9],
-                        'min_charge'             => $item[10],
-                        'per_kg_rate'            => $item[11],
-                        'flat_charge'            => $item[12],
+                        'tier_zone'              => $item[3],
+                        'courier_mode'           => $item[4],
+                        'commercial_mode'        => $item[5],
+                        'location_type'          => $item[6],
+                        'postal_code'            => $item[7] ? $item[7] : NULL,
+                        'postal_code_from'       => $item[8] ? $item[8] : NULL,
+                        'postal_code_to'         => $item[9] ? $item[9] : NULL,
+                        'city_name'              => $item[10] ? $item[10] : NULL,
+                        'state_name'             => $item[11] ? $item[11] : NULL,
+                        'calculation_type'       => $item[12],
+                        'min_charge'             => $item[13],
+                        'per_kg_rate'            => $item[14],
+                        'flat_charge'            => $item[15],
                         'status'                 => 'Active',
                         'created_at'             => date('Y-m-d H:i:s')
                     ));
@@ -1161,6 +1198,9 @@ class Master_model extends CI_Model {
             $this->db->like('c.country_name', $search);
             $this->db->or_like('p.partner_name', $search);
             $this->db->or_like('o.service_type', $search);
+            $this->db->or_like('o.tier_zone', $search);
+            $this->db->or_like('o.courier_mode', $search);
+            $this->db->or_like('o.commercial_mode', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
@@ -1177,11 +1217,15 @@ class Master_model extends CI_Model {
             1 => 'c.country_name',
             2 => 'p.partner_name',
             3 => 'o.service_type',
-            4 => 'o.location_type',
-            5 => 'o.postal_code',
-            6 => 'o.calculation_type',
-            7 => 'o.status',
-            8 => 'o.id'
+            4 => 'o.tier_zone',
+            5 => 'o.courier_mode',
+            6 => 'o.commercial_mode',
+            7 => 'o.is_non_deliverable',
+            8 => 'o.location_type',
+            9 => 'o.postal_code',
+            10 => 'o.calculation_type',
+            11 => 'o.status',
+            12 => 'o.id'
         );
         $order_by_col = isset($col_map[$order_col]) ? $col_map[$order_col] : 'o.id';
         $this->db->order_by($order_by_col, $order_dir);
@@ -1214,6 +1258,9 @@ class Master_model extends CI_Model {
             $this->db->like('c.country_name', $search);
             $this->db->or_like('p.partner_name', $search);
             $this->db->or_like('o.service_type', $search);
+            $this->db->or_like('o.tier_zone', $search);
+            $this->db->or_like('o.courier_mode', $search);
+            $this->db->or_like('o.commercial_mode', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
@@ -1236,6 +1283,18 @@ class Master_model extends CI_Model {
         if (!empty($filters['service_type']) && $filters['service_type'] !== 'All') {
             $this->db->where('o.service_type', $filters['service_type']);
         }
+        if (!empty($filters['tier_zone'])) {
+            $this->db->where('o.tier_zone', $filters['tier_zone']);
+        }
+        if (!empty($filters['courier_mode'])) {
+            $this->db->where('o.courier_mode', $filters['courier_mode']);
+        }
+        if (!empty($filters['commercial_mode'])) {
+            $this->db->where('o.commercial_mode', $filters['commercial_mode']);
+        }
+        if (isset($filters['is_non_deliverable']) && $filters['is_non_deliverable'] !== '') {
+            $this->db->where('o.is_non_deliverable', intval($filters['is_non_deliverable']));
+        }
         if (!empty($filters['location_type'])) {
             $this->db->where('o.location_type', $filters['location_type']);
         }
@@ -1245,6 +1304,72 @@ class Master_model extends CI_Model {
         if (!empty($filters['status'])) {
             $this->db->where('o.status', $filters['status']);
         }
+    }
+
+    public function get_distinct_oda_tier_zones() {
+        $this->ensure_oda_charges_schema();
+        $this->db->distinct();
+        $this->db->select('tier_zone');
+        $this->db->from('master_oda_charges');
+        $this->db->where('deleted_at IS NULL');
+        $this->db->where('tier_zone IS NOT NULL');
+        $this->db->where('tier_zone !=', '');
+        $this->db->order_by('tier_zone', 'ASC');
+        $q = $this->db->get();
+        if (!$q || $q->num_rows() === 0) {
+            return array();
+        }
+        $list = array();
+        foreach ($q->result() as $row) {
+            if (!empty($row->tier_zone)) {
+                $list[] = trim($row->tier_zone);
+            }
+        }
+        return array_values(array_unique($list));
+    }
+
+    public function get_distinct_oda_courier_modes() {
+        $this->ensure_oda_charges_schema();
+        $this->db->distinct();
+        $this->db->select('courier_mode');
+        $this->db->from('master_oda_charges');
+        $this->db->where('deleted_at IS NULL');
+        $this->db->where('courier_mode IS NOT NULL');
+        $this->db->where('courier_mode !=', '');
+        $this->db->order_by('courier_mode', 'ASC');
+        $q = $this->db->get();
+        if (!$q || $q->num_rows() === 0) {
+            return array();
+        }
+        $list = array();
+        foreach ($q->result() as $row) {
+            if (!empty($row->courier_mode)) {
+                $list[] = trim($row->courier_mode);
+            }
+        }
+        return array_values(array_unique($list));
+    }
+
+    public function get_distinct_oda_commercial_modes() {
+        $this->ensure_oda_charges_schema();
+        $this->db->distinct();
+        $this->db->select('commercial_mode');
+        $this->db->from('master_oda_charges');
+        $this->db->where('deleted_at IS NULL');
+        $this->db->where('commercial_mode IS NOT NULL');
+        $this->db->where('commercial_mode !=', '');
+        $this->db->order_by('commercial_mode', 'ASC');
+        $q = $this->db->get();
+        if (!$q || $q->num_rows() === 0) {
+            return array();
+        }
+        $list = array();
+        foreach ($q->result() as $row) {
+            if (!empty($row->commercial_mode)) {
+                $list[] = trim($row->commercial_mode);
+            }
+        }
+        return array_values(array_unique($list));
     }
 
     public function get_oda_charge_by_id($id) {
@@ -1330,6 +1455,10 @@ class Master_model extends CI_Model {
             'destination_country_id' => intval($data['destination_country_id']),
             'courier_partner_id'     => intval($data['courier_partner_id']),
             'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
+            'tier_zone'              => !empty($data['tier_zone']) ? trim($data['tier_zone']) : NULL,
+            'courier_mode'           => !empty($data['courier_mode']) ? trim($data['courier_mode']) : NULL,
+            'commercial_mode'        => !empty($data['commercial_mode']) ? trim($data['commercial_mode']) : NULL,
+            'is_non_deliverable'     => !empty($data['is_non_deliverable']) ? 1 : 0,
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
             'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
             'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
@@ -1360,6 +1489,10 @@ class Master_model extends CI_Model {
             'destination_country_id' => intval($data['destination_country_id']),
             'courier_partner_id'     => intval($data['courier_partner_id']),
             'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
+            'tier_zone'              => !empty($data['tier_zone']) ? trim($data['tier_zone']) : NULL,
+            'courier_mode'           => !empty($data['courier_mode']) ? trim($data['courier_mode']) : NULL,
+            'commercial_mode'        => !empty($data['commercial_mode']) ? trim($data['commercial_mode']) : NULL,
+            'is_non_deliverable'     => !empty($data['is_non_deliverable']) ? 1 : 0,
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
             'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
             'postal_code'            => !empty($data['postal_code']) ? trim($data['postal_code']) : NULL,
@@ -1486,6 +1619,22 @@ class Master_model extends CI_Model {
                 $service_type = 'All';
             }
 
+            $tier_zone       = isset($row['tier_zone']) ? trim($row['tier_zone']) : (isset($row['tier']) ? trim($row['tier']) : (isset($row['zone']) ? trim($row['zone']) : NULL));
+            $courier_mode    = isset($row['courier_mode']) ? trim($row['courier_mode']) : (isset($row['mode']) ? trim($row['mode']) : NULL);
+            $commercial_mode = isset($row['commercial_mode']) ? trim($row['commercial_mode']) : NULL;
+
+            $is_non_deliv = 0;
+            if (isset($row['is_non_deliverable'])) {
+                $nd_raw = strtolower(trim($row['is_non_deliverable']));
+                $is_non_deliv = in_array($nd_raw, array('1', 'yes', 'y', 'true', 'non-deliverable', 'non deliverable')) ? 1 : 0;
+            } elseif (isset($row['non_deliverable_location'])) {
+                $nd_raw = strtolower(trim($row['non_deliverable_location']));
+                $is_non_deliv = in_array($nd_raw, array('1', 'yes', 'y', 'true', 'non-deliverable', 'non deliverable')) ? 1 : 0;
+            } elseif (isset($row['non_deliverable'])) {
+                $nd_raw = strtolower(trim($row['non_deliverable']));
+                $is_non_deliv = in_array($nd_raw, array('1', 'yes', 'y', 'true', 'non-deliverable', 'non deliverable')) ? 1 : 0;
+            }
+
             $loc_type = isset($row['location_type']) ? strtolower(trim($row['location_type'])) : 'pincode';
             if (!in_array($loc_type, array('pincode', 'pincode_range', 'city'))) {
                 $loc_type = 'pincode';
@@ -1540,6 +1689,10 @@ class Master_model extends CI_Model {
                 'destination_country_id' => $dest_country_id,
                 'courier_partner_id'     => $courier_partner_id,
                 'service_type'           => $service_type,
+                'tier_zone'              => !empty($tier_zone) ? $tier_zone : NULL,
+                'courier_mode'           => !empty($courier_mode) ? $courier_mode : NULL,
+                'commercial_mode'        => !empty($commercial_mode) ? $commercial_mode : NULL,
+                'is_non_deliverable'     => $is_non_deliv,
                 'location_type'          => $loc_type,
                 'geo_location_id'        => $geo_location_id,
                 'postal_code'            => $postal_code,
@@ -1766,6 +1919,10 @@ class Master_model extends CI_Model {
                 'is_oda'             => TRUE,
                 'rule_id'            => $matched_rule->id,
                 'service_type'       => !empty($matched_rule->service_type) ? $matched_rule->service_type : 'All',
+                'tier_zone'          => !empty($matched_rule->tier_zone) ? $matched_rule->tier_zone : NULL,
+                'courier_mode'       => !empty($matched_rule->courier_mode) ? $matched_rule->courier_mode : NULL,
+                'commercial_mode'    => !empty($matched_rule->commercial_mode) ? $matched_rule->commercial_mode : NULL,
+                'is_non_deliverable' => !empty($matched_rule->is_non_deliverable) ? TRUE : FALSE,
                 'geo_location_id'    => !empty($matched_rule->geo_location_id) ? $matched_rule->geo_location_id : NULL,
                 'partner_name'       => !empty($matched_rule->courier_partner_name) ? $matched_rule->courier_partner_name : 'All Courier Partners',
                 'location_matched'   => $match_reason,
@@ -1778,7 +1935,7 @@ class Master_model extends CI_Model {
             );
         }
 
-        return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+        return array('is_oda' => FALSE, 'oda_amount' => 0.00, 'is_non_deliverable' => FALSE);
     }
 
     /**
@@ -1796,7 +1953,7 @@ class Master_model extends CI_Model {
             return array();
         }
 
-        $this->db->select('o.id, o.destination_country_id, o.courier_partner_id, o.service_type, o.location_type, o.postal_code, o.postal_code_from, o.postal_code_to, o.city_name, o.state_name, o.calculation_type, o.min_charge, o.per_kg_rate, o.flat_charge, o.status, p.partner_name, c.country_name, c.country_code, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.district_name as geo_district_name, g.state_name as geo_state_name');
+        $this->db->select('o.id, o.destination_country_id, o.courier_partner_id, o.service_type, o.tier_zone, o.courier_mode, o.commercial_mode, o.is_non_deliverable, o.location_type, o.postal_code, o.postal_code_from, o.postal_code_to, o.city_name, o.state_name, o.calculation_type, o.min_charge, o.per_kg_rate, o.flat_charge, o.status, p.partner_name, c.country_name, c.country_code, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.district_name as geo_district_name, g.state_name as geo_state_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');

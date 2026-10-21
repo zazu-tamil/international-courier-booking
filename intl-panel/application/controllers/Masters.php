@@ -1794,6 +1794,10 @@ class Masters extends CI_Controller {
             'destination_country_id' => $this->input->post_get('dest_country'),
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
+            'tier_zone'              => $this->input->post_get('tier_zone'),
+            'courier_mode'           => $this->input->post_get('courier_mode'),
+            'commercial_mode'        => $this->input->post_get('commercial_mode'),
+            'is_non_deliverable'     => $this->input->post_get('is_non_deliverable'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
             'status'                 => $this->input->post_get('status')
@@ -1803,6 +1807,9 @@ class Masters extends CI_Controller {
         $data['countries']        = $this->Master_model->get_countries();
         $data['courier_partners'] = $this->Master_model->get_courier_partners();
         $data['service_types']    = $this->Master_model->get_service_types();
+        $data['tier_zones']       = $this->Master_model->get_distinct_oda_tier_zones();
+        $data['courier_modes']    = $this->Master_model->get_distinct_oda_courier_modes();
+        $data['commercial_modes'] = $this->Master_model->get_distinct_oda_commercial_modes();
         $data['filters']          = $filters;
 
         // Statistics
@@ -1839,6 +1846,10 @@ class Masters extends CI_Controller {
             'destination_country_id' => $this->input->post_get('dest_country'),
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
+            'tier_zone'              => $this->input->post_get('tier_zone'),
+            'courier_mode'           => $this->input->post_get('courier_mode'),
+            'commercial_mode'        => $this->input->post_get('commercial_mode'),
+            'is_non_deliverable'     => $this->input->post_get('is_non_deliverable'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
             'status'                 => $this->input->post_get('status')
@@ -1863,6 +1874,22 @@ class Masters extends CI_Controller {
             $service_badge = (!empty($r->service_type) && strtolower($r->service_type) !== 'all')
                 ? '<span class="label label-warning" style="font-size:11px;"><i class="fa fa-plane"></i> ' . htmlspecialchars($r->service_type) . '</span>'
                 : '<span class="label label-default" style="font-size:11px;"><i class="fa fa-asterisk"></i> All Services</span>';
+
+            $tier_zone_html = !empty($r->tier_zone)
+                ? '<span class="label label-primary" style="font-size:11px;"><i class="fa fa-cubes"></i> ' . htmlspecialchars($r->tier_zone) . '</span>'
+                : '<span class="text-muted" style="font-size:11px;">-</span>';
+
+            $courier_mode_html = !empty($r->courier_mode)
+                ? '<span class="label label-info" style="font-size:11px;"><i class="fa fa-paper-plane-o"></i> ' . htmlspecialchars($r->courier_mode) . '</span>'
+                : '<span class="text-muted" style="font-size:11px;">-</span>';
+
+            $commercial_mode_html = !empty($r->commercial_mode)
+                ? '<span class="label label-default" style="font-size:11px;"><i class="fa fa-briefcase"></i> ' . htmlspecialchars($r->commercial_mode) . '</span>'
+                : '<span class="text-muted" style="font-size:11px;">-</span>';
+
+            $non_deliv_badge = (!empty($r->is_non_deliverable) && intval($r->is_non_deliverable) === 1)
+                ? '<span class="label label-danger" style="font-size:11px;" title="Non-Deliverable Location (No Service)"><i class="fa fa-ban"></i> Yes</span>'
+                : '<span class="label label-success" style="font-size:11px;" title="Deliverable Area (ODA Surcharge)"><i class="fa fa-check"></i> No</span>';
 
             // Location display
             $loc_type_badge = '';
@@ -1919,6 +1946,10 @@ class Masters extends CI_Controller {
                 $country_badge,
                 $partner_badge,
                 $service_badge,
+                $tier_zone_html,
+                $courier_mode_html,
+                $commercial_mode_html,
+                $non_deliv_badge,
                 $loc_type_badge,
                 $loc_detail,
                 $calc_badge . '<br>' . $charge_detail,
@@ -2017,6 +2048,10 @@ class Masters extends CI_Controller {
             'destination_country_id' => $this->input->post('destination_country_id'),
             'courier_partner_id'     => $this->input->post('courier_partner_id'),
             'service_type'           => $this->input->post('service_type') ?: 'All',
+            'tier_zone'              => $this->input->post('tier_zone') ? trim($this->input->post('tier_zone')) : NULL,
+            'courier_mode'           => $this->input->post('courier_mode') ? trim($this->input->post('courier_mode')) : NULL,
+            'commercial_mode'        => $this->input->post('commercial_mode') ? trim($this->input->post('commercial_mode')) : NULL,
+            'is_non_deliverable'     => intval($this->input->post('is_non_deliverable')) ? 1 : 0,
             'location_type'          => $this->input->post('location_type'),
             'geo_location_id'        => $this->input->post('geo_location_id') ? intval($this->input->post('geo_location_id')) : NULL,
             'postal_code'            => $this->input->post('postal_code'),
@@ -2077,6 +2112,9 @@ class Masters extends CI_Controller {
             'destination_country_id' => $this->input->post_get('dest_country'),
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
+            'tier_zone'              => $this->input->post_get('tier_zone'),
+            'courier_mode'           => $this->input->post_get('courier_mode'),
+            'commercial_mode'        => $this->input->post_get('commercial_mode'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
             'status'                 => $this->input->post_get('status')
@@ -2094,18 +2132,22 @@ class Masters extends CI_Controller {
             'B1' => 'Destination Country',
             'C1' => 'Courier Partner',
             'D1' => 'Service Type',
-            'E1' => 'Location Type',
-            'F1' => 'Geo Location ID',
-            'G1' => 'Postal Code',
-            'H1' => 'Postal Code From',
-            'I1' => 'Postal Code To',
-            'J1' => 'City Name',
-            'K1' => 'State Name',
-            'L1' => 'Calculation Type',
-            'M1' => 'Min Charge (INR)',
-            'N1' => 'Per KG Rate (INR)',
-            'O1' => 'Flat Charge (INR)',
-            'P1' => 'Status'
+            'E1' => 'Tier / Zone',
+            'F1' => 'Courier Mode',
+            'G1' => 'Commercial Mode',
+            'H1' => 'Non Deliverable Location',
+            'I1' => 'Location Type',
+            'J1' => 'Geo Location ID',
+            'K1' => 'Postal Code',
+            'L1' => 'Postal Code From',
+            'M1' => 'Postal Code To',
+            'N1' => 'City Name',
+            'O1' => 'State Name',
+            'P1' => 'Calculation Type',
+            'Q1' => 'Min Charge (INR)',
+            'R1' => 'Per KG Rate (INR)',
+            'S1' => 'Flat Charge (INR)',
+            'T1' => 'Status'
         );
 
         foreach ($headers as $cell => $val) {
@@ -2120,7 +2162,7 @@ class Masters extends CI_Controller {
             ),
             'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
         );
-        $sheet->getStyle('A1:P1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
 
         $row_num = 2;
         foreach ($records as $r) {
@@ -2128,22 +2170,26 @@ class Masters extends CI_Controller {
             $sheet->setCellValue('B' . $row_num, $r['destination_country']);
             $sheet->setCellValue('C' . $row_num, !empty($r['courier_partner_name']) ? $r['courier_partner_name'] : 'All Partners');
             $sheet->setCellValue('D' . $row_num, !empty($r['service_type']) ? $r['service_type'] : 'All');
-            $sheet->setCellValue('E' . $row_num, $r['location_type']);
-            $sheet->setCellValue('F' . $row_num, !empty($r['geo_location_id']) ? $r['geo_location_id'] : '');
-            $sheet->setCellValueExplicit('G' . $row_num, $r['postal_code'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit('H' . $row_num, $r['postal_code_from'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit('I' . $row_num, $r['postal_code_to'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValue('J' . $row_num, $r['city_name'] ?: '');
-            $sheet->setCellValue('K' . $row_num, $r['state_name'] ?: '');
-            $sheet->setCellValue('L' . $row_num, $r['calculation_type']);
-            $sheet->setCellValue('M' . $row_num, $r['min_charge']);
-            $sheet->setCellValue('N' . $row_num, $r['per_kg_rate']);
-            $sheet->setCellValue('O' . $row_num, $r['flat_charge']);
-            $sheet->setCellValue('P' . $row_num, $r['status']);
+            $sheet->setCellValue('E' . $row_num, !empty($r['tier_zone']) ? $r['tier_zone'] : '');
+            $sheet->setCellValue('F' . $row_num, !empty($r['courier_mode']) ? $r['courier_mode'] : '');
+            $sheet->setCellValue('G' . $row_num, !empty($r['commercial_mode']) ? $r['commercial_mode'] : '');
+            $sheet->setCellValue('H' . $row_num, (!empty($r['is_non_deliverable']) && intval($r['is_non_deliverable']) === 1) ? 'Yes' : 'No');
+            $sheet->setCellValue('I' . $row_num, $r['location_type']);
+            $sheet->setCellValue('J' . $row_num, !empty($r['geo_location_id']) ? $r['geo_location_id'] : '');
+            $sheet->setCellValueExplicit('K' . $row_num, $r['postal_code'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('L' . $row_num, $r['postal_code_from'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('M' . $row_num, $r['postal_code_to'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('N' . $row_num, $r['city_name'] ?: '');
+            $sheet->setCellValue('O' . $row_num, $r['state_name'] ?: '');
+            $sheet->setCellValue('P' . $row_num, $r['calculation_type']);
+            $sheet->setCellValue('Q' . $row_num, $r['min_charge']);
+            $sheet->setCellValue('R' . $row_num, $r['per_kg_rate']);
+            $sheet->setCellValue('S' . $row_num, $r['flat_charge']);
+            $sheet->setCellValue('T' . $row_num, $r['status']);
             $row_num++;
         }
 
-        foreach (range('A', 'P') as $col) {
+        foreach (range('A', 'T') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -2171,17 +2217,21 @@ class Masters extends CI_Controller {
             'A1' => 'Destination Country',
             'B1' => 'Courier Partner',
             'C1' => 'Service Type',
-            'D1' => 'Location Type',
-            'E1' => 'Postal Code',
-            'F1' => 'Postal Code From',
-            'G1' => 'Postal Code To',
-            'H1' => 'City Name',
-            'I1' => 'State Name',
-            'J1' => 'Calculation Type',
-            'K1' => 'Min Charge (INR)',
-            'L1' => 'Per KG Rate (INR)',
-            'M1' => 'Flat Charge (INR)',
-            'N1' => 'Status'
+            'D1' => 'Tier / Zone',
+            'E1' => 'Courier Mode',
+            'F1' => 'Commercial Mode',
+            'G1' => 'Non Deliverable Location',
+            'H1' => 'Location Type',
+            'I1' => 'Postal Code',
+            'J1' => 'Postal Code From',
+            'K1' => 'Postal Code To',
+            'L1' => 'City Name',
+            'M1' => 'State Name',
+            'N1' => 'Calculation Type',
+            'O1' => 'Min Charge (INR)',
+            'P1' => 'Per KG Rate (INR)',
+            'Q1' => 'Flat Charge (INR)',
+            'R1' => 'Status'
         );
 
         foreach ($headers as $cell => $val) {
@@ -2196,16 +2246,16 @@ class Masters extends CI_Controller {
             ),
             'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
         );
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:R1')->applyFromArray($headerStyle);
 
         // Sample rows demonstrating each location type and calculation model
         $sample_data = array(
-            array('United Arab Emirates', 'Aramex', 'Express', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', '0.00', '0.00', '1500.00', 'Active'),
-            array('United Arab Emirates', 'DHL Express', 'Economy', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', '1800.00', '35.00', '0.00', 'Active'),
-            array('United States', 'DHL Express', 'Express', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', '2100.00', '42.00', '0.00', 'Active'),
-            array('United States', 'FedEx', 'All', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', '2150.00', '45.00', '0.00', 'Active'),
-            array('United Kingdom', 'DHL Express', 'Saver', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', '1850.00', '35.00', '0.00', 'Active'),
-            array('Australia', 'All Partners', 'All', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', '2200.00', '48.00', '0.00', 'Active')
+            array('United Arab Emirates', 'Aramex', 'Express', 'Tier 1', 'Air', 'All', 'No', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', '0.00', '0.00', '1500.00', 'Active'),
+            array('United Arab Emirates', 'DHL Express', 'Economy', 'Zone A', 'Express', 'Commercial', 'No', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', '1800.00', '35.00', '0.00', 'Active'),
+            array('United States', 'DHL Express', 'Express', 'Zone 4', 'Express', 'Non-Commercial', 'Yes', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', '2100.00', '42.00', '0.00', 'Active'),
+            array('United States', 'FedEx', 'All', 'Remote Zone', 'Surface', 'Commercial', 'No', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', '2150.00', '45.00', '0.00', 'Active'),
+            array('United Kingdom', 'DHL Express', 'Saver', 'Zone 2', 'Air', 'All', 'No', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', '1850.00', '35.00', '0.00', 'Active'),
+            array('Australia', 'All Partners', 'All', 'Outback Tier 3', 'Economy', 'Commercial', 'Yes', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', '2200.00', '48.00', '0.00', 'Active')
         );
 
         $row_num = 2;
@@ -2218,7 +2268,7 @@ class Masters extends CI_Controller {
             $row_num++;
         }
 
-        foreach (range('A', 'N') as $col) {
+        foreach (range('A', 'R') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -2323,6 +2373,29 @@ class Masters extends CI_Controller {
                     case 'service':
                     case 'servicename':
                         $col_map['service_type'] = $idx;
+                        break;
+                    case 'tierzone':
+                    case 'tier':
+                    case 'zone':
+                    case 'tierorzone':
+                        $col_map['tier_zone'] = $idx;
+                        break;
+                    case 'couriermode':
+                    case 'mode':
+                    case 'couriermodes':
+                        $col_map['courier_mode'] = $idx;
+                        break;
+                    case 'commercialmode':
+                    case 'commercial':
+                    case 'commercialmodes':
+                        $col_map['commercial_mode'] = $idx;
+                        break;
+                    case 'nondeliverablelocation':
+                    case 'nondeliverable':
+                    case 'isnondeliverable':
+                    case 'nondeliverablearea':
+                    case 'deliverystatus':
+                        $col_map['is_non_deliverable'] = $idx;
                         break;
                     case 'locationtype':
                     case 'type':
