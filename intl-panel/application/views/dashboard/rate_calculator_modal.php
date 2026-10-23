@@ -593,18 +593,24 @@
     var isDoc = $('input[name="calc_shipment_type"]:checked').val().indexOf('Non') === -1;
     $('#res_summary_type').text(isDoc ? 'Documents' : 'Non-Doc / Parcel');
 
-    // ODA Banner
+    // ODA Banner & Deliverability
     var hasOda = false;
     var odaNote = '';
+    var hasNonDeliverable = false;
     $.each(data.quotes, function(i, q) {
+      if (q.is_non_deliverable) {
+        hasNonDeliverable = true;
+      }
       if (q.is_oda && q.oda_amount > 0) {
         hasOda = true;
         odaNote = q.oda_note || 'Location matched Out of Delivery Area surcharge rule.';
-        return false;
       }
     });
 
-    if (hasOda) {
+    if (hasNonDeliverable) {
+      $('#res_oda_details').html('<span class="label label-danger" style="margin-right: 5px;"><i class="fa fa-ban"></i> Non-Deliverable Location</span> Carrier has flagged this destination as non-deliverable.' + (odaNote ? ' (' + odaNote + ')' : ''));
+      $('#res_oda_banner').slideDown();
+    } else if (hasOda) {
       $('#res_oda_details').text(odaNote);
       $('#res_oda_banner').slideDown();
     } else {
@@ -645,6 +651,7 @@
                     '<i class="fa fa-truck"></i> ' + q.partner_name +
                   '</span>' +
                   (isCheapest ? '<span class="label label-success" style="font-size: 10px; padding: 3px 6px; border-radius: 3px;"><i class="fa fa-star"></i> BEST VALUE</span>' : '') +
+                  (q.is_non_deliverable ? '<span class="label label-danger" style="font-size: 10px; padding: 3px 6px; border-radius: 3px;"><i class="fa fa-ban"></i> Non-Deliverable</span>' : '') +
                 '</div>' +
                 '<div style="font-size: 12px; color: #475569; font-weight: 600;">' +
                   '<span class="label ' + serviceBadgeClass + '" style="font-size: 10px; margin-right: 4px;">' + q.service_type + '</span>' +
@@ -657,7 +664,8 @@
                 '<div>Shipping Charge: <strong style="color: #0f172a;">₹' + parseFloat(q.base_rate).toFixed(2) + '</strong>' + 
                   (q.is_extrapolated ? ' <small class="text-muted" style="font-size: 9px;">(Slab ext.)</small>' : '') + 
                 '</div>' +
-                (q.is_oda ? '<div class="text-warning" style="margin-top: 2px;"><strong><i class="fa fa-exclamation-triangle"></i> ODA Charge: +₹' + parseFloat(q.oda_amount).toFixed(2) + '</strong>' + (q.oda_note ? '<br><small style="font-size: 10px; color: #b45309;">' + q.oda_note + '</small>' : '') + '</div>' : '<div style="color: #10b981; margin-top: 2px;"><small><i class="fa fa-check-circle"></i> Standard Delivery (No ODA)</small></div>') +
+                (q.is_non_deliverable ? '<div class="text-danger" style="margin-top: 2px;"><strong><i class="fa fa-ban"></i> Non-Deliverable Location</strong></div>' : '') +
+                (q.is_oda ? '<div class="text-warning" style="margin-top: 2px;"><strong><i class="fa fa-exclamation-triangle"></i> ODA Charge: +₹' + parseFloat(q.oda_amount).toFixed(2) + '</strong>' + (q.oda_note ? '<br><small style="font-size: 10px; color: #b45309;">' + q.oda_note + '</small>' : '') + '</div>' : (!q.is_non_deliverable ? '<div style="color: #10b981; margin-top: 2px;"><small><i class="fa fa-check-circle"></i> Standard Delivery (No ODA)</small></div>' : '')) +
               '</div>' +
 
               // Column 3: Total Cost & Book Button

@@ -1389,23 +1389,29 @@ class Master_model extends CI_Model {
      * Search verified geo locations from 01_geo_location_info
      */
     public function search_geo_locations($q = '', $country_id = null, $limit = 30) {
+        $country = NULL;
+        if (!empty($country_id)) {
+            $country_query = $this->db->get_where('countries', array('id' => intval($country_id)));
+            $country = ($country_query && is_object($country_query) && $country_query->num_rows() > 0) ? $country_query->row() : NULL;
+        }
+
         $this->db->select('g.id, g.country_name, g.country_code, g.country_code3, g.state_name, g.state_code, g.district_name, g.city_name, g.postal_code, g.postal_name, g.latitude, g.longitude');
         $this->db->from('01_geo_location_info g');
         $this->db->where('g.is_active', 1);
 
         $has_country_filter = false;
-        if (!empty($country_id)) {
-            $country = $this->db->get_where('countries', array('id' => intval($country_id)))->row();
-            if ($country) {
-                $has_country_filter = true;
-                $this->db->group_start();
-                $this->db->where('g.country_name', $country->country_name);
-                if (!empty($country->iso_code)) {
-                    $this->db->or_where('g.country_code3', $country->iso_code);
-                    $this->db->or_where('g.country_code', $country->iso_code);
-                }
-                $this->db->group_end();
+        if ($country) {
+            $has_country_filter = true;
+            $this->db->group_start();
+            $this->db->where('g.country_name', $country->country_name);
+            if (!empty($country->iso_code)) {
+                $this->db->or_where('g.country_code3', $country->iso_code);
+                $this->db->or_where('g.country_code', $country->iso_code);
             }
+            if (!empty($country->country_code)) {
+                $this->db->or_where('g.country_code', $country->country_code);
+            }
+            $this->db->group_end();
         }
 
         if (!empty($q)) {
@@ -1746,8 +1752,12 @@ class Master_model extends CI_Model {
         $service_type = trim($service_type);
 
         if ($country_id <= 0) {
-            return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+            return array('is_oda' => FALSE, 'oda_amount' => 0.00, 'is_non_deliverable' => FALSE);
         }
+
+        // Fetch country info first, safely before starting the geo location query builder
+        $country_query = $this->db->get_where('countries', array('id' => $country_id));
+        $country = ($country_query && is_object($country_query) && $country_query->num_rows() > 0) ? $country_query->row() : NULL;
 
         // Enrich location information using 01_geo_location_info if available
         $geo_record = NULL;
@@ -1756,12 +1766,16 @@ class Master_model extends CI_Model {
             $this->db->from('01_geo_location_info g');
             $this->db->where('g.is_active', 1);
 
-            $country = $this->db->get_where('countries', array('id' => $country_id))->row();
             if ($country) {
                 $this->db->group_start();
-                $this->db->where('g.country_name', $country->country_name);
+                if (!empty($country->country_name)) {
+                    $this->db->where('g.country_name', $country->country_name);
+                }
                 if (!empty($country->iso_code)) {
                     $this->db->or_where('g.country_code', $country->iso_code);
+                }
+                if (!empty($country->country_code)) {
+                    $this->db->or_where('g.country_code', $country->country_code);
                 }
                 $this->db->group_end();
             }
@@ -1777,7 +1791,8 @@ class Master_model extends CI_Model {
                 $this->db->like('g.city_name', $city);
             }
 
-            $geo_record = $this->db->limit(1)->get()->row();
+            $geo_query = $this->db->limit(1)->get();
+            $geo_record = ($geo_query && is_object($geo_query) && $geo_query->num_rows() > 0) ? $geo_query->row() : NULL;
             if ($geo_record) {
                 if (empty($city) && !empty($geo_record->city_name)) {
                     $city = $geo_record->city_name;
@@ -1817,9 +1832,10 @@ class Master_model extends CI_Model {
         }
         $this->db->order_by('o.id', 'ASC');
 
-        $rules = $this->db->get()->result();
+        $rules_query = $this->db->get();
+        $rules = ($rules_query && is_object($rules_query)) ? $rules_query->result() : array();
         if (empty($rules)) {
-            return array('is_oda' => FALSE, 'oda_amount' => 0.00);
+            return array('is_oda' => FALSE, 'oda_amount' => 0.00, 'is_non_deliverable' => FALSE);
         }
 
         $matched_rule = NULL;
@@ -2055,7 +2071,8 @@ class Master_model extends CI_Model {
      * Calculate International Rate Options for Dashboard Modal Calculator
      */
     public function calculate_international_rate_options($dest_id, $weight, $shipment_type = 'Documents', $partner_id = 0, $service_type = 'All', $pincode = '', $city = '') {
-        $country = $this->db->get_where('countries', array('id' => intval($dest_id)))->row();
+        $country_query = $this->db->get_where('countries', array('id' => intval($dest_id)));
+        $country = ($country_query && is_object($country_query) && $country_query->num_rows() > 0) ? $country_query->row() : NULL;
         if (!$country) {
             return array('status' => 'error', 'message' => 'Please select a valid destination country.');
         }
@@ -2147,6 +2164,7 @@ class Master_model extends CI_Model {
             $oda_amount = 0.00;
             $oda_note = '';
             $is_oda = FALSE;
+            $is_non_deliverable = FALSE;
 
             if (!empty($pincode) || !empty($city)) {
                 $oda_check = $this->check_oda_status($dest_id, $partner_id_curr, $pincode, $city, $weight, $service_type_curr);
@@ -2155,23 +2173,27 @@ class Master_model extends CI_Model {
                     $oda_amount = floatval($oda_check['oda_amount']);
                     $oda_note = !empty($oda_check['formula_note']) ? $oda_check['formula_note'] : 'Out of Delivery Area Surcharge';
                 }
+                if (!empty($oda_check['is_non_deliverable'])) {
+                    $is_non_deliverable = TRUE;
+                }
             }
 
             // Total is base shipping charges + ODA charge (if applicable)
             $total = $base_rate + $oda_amount;
 
             $quotes[] = array(
-                'partner_id'        => $partner_id_curr,
-                'partner_name'      => $partner_name_curr,
-                'service_type'      => $service_type_curr,
-                'base_rate'         => $base_rate,
-                'slab_weight'       => $slab_weight,
-                'is_extrapolated'   => $is_extrapolated,
-                'is_oda'            => $is_oda,
-                'oda_amount'        => $oda_amount,
-                'oda_note'          => $oda_note,
-                'total_charges'     => round($total, 2),
-                'transit_estimate'  => (strtolower($service_type_curr) === 'express') ? '2 - 4 Business Days' : '5 - 8 Business Days'
+                'partner_id'         => $partner_id_curr,
+                'partner_name'       => $partner_name_curr,
+                'service_type'       => $service_type_curr,
+                'base_rate'          => $base_rate,
+                'slab_weight'        => $slab_weight,
+                'is_extrapolated'    => $is_extrapolated,
+                'is_oda'             => $is_oda,
+                'oda_amount'         => $oda_amount,
+                'oda_note'           => $oda_note,
+                'is_non_deliverable' => $is_non_deliverable,
+                'total_charges'      => round($total, 2),
+                'transit_estimate'   => (strtolower($service_type_curr) === 'express') ? '2 - 4 Business Days' : '5 - 8 Business Days'
             );
         }
 

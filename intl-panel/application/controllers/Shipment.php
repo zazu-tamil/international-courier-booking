@@ -533,7 +533,8 @@ class Shipment extends CI_Controller {
         $result = $this->Master_model->check_oda_status($country_id, $partner_id, $pincode, $city, $weight, $service_type);
 
         // Resolve ODA charge type ID from additional_charge_types table
-        $oda_type = $this->db->like('charge_name', 'ODA')->get('additional_charge_types')->row();
+        $oda_q    = $this->db->like('charge_name', 'ODA')->get('additional_charge_types');
+        $oda_type = ($oda_q && is_object($oda_q) && $oda_q->num_rows() > 0) ? $oda_q->row() : NULL;
         $result['charge_type_id'] = $oda_type ? $oda_type->id : 1;
         $result['charge_name']    = $oda_type ? $oda_type->charge_name : 'ODA Charges';
 
