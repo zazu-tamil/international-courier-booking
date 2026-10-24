@@ -1051,8 +1051,7 @@ class Master_model extends CI_Model {
               `courier_partner_id` INT(11) NOT NULL DEFAULT 0 COMMENT 'References courier_partners.id (0 = All Partners)',
               `service_type` VARCHAR(50) NOT NULL DEFAULT 'All',
               `tier_zone` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Tier / Zone classification',
-              `courier_mode` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Courier Mode',
-              `commercial_mode` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Commercial Mode',
+              `transit_mode` VARCHAR(50) NOT NULL DEFAULT 'courier' COMMENT 'Transit Mode: courier, commercial',
               `is_non_deliverable` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Non-Deliverable Location, 0 = Deliverable (ODA)',
               `location_type` ENUM('pincode', 'pincode_range', 'city') NOT NULL DEFAULT 'pincode',
               `postal_code` VARCHAR(30) NULL COMMENT 'Single postal code or exact match',
@@ -1074,8 +1073,7 @@ class Master_model extends CI_Model {
               KEY `idx_oda_partner` (`courier_partner_id`),
               KEY `idx_oda_service_type` (`service_type`),
               KEY `idx_oda_tier_zone` (`tier_zone`),
-              KEY `idx_oda_courier_mode` (`courier_mode`),
-              KEY `idx_oda_commercial_mode` (`commercial_mode`),
+              KEY `idx_oda_transit_mode` (`transit_mode`),
               KEY `idx_oda_is_non_deliverable` (`is_non_deliverable`),
               KEY `idx_oda_postal` (`postal_code`),
               KEY `idx_oda_postal_range` (`postal_code_from`, `postal_code_to`),
@@ -1098,22 +1096,30 @@ class Master_model extends CI_Model {
             $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `tier_zone` VARCHAR(100) NULL DEFAULT NULL AFTER `service_type`, ADD KEY `idx_oda_tier_zone` (`tier_zone`)");
         }
 
-        // Ensure courier_mode column exists
-        $cm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'courier_mode'");
-        if (!$cm_check || $cm_check->num_rows() == 0) {
-            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `courier_mode` VARCHAR(100) NULL DEFAULT NULL AFTER `tier_zone`, ADD KEY `idx_oda_courier_mode` (`courier_mode`)");
+        // Ensure transit_mode column exists
+        $tm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'transit_mode'");
+        if (!$tm_check || $tm_check->num_rows() == 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `transit_mode` VARCHAR(50) NOT NULL DEFAULT 'courier' COMMENT 'Transit Mode: courier, commercial' AFTER `tier_zone`, ADD KEY `idx_oda_transit_mode` (`transit_mode`)");
+            $has_comm = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'commercial_mode'")->num_rows() > 0;
+            if ($has_comm) {
+                $this->db->query("UPDATE `master_oda_charges` SET `transit_mode` = CASE WHEN LOWER(`commercial_mode`) = 'commercial' THEN 'commercial' ELSE 'courier' END");
+            }
         }
 
-        // Ensure commercial_mode column exists
+        // Drop obsolete courier_mode and commercial_mode columns if present
+        $cm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'courier_mode'");
+        if ($cm_check && $cm_check->num_rows() > 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` DROP COLUMN `courier_mode`");
+        }
         $comm_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'commercial_mode'");
-        if (!$comm_check || $comm_check->num_rows() == 0) {
-            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `commercial_mode` VARCHAR(100) NULL DEFAULT NULL AFTER `courier_mode`, ADD KEY `idx_oda_commercial_mode` (`commercial_mode`)");
+        if ($comm_check && $comm_check->num_rows() > 0) {
+            $this->db->query("ALTER TABLE `master_oda_charges` DROP COLUMN `commercial_mode`");
         }
 
         // Ensure is_non_deliverable column exists
         $nd_check = $this->db->query("SHOW COLUMNS FROM `master_oda_charges` LIKE 'is_non_deliverable'");
         if (!$nd_check || $nd_check->num_rows() == 0) {
-            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `is_non_deliverable` TINYINT(1) NOT NULL DEFAULT 0 AFTER `commercial_mode`, ADD KEY `idx_oda_is_non_deliverable` (`is_non_deliverable`)");
+            $this->db->query("ALTER TABLE `master_oda_charges` ADD COLUMN `is_non_deliverable` TINYINT(1) NOT NULL DEFAULT 0 AFTER `transit_mode`, ADD KEY `idx_oda_is_non_deliverable` (`is_non_deliverable`)");
         }
 
         // Ensure geo_location_id column exists
@@ -1158,8 +1164,7 @@ class Master_model extends CI_Model {
                         'courier_partner_id'     => $p_id,
                         'service_type'           => $item[2],
                         'tier_zone'              => $item[3],
-                        'courier_mode'           => $item[4],
-                        'commercial_mode'        => $item[5],
+                        'transit_mode'           => (strtolower($item[5]) === 'commercial' ? 'commercial' : 'courier'),
                         'location_type'          => $item[6],
                         'postal_code'            => $item[7] ? $item[7] : NULL,
                         'postal_code_from'       => $item[8] ? $item[8] : NULL,
@@ -1199,8 +1204,7 @@ class Master_model extends CI_Model {
             $this->db->or_like('p.partner_name', $search);
             $this->db->or_like('o.service_type', $search);
             $this->db->or_like('o.tier_zone', $search);
-            $this->db->or_like('o.courier_mode', $search);
-            $this->db->or_like('o.commercial_mode', $search);
+            $this->db->or_like('o.transit_mode', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
@@ -1211,21 +1215,20 @@ class Master_model extends CI_Model {
             $this->db->group_end();
         }
 
-        // Map column ordering
+        // Map column ordering (12 columns)
         $col_map = array(
             0 => 'o.id',
             1 => 'c.country_name',
             2 => 'p.partner_name',
             3 => 'o.service_type',
             4 => 'o.tier_zone',
-            5 => 'o.courier_mode',
-            6 => 'o.commercial_mode',
-            7 => 'o.is_non_deliverable',
-            8 => 'o.location_type',
-            9 => 'o.postal_code',
-            10 => 'o.calculation_type',
-            11 => 'o.status',
-            12 => 'o.id'
+            5 => 'o.transit_mode',
+            6 => 'o.is_non_deliverable',
+            7 => 'o.location_type',
+            8 => 'o.postal_code',
+            9 => 'o.calculation_type',
+            10 => 'o.status',
+            11 => 'o.id'
         );
         $order_by_col = isset($col_map[$order_col]) ? $col_map[$order_col] : 'o.id';
         $this->db->order_by($order_by_col, $order_dir);
@@ -1259,8 +1262,7 @@ class Master_model extends CI_Model {
             $this->db->or_like('p.partner_name', $search);
             $this->db->or_like('o.service_type', $search);
             $this->db->or_like('o.tier_zone', $search);
-            $this->db->or_like('o.courier_mode', $search);
-            $this->db->or_like('o.commercial_mode', $search);
+            $this->db->or_like('o.transit_mode', $search);
             $this->db->or_like('o.postal_code', $search);
             $this->db->or_like('o.postal_code_from', $search);
             $this->db->or_like('o.postal_code_to', $search);
@@ -1286,11 +1288,8 @@ class Master_model extends CI_Model {
         if (!empty($filters['tier_zone'])) {
             $this->db->where('o.tier_zone', $filters['tier_zone']);
         }
-        if (!empty($filters['courier_mode'])) {
-            $this->db->where('o.courier_mode', $filters['courier_mode']);
-        }
-        if (!empty($filters['commercial_mode'])) {
-            $this->db->where('o.commercial_mode', $filters['commercial_mode']);
+        if (!empty($filters['transit_mode'])) {
+            $this->db->where('o.transit_mode', strtolower(trim($filters['transit_mode'])));
         }
         if (isset($filters['is_non_deliverable']) && $filters['is_non_deliverable'] !== '') {
             $this->db->where('o.is_non_deliverable', intval($filters['is_non_deliverable']));
@@ -1328,48 +1327,25 @@ class Master_model extends CI_Model {
         return array_values(array_unique($list));
     }
 
-    public function get_distinct_oda_courier_modes() {
+    public function get_distinct_oda_transit_modes() {
         $this->ensure_oda_charges_schema();
         $this->db->distinct();
-        $this->db->select('courier_mode');
+        $this->db->select('transit_mode');
         $this->db->from('master_oda_charges');
         $this->db->where('deleted_at IS NULL');
-        $this->db->where('courier_mode IS NOT NULL');
-        $this->db->where('courier_mode !=', '');
-        $this->db->order_by('courier_mode', 'ASC');
+        $this->db->where('transit_mode IS NOT NULL');
+        $this->db->where('transit_mode !=', '');
+        $this->db->order_by('transit_mode', 'ASC');
         $q = $this->db->get();
-        if (!$q || $q->num_rows() === 0) {
-            return array();
-        }
         $list = array();
-        foreach ($q->result() as $row) {
-            if (!empty($row->courier_mode)) {
-                $list[] = trim($row->courier_mode);
+        if ($q && $q->num_rows() > 0) {
+            foreach ($q->result() as $row) {
+                if (!empty($row->transit_mode)) {
+                    $list[] = strtolower(trim($row->transit_mode));
+                }
             }
         }
-        return array_values(array_unique($list));
-    }
-
-    public function get_distinct_oda_commercial_modes() {
-        $this->ensure_oda_charges_schema();
-        $this->db->distinct();
-        $this->db->select('commercial_mode');
-        $this->db->from('master_oda_charges');
-        $this->db->where('deleted_at IS NULL');
-        $this->db->where('commercial_mode IS NOT NULL');
-        $this->db->where('commercial_mode !=', '');
-        $this->db->order_by('commercial_mode', 'ASC');
-        $q = $this->db->get();
-        if (!$q || $q->num_rows() === 0) {
-            return array();
-        }
-        $list = array();
-        foreach ($q->result() as $row) {
-            if (!empty($row->commercial_mode)) {
-                $list[] = trim($row->commercial_mode);
-            }
-        }
-        return array_values(array_unique($list));
+        return array_values(array_unique(array_merge($list, array('courier', 'commercial'))));
     }
 
     public function get_oda_charge_by_id($id) {
@@ -1462,8 +1438,7 @@ class Master_model extends CI_Model {
             'courier_partner_id'     => intval($data['courier_partner_id']),
             'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
             'tier_zone'              => !empty($data['tier_zone']) ? trim($data['tier_zone']) : NULL,
-            'courier_mode'           => !empty($data['courier_mode']) ? trim($data['courier_mode']) : NULL,
-            'commercial_mode'        => !empty($data['commercial_mode']) ? trim($data['commercial_mode']) : NULL,
+            'transit_mode'           => (!empty($data['transit_mode']) && in_array(strtolower(trim($data['transit_mode'])), array('commercial', 'courier'))) ? strtolower(trim($data['transit_mode'])) : 'courier',
             'is_non_deliverable'     => !empty($data['is_non_deliverable']) ? 1 : 0,
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
             'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
@@ -1496,8 +1471,7 @@ class Master_model extends CI_Model {
             'courier_partner_id'     => intval($data['courier_partner_id']),
             'service_type'           => !empty($data['service_type']) ? trim($data['service_type']) : 'All',
             'tier_zone'              => !empty($data['tier_zone']) ? trim($data['tier_zone']) : NULL,
-            'courier_mode'           => !empty($data['courier_mode']) ? trim($data['courier_mode']) : NULL,
-            'commercial_mode'        => !empty($data['commercial_mode']) ? trim($data['commercial_mode']) : NULL,
+            'transit_mode'           => (!empty($data['transit_mode']) && in_array(strtolower(trim($data['transit_mode'])), array('commercial', 'courier'))) ? strtolower(trim($data['transit_mode'])) : 'courier',
             'is_non_deliverable'     => !empty($data['is_non_deliverable']) ? 1 : 0,
             'location_type'          => in_array($data['location_type'], array('pincode', 'pincode_range', 'city')) ? $data['location_type'] : 'pincode',
             'geo_location_id'        => !empty($data['geo_location_id']) ? intval($data['geo_location_id']) : NULL,
@@ -1625,9 +1599,26 @@ class Master_model extends CI_Model {
                 $service_type = 'All';
             }
 
-            $tier_zone       = isset($row['tier_zone']) ? trim($row['tier_zone']) : (isset($row['tier']) ? trim($row['tier']) : (isset($row['zone']) ? trim($row['zone']) : NULL));
-            $courier_mode    = isset($row['courier_mode']) ? trim($row['courier_mode']) : (isset($row['mode']) ? trim($row['mode']) : NULL);
-            $commercial_mode = isset($row['commercial_mode']) ? trim($row['commercial_mode']) : NULL;
+            $tier_zone    = isset($row['tier_zone']) ? trim($row['tier_zone']) : (isset($row['tier']) ? trim($row['tier']) : (isset($row['zone']) ? trim($row['zone']) : NULL));
+            $transit_mode = 'courier';
+            if (isset($row['transit_mode'])) {
+                $tm_raw = strtolower(trim($row['transit_mode']));
+                if ((strpos($tm_raw, 'commercial') !== false || $tm_raw === 'comm') && strpos($tm_raw, 'non') === false) {
+                    $transit_mode = 'commercial';
+                } else {
+                    $transit_mode = 'courier';
+                }
+            } elseif (isset($row['commercial_mode'])) {
+                $cm_raw = strtolower(trim($row['commercial_mode']));
+                if ((strpos($cm_raw, 'commercial') !== false || $cm_raw === 'comm') && strpos($cm_raw, 'non') === false) {
+                    $transit_mode = 'commercial';
+                }
+            } elseif (isset($row['mode'])) {
+                $m_raw = strtolower(trim($row['mode']));
+                if ((strpos($m_raw, 'commercial') !== false || $m_raw === 'comm') && strpos($m_raw, 'non') === false) {
+                    $transit_mode = 'commercial';
+                }
+            }
 
             $is_non_deliv = 0;
             if (isset($row['is_non_deliverable'])) {
@@ -1679,6 +1670,7 @@ class Master_model extends CI_Model {
             $this->db->where('destination_country_id', $dest_country_id);
             $this->db->where('courier_partner_id', $courier_partner_id);
             $this->db->where('service_type', $service_type);
+            $this->db->where('transit_mode', $transit_mode);
             $this->db->where('location_type', $loc_type);
             $this->db->where('deleted_at IS NULL');
             if ($loc_type === 'pincode') {
@@ -1696,8 +1688,7 @@ class Master_model extends CI_Model {
                 'courier_partner_id'     => $courier_partner_id,
                 'service_type'           => $service_type,
                 'tier_zone'              => !empty($tier_zone) ? $tier_zone : NULL,
-                'courier_mode'           => !empty($courier_mode) ? $courier_mode : NULL,
-                'commercial_mode'        => !empty($commercial_mode) ? $commercial_mode : NULL,
+                'transit_mode'           => $transit_mode,
                 'is_non_deliverable'     => $is_non_deliv,
                 'location_type'          => $loc_type,
                 'geo_location_id'        => $geo_location_id,
@@ -1741,7 +1732,7 @@ class Master_model extends CI_Model {
      * Matches receiver location against active ODA rules, taking into account
      * destination country, courier partner, service type, and 01_geo_location_info.
      */
-    public function check_oda_status($country_id, $partner_id = 0, $pincode = '', $city = '', $weight = 0, $service_type = '') {
+    public function check_oda_status($country_id, $partner_id = 0, $pincode = '', $city = '', $weight = 0, $service_type = '', $transit_mode = 'All') {
         $this->ensure_oda_charges_schema();
 
         $country_id   = intval($country_id);
@@ -1750,6 +1741,7 @@ class Master_model extends CI_Model {
         $city         = trim($city);
         $weight       = floatval($weight);
         $service_type = trim($service_type);
+        $transit_mode = trim($transit_mode);
 
         if ($country_id <= 0) {
             return array('is_oda' => FALSE, 'oda_amount' => 0.00, 'is_non_deliverable' => FALSE);
@@ -1821,11 +1813,22 @@ class Master_model extends CI_Model {
             $this->db->where_in('o.service_type', array($service_type, 'All', ''));
         }
 
+        if (!empty($transit_mode) && strtolower($transit_mode) !== 'all') {
+            $this->db->where_in('o.transit_mode', array(strtolower($transit_mode), 'courier'));
+        }
+
         // Priority ordering:
         // 1. Specific courier partner before universal 0
         // 2. Specific service_type before 'All'
+        // 3. Specific transit_mode before generic fallback
         if ($partner_id > 0) {
             $this->db->order_by('o.courier_partner_id', 'DESC');
+        }
+        if (!empty($service_type) && strtolower($service_type) !== 'all') {
+            $this->db->order_by("CASE WHEN o.service_type = ".$this->db->escape($service_type)." THEN 1 ELSE 2 END", 'ASC', FALSE);
+        }
+        if (!empty($transit_mode) && strtolower($transit_mode) !== 'all') {
+            $this->db->order_by("CASE WHEN o.transit_mode = ".$this->db->escape(strtolower($transit_mode))." THEN 1 ELSE 2 END", 'ASC', FALSE);
         }
         if (!empty($service_type) && strtolower($service_type) !== 'all') {
             $this->db->order_by("CASE WHEN o.service_type = ".$this->db->escape($service_type)." THEN 1 ELSE 2 END", 'ASC', FALSE);
@@ -1936,8 +1939,7 @@ class Master_model extends CI_Model {
                 'rule_id'            => $matched_rule->id,
                 'service_type'       => !empty($matched_rule->service_type) ? $matched_rule->service_type : 'All',
                 'tier_zone'          => !empty($matched_rule->tier_zone) ? $matched_rule->tier_zone : NULL,
-                'courier_mode'       => !empty($matched_rule->courier_mode) ? $matched_rule->courier_mode : NULL,
-                'commercial_mode'    => !empty($matched_rule->commercial_mode) ? $matched_rule->commercial_mode : NULL,
+                'transit_mode'       => !empty($matched_rule->transit_mode) ? $matched_rule->transit_mode : 'courier',
                 'is_non_deliverable' => !empty($matched_rule->is_non_deliverable) ? TRUE : FALSE,
                 'geo_location_id'    => !empty($matched_rule->geo_location_id) ? $matched_rule->geo_location_id : NULL,
                 'partner_name'       => !empty($matched_rule->courier_partner_name) ? $matched_rule->courier_partner_name : 'All Courier Partners',
@@ -1958,18 +1960,19 @@ class Master_model extends CI_Model {
      * Search ODA surcharge records for live suggestion autocomplete
      * Queries master_oda_charges (filtered by destination country and query term)
      */
-    public function search_oda_suggestions($country_id, $q = '', $type = 'all', $limit = 30) {
+    public function search_oda_suggestions($country_id, $q = '', $type = 'all', $limit = 30, $transit_mode = '') {
         $this->ensure_oda_charges_schema();
 
-        $country_id = intval($country_id);
-        $q          = trim($q);
-        $type       = strtolower(trim($type));
+        $country_id   = intval($country_id);
+        $q            = trim($q);
+        $type         = strtolower(trim($type));
+        $transit_mode = trim($transit_mode);
 
         if ($country_id <= 0) {
             return array();
         }
 
-        $this->db->select('o.id, o.destination_country_id, o.courier_partner_id, o.service_type, o.tier_zone, o.courier_mode, o.commercial_mode, o.is_non_deliverable, o.location_type, o.postal_code, o.postal_code_from, o.postal_code_to, o.city_name, o.state_name, o.calculation_type, o.min_charge, o.per_kg_rate, o.flat_charge, o.status, p.partner_name, c.country_name, c.country_code, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.district_name as geo_district_name, g.state_name as geo_state_name');
+        $this->db->select('o.id, o.destination_country_id, o.courier_partner_id, o.service_type, o.tier_zone, o.transit_mode, o.is_non_deliverable, o.location_type, o.postal_code, o.postal_code_from, o.postal_code_to, o.city_name, o.state_name, o.calculation_type, o.min_charge, o.per_kg_rate, o.flat_charge, o.status, p.partner_name, c.country_name, c.country_code, g.postal_code as geo_postal_code, g.city_name as geo_city_name, g.district_name as geo_district_name, g.state_name as geo_state_name');
         $this->db->from('master_oda_charges o');
         $this->db->join('countries c', 'c.id = o.destination_country_id', 'left');
         $this->db->join('courier_partners p', 'p.id = o.courier_partner_id', 'left');
@@ -1977,6 +1980,10 @@ class Master_model extends CI_Model {
         $this->db->where('o.destination_country_id', $country_id);
         $this->db->where('o.status', 'Active');
         $this->db->where('o.deleted_at IS NULL');
+
+        if (!empty($transit_mode) && strtolower($transit_mode) !== 'all') {
+            $this->db->where('o.transit_mode', strtolower($transit_mode));
+        }
 
         if (!empty($q)) {
             $this->db->group_start();
@@ -2059,6 +2066,7 @@ class Master_model extends CI_Model {
                 'state_name'    => $display_state,
                 'partner_name'  => $partner_display,
                 'service_type'  => $service_display,
+                'transit_mode'  => !empty($r->transit_mode) ? ucfirst(strtolower($r->transit_mode)) : 'Courier',
                 'calc_type'     => $r->calculation_type,
                 'rate_summary'  => $rate_badge
             );
@@ -2070,7 +2078,7 @@ class Master_model extends CI_Model {
     /**
      * Calculate International Rate Options for Dashboard Modal Calculator
      */
-    public function calculate_international_rate_options($dest_id, $weight, $shipment_type = 'Documents', $partner_id = 0, $service_type = 'All', $pincode = '', $city = '') {
+    public function calculate_international_rate_options($dest_id, $weight, $shipment_type = 'Documents', $partner_id = 0, $service_type = 'All', $pincode = '', $city = '', $transit_mode = 'All') {
         $country_query = $this->db->get_where('countries', array('id' => intval($dest_id)));
         $country = ($country_query && is_object($country_query) && $country_query->num_rows() > 0) ? $country_query->row() : NULL;
         if (!$country) {
@@ -2167,7 +2175,7 @@ class Master_model extends CI_Model {
             $is_non_deliverable = FALSE;
 
             if (!empty($pincode) || !empty($city)) {
-                $oda_check = $this->check_oda_status($dest_id, $partner_id_curr, $pincode, $city, $weight, $service_type_curr);
+                $oda_check = $this->check_oda_status($dest_id, $partner_id_curr, $pincode, $city, $weight, $service_type_curr, $transit_mode);
                 if (!empty($oda_check['is_oda'])) {
                     $is_oda = TRUE;
                     $oda_amount = floatval($oda_check['oda_amount']);

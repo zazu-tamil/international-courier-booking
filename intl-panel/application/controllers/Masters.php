@@ -1795,8 +1795,7 @@ class Masters extends CI_Controller {
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
             'tier_zone'              => $this->input->post_get('tier_zone'),
-            'courier_mode'           => $this->input->post_get('courier_mode'),
-            'commercial_mode'        => $this->input->post_get('commercial_mode'),
+            'transit_mode'           => $this->input->post_get('transit_mode'),
             'is_non_deliverable'     => $this->input->post_get('is_non_deliverable'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
@@ -1808,8 +1807,7 @@ class Masters extends CI_Controller {
         $data['courier_partners'] = $this->Master_model->get_courier_partners();
         $data['service_types']    = $this->Master_model->get_service_types();
         $data['tier_zones']       = $this->Master_model->get_distinct_oda_tier_zones();
-        $data['courier_modes']    = $this->Master_model->get_distinct_oda_courier_modes();
-        $data['commercial_modes'] = $this->Master_model->get_distinct_oda_commercial_modes();
+        $data['transit_modes']    = $this->Master_model->get_distinct_oda_transit_modes();
         $data['filters']          = $filters;
 
         // Statistics
@@ -1847,8 +1845,7 @@ class Masters extends CI_Controller {
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
             'tier_zone'              => $this->input->post_get('tier_zone'),
-            'courier_mode'           => $this->input->post_get('courier_mode'),
-            'commercial_mode'        => $this->input->post_get('commercial_mode'),
+            'transit_mode'           => $this->input->post_get('transit_mode'),
             'is_non_deliverable'     => $this->input->post_get('is_non_deliverable'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
@@ -1879,13 +1876,10 @@ class Masters extends CI_Controller {
                 ? '<span class="label label-primary" style="font-size:11px;"><i class="fa fa-cubes"></i> ' . htmlspecialchars($r->tier_zone) . '</span>'
                 : '<span class="text-muted" style="font-size:11px;">-</span>';
 
-            $courier_mode_html = !empty($r->courier_mode)
-                ? '<span class="label label-info" style="font-size:11px;"><i class="fa fa-paper-plane-o"></i> ' . htmlspecialchars($r->courier_mode) . '</span>'
-                : '<span class="text-muted" style="font-size:11px;">-</span>';
-
-            $commercial_mode_html = !empty($r->commercial_mode)
-                ? '<span class="label label-default" style="font-size:11px;"><i class="fa fa-briefcase"></i> ' . htmlspecialchars($r->commercial_mode) . '</span>'
-                : '<span class="text-muted" style="font-size:11px;">-</span>';
+            $tm_val = !empty($r->transit_mode) ? strtolower(trim($r->transit_mode)) : 'courier';
+            $transit_mode_html = ($tm_val === 'commercial')
+                ? '<span class="label label-warning" style="font-size:11px;"><i class="fa fa-briefcase"></i> Commercial</span>'
+                : '<span class="label label-info" style="font-size:11px;"><i class="fa fa-truck"></i> Courier</span>';
 
             $non_deliv_badge = (!empty($r->is_non_deliverable) && intval($r->is_non_deliverable) === 1)
                 ? '<span class="label label-danger" style="font-size:11px;" title="Non-Deliverable Location (No Service)"><i class="fa fa-ban"></i> Yes</span>'
@@ -1947,8 +1941,7 @@ class Masters extends CI_Controller {
                 $partner_badge,
                 $service_badge,
                 $tier_zone_html,
-                $courier_mode_html,
-                $commercial_mode_html,
+                $transit_mode_html,
                 $non_deliv_badge,
                 $loc_type_badge,
                 $loc_detail,
@@ -2049,8 +2042,7 @@ class Masters extends CI_Controller {
             'courier_partner_id'     => $this->input->post('courier_partner_id'),
             'service_type'           => $this->input->post('service_type') ?: 'All',
             'tier_zone'              => $this->input->post('tier_zone') ? trim($this->input->post('tier_zone')) : NULL,
-            'courier_mode'           => $this->input->post('courier_mode') ? trim($this->input->post('courier_mode')) : NULL,
-            'commercial_mode'        => $this->input->post('commercial_mode') ? trim($this->input->post('commercial_mode')) : NULL,
+            'transit_mode'           => $this->input->post('transit_mode') ? strtolower(trim($this->input->post('transit_mode'))) : 'courier',
             'is_non_deliverable'     => intval($this->input->post('is_non_deliverable')) ? 1 : 0,
             'location_type'          => $this->input->post('location_type'),
             'geo_location_id'        => $this->input->post('geo_location_id') ? intval($this->input->post('geo_location_id')) : NULL,
@@ -2113,44 +2105,104 @@ class Masters extends CI_Controller {
             'courier_partner_id'     => $this->input->post_get('partner'),
             'service_type'           => $this->input->post_get('service_type'),
             'tier_zone'              => $this->input->post_get('tier_zone'),
-            'courier_mode'           => $this->input->post_get('courier_mode'),
-            'commercial_mode'        => $this->input->post_get('commercial_mode'),
+            'transit_mode'           => $this->input->post_get('transit_mode'),
+            'is_non_deliverable'     => $this->input->post_get('is_non_deliverable'),
             'location_type'          => $this->input->post_get('location_type'),
             'calculation_type'       => $this->input->post_get('calculation_type'),
             'status'                 => $this->input->post_get('status')
         );
 
         $records = $this->Master_model->get_all_oda_charges_for_export($filters);
+        $format  = strtolower($this->input->post_get('format') ?: 'excel');
+
+        $headers = array(
+            'ID',
+            'Destination Country',
+            'Courier Partner',
+            'Service Type',
+            'Tier / Zone',
+            'Transit Mode',
+            'Non Deliverable Location',
+            'Location Type',
+            'Geo Location ID',
+            'Postal Code',
+            'Postal Code From',
+            'Postal Code To',
+            'City Name',
+            'State Name',
+            'Calculation Type',
+            'Min Charge (INR)',
+            'Per KG Rate (INR)',
+            'Flat Charge (INR)',
+            'Status'
+        );
+
+        if ($format === 'csv') {
+            $filename = 'oda_charges_' . date('Y-m-d_His') . '.csv';
+            if (ob_get_length()) {
+                ob_end_clean();
+            }
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            $out = fopen('php://output', 'w');
+            fputs($out, "\xEF\xBB\xBF");
+            fputcsv($out, $headers);
+            foreach ($records as $r) {
+                fputcsv($out, array(
+                    $r['id'],
+                    $r['destination_country'],
+                    !empty($r['courier_partner_name']) ? $r['courier_partner_name'] : 'All Partners',
+                    !empty($r['service_type']) ? $r['service_type'] : 'All',
+                    !empty($r['tier_zone']) ? $r['tier_zone'] : '',
+                    !empty($r['transit_mode']) ? ucfirst($r['transit_mode']) : 'Courier',
+                    (!empty($r['is_non_deliverable']) && intval($r['is_non_deliverable']) === 1) ? 'Yes' : 'No',
+                    $r['location_type'],
+                    !empty($r['geo_location_id']) ? $r['geo_location_id'] : '',
+                    $r['postal_code'] ?: '',
+                    $r['postal_code_from'] ?: '',
+                    $r['postal_code_to'] ?: '',
+                    $r['city_name'] ?: '',
+                    $r['state_name'] ?: '',
+                    $r['calculation_type'],
+                    $r['min_charge'],
+                    $r['per_kg_rate'],
+                    $r['flat_charge'],
+                    $r['status']
+                ));
+            }
+            fclose($out);
+            exit;
+        }
 
         require_once APPPATH . 'third_party/PHPExcel.php';
         $objPHPExcel = new PHPExcel();
         $sheet = $objPHPExcel->setActiveSheetIndex(0);
         $sheet->setTitle('ODA Charges');
 
-        $headers = array(
+        $cell_headers = array(
             'A1' => 'ID',
             'B1' => 'Destination Country',
             'C1' => 'Courier Partner',
             'D1' => 'Service Type',
             'E1' => 'Tier / Zone',
-            'F1' => 'Courier Mode',
-            'G1' => 'Commercial Mode',
-            'H1' => 'Non Deliverable Location',
-            'I1' => 'Location Type',
-            'J1' => 'Geo Location ID',
-            'K1' => 'Postal Code',
-            'L1' => 'Postal Code From',
-            'M1' => 'Postal Code To',
-            'N1' => 'City Name',
-            'O1' => 'State Name',
-            'P1' => 'Calculation Type',
-            'Q1' => 'Min Charge (INR)',
-            'R1' => 'Per KG Rate (INR)',
-            'S1' => 'Flat Charge (INR)',
-            'T1' => 'Status'
+            'F1' => 'Transit Mode',
+            'G1' => 'Non Deliverable Location',
+            'H1' => 'Location Type',
+            'I1' => 'Geo Location ID',
+            'J1' => 'Postal Code',
+            'K1' => 'Postal Code From',
+            'L1' => 'Postal Code To',
+            'M1' => 'City Name',
+            'N1' => 'State Name',
+            'O1' => 'Calculation Type',
+            'P1' => 'Min Charge (INR)',
+            'Q1' => 'Per KG Rate (INR)',
+            'R1' => 'Flat Charge (INR)',
+            'S1' => 'Status'
         );
 
-        foreach ($headers as $cell => $val) {
+        foreach ($cell_headers as $cell => $val) {
             $sheet->setCellValue($cell, $val);
         }
 
@@ -2162,7 +2214,7 @@ class Masters extends CI_Controller {
             ),
             'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
         );
-        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:S1')->applyFromArray($headerStyle);
 
         $row_num = 2;
         foreach ($records as $r) {
@@ -2171,25 +2223,24 @@ class Masters extends CI_Controller {
             $sheet->setCellValue('C' . $row_num, !empty($r['courier_partner_name']) ? $r['courier_partner_name'] : 'All Partners');
             $sheet->setCellValue('D' . $row_num, !empty($r['service_type']) ? $r['service_type'] : 'All');
             $sheet->setCellValue('E' . $row_num, !empty($r['tier_zone']) ? $r['tier_zone'] : '');
-            $sheet->setCellValue('F' . $row_num, !empty($r['courier_mode']) ? $r['courier_mode'] : '');
-            $sheet->setCellValue('G' . $row_num, !empty($r['commercial_mode']) ? $r['commercial_mode'] : '');
-            $sheet->setCellValue('H' . $row_num, (!empty($r['is_non_deliverable']) && intval($r['is_non_deliverable']) === 1) ? 'Yes' : 'No');
-            $sheet->setCellValue('I' . $row_num, $r['location_type']);
-            $sheet->setCellValue('J' . $row_num, !empty($r['geo_location_id']) ? $r['geo_location_id'] : '');
-            $sheet->setCellValueExplicit('K' . $row_num, $r['postal_code'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit('L' . $row_num, $r['postal_code_from'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit('M' . $row_num, $r['postal_code_to'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->setCellValue('N' . $row_num, $r['city_name'] ?: '');
-            $sheet->setCellValue('O' . $row_num, $r['state_name'] ?: '');
-            $sheet->setCellValue('P' . $row_num, $r['calculation_type']);
-            $sheet->setCellValue('Q' . $row_num, $r['min_charge']);
-            $sheet->setCellValue('R' . $row_num, $r['per_kg_rate']);
-            $sheet->setCellValue('S' . $row_num, $r['flat_charge']);
-            $sheet->setCellValue('T' . $row_num, $r['status']);
+            $sheet->setCellValue('F' . $row_num, !empty($r['transit_mode']) ? ucfirst($r['transit_mode']) : 'Courier');
+            $sheet->setCellValue('G' . $row_num, (!empty($r['is_non_deliverable']) && intval($r['is_non_deliverable']) === 1) ? 'Yes' : 'No');
+            $sheet->setCellValue('H' . $row_num, $r['location_type']);
+            $sheet->setCellValue('I' . $row_num, !empty($r['geo_location_id']) ? $r['geo_location_id'] : '');
+            $sheet->setCellValueExplicit('J' . $row_num, $r['postal_code'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('K' . $row_num, $r['postal_code_from'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('L' . $row_num, $r['postal_code_to'] ?: '', PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->setCellValue('M' . $row_num, $r['city_name'] ?: '');
+            $sheet->setCellValue('N' . $row_num, $r['state_name'] ?: '');
+            $sheet->setCellValue('O' . $row_num, $r['calculation_type']);
+            $sheet->setCellValue('P' . $row_num, $r['min_charge']);
+            $sheet->setCellValue('Q' . $row_num, $r['per_kg_rate']);
+            $sheet->setCellValue('R' . $row_num, $r['flat_charge']);
+            $sheet->setCellValue('S' . $row_num, $r['status']);
             $row_num++;
         }
 
-        foreach (range('A', 'T') as $col) {
+        foreach (range('A', 'S') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -2205,34 +2256,63 @@ class Masters extends CI_Controller {
         exit;
     }
 
-    public function download_oda_template() {
+    public function download_oda_template($format = 'xls') {
         error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
 
-        require_once APPPATH . 'third_party/PHPExcel.php';
-        $objPHPExcel = new PHPExcel();
-        $sheet = $objPHPExcel->setActiveSheetIndex(0);
-        $sheet->setTitle('Template');
+        $format = strtolower($this->input->get('format') ?: $format);
 
         $headers = array(
             'A1' => 'Destination Country',
             'B1' => 'Courier Partner',
             'C1' => 'Service Type',
             'D1' => 'Tier / Zone',
-            'E1' => 'Courier Mode',
-            'F1' => 'Commercial Mode',
-            'G1' => 'Non Deliverable Location',
-            'H1' => 'Location Type',
-            'I1' => 'Postal Code',
-            'J1' => 'Postal Code From',
-            'K1' => 'Postal Code To',
-            'L1' => 'City Name',
-            'M1' => 'State Name',
-            'N1' => 'Calculation Type',
-            'O1' => 'Min Charge (INR)',
-            'P1' => 'Per KG Rate (INR)',
-            'Q1' => 'Flat Charge (INR)',
-            'R1' => 'Status'
+            'E1' => 'Transit Mode',
+            'F1' => 'Non Deliverable Location',
+            'G1' => 'Location Type',
+            'H1' => 'Postal Code',
+            'I1' => 'Postal Code From',
+            'J1' => 'Postal Code To',
+            'K1' => 'City Name',
+            'L1' => 'State Name',
+            'M1' => 'Calculation Type',
+            'N1' => 'Min Charge (INR)',
+            'O1' => 'Per KG Rate (INR)',
+            'P1' => 'Flat Charge (INR)',
+            'Q1' => 'Status'
         );
+
+        // Sample rows demonstrating each location type and calculation model
+        $sample_data = array(
+            array('United Arab Emirates', 'Aramex', 'Express', 'Tier 1', 'Courier', 'No', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', '0.00', '0.00', '1500.00', 'Active'),
+            array('United Arab Emirates', 'DHL Express', 'Economy', 'Zone A', 'Commercial', 'No', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', '1800.00', '35.00', '0.00', 'Active'),
+            array('United States', 'DHL Express', 'Express', 'Zone 4', 'Courier', 'Yes', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', '2100.00', '42.00', '0.00', 'Active'),
+            array('United States', 'FedEx', 'All', 'Remote Zone', 'Commercial', 'No', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', '2150.00', '45.00', '0.00', 'Active'),
+            array('United Kingdom', 'DHL Express', 'Saver', 'Zone 2', 'Courier', 'No', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', '1850.00', '35.00', '0.00', 'Active'),
+            array('Australia', 'All Partners', 'All', 'Outback Tier 3', 'Commercial', 'Yes', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', '2200.00', '48.00', '0.00', 'Active')
+        );
+
+        if ($format === 'csv') {
+            $filename = 'oda_charges_template.csv';
+            if (ob_get_length()) {
+                ob_end_clean();
+            }
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            $out = fopen('php://output', 'w');
+            fputs($out, "\xEF\xBB\xBF");
+            fputcsv($out, array_values($headers));
+            foreach ($sample_data as $row) {
+                fputcsv($out, $row);
+            }
+            fclose($out);
+            exit;
+        }
+
+        require_once APPPATH . 'third_party/PHPExcel.php';
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $sheet->setTitle('Template');
 
         foreach ($headers as $cell => $val) {
             $sheet->setCellValue($cell, $val);
@@ -2246,17 +2326,7 @@ class Masters extends CI_Controller {
             ),
             'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
         );
-        $sheet->getStyle('A1:R1')->applyFromArray($headerStyle);
-
-        // Sample rows demonstrating each location type and calculation model
-        $sample_data = array(
-            array('United Arab Emirates', 'Aramex', 'Express', 'Tier 1', 'Air', 'All', 'No', 'city', '', '', '', 'Hatta', 'Dubai', 'flat', '0.00', '0.00', '1500.00', 'Active'),
-            array('United Arab Emirates', 'DHL Express', 'Economy', 'Zone A', 'Express', 'Commercial', 'No', 'city', '', '', '', 'Al Madam', 'Sharjah', 'higher_of', '1800.00', '35.00', '0.00', 'Active'),
-            array('United States', 'DHL Express', 'Express', 'Zone 4', 'Express', 'Non-Commercial', 'Yes', 'pincode', '99501', '', '', 'Anchorage', 'Alaska', 'higher_of', '2100.00', '42.00', '0.00', 'Active'),
-            array('United States', 'FedEx', 'All', 'Remote Zone', 'Surface', 'Commercial', 'No', 'pincode_range', '', '99502', '99950', 'Remote Alaska', 'Alaska', 'higher_of', '2150.00', '45.00', '0.00', 'Active'),
-            array('United Kingdom', 'DHL Express', 'Saver', 'Zone 2', 'Air', 'All', 'No', 'pincode_range', '', 'IV1', 'IV63', 'Highlands & Islands', 'Inverness', 'higher_of', '1850.00', '35.00', '0.00', 'Active'),
-            array('Australia', 'All Partners', 'All', 'Outback Tier 3', 'Economy', 'Commercial', 'Yes', 'pincode', '0870', '', '', 'Alice Springs', 'Northern Territory', 'higher_of', '2200.00', '48.00', '0.00', 'Active')
-        );
+        $sheet->getStyle('A1:Q1')->applyFromArray($headerStyle);
 
         $row_num = 2;
         foreach ($sample_data as $row) {
@@ -2268,7 +2338,7 @@ class Masters extends CI_Controller {
             $row_num++;
         }
 
-        foreach (range('A', 'R') as $col) {
+        foreach (range('A', 'Q') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -2330,20 +2400,45 @@ class Masters extends CI_Controller {
             redirect('oda-charges');
         }
 
-        require_once APPPATH . 'third_party/PHPExcel.php';
-
         try {
-            if ($file_ext === 'csv') {
-                $objReader = PHPExcel_IOFactory::createReader('CSV');
-            } elseif ($file_ext === 'xlsx') {
-                $objReader = PHPExcel_IOFactory::createReader('Excel2007');
-            } else {
-                $objReader = PHPExcel_IOFactory::createReader('Excel5');
-            }
+            $sheetData = array();
 
-            $objPHPExcel = $objReader->load($tmp_file);
-            $sheet = $objPHPExcel->getActiveSheet();
-            $sheetData = $sheet->toArray(null, true, true, false);
+            if ($file_ext === 'csv') {
+                // High-performance robust native CSV parsing with delimiter detection & BOM handling
+                ini_set('auto_detect_line_endings', true);
+                if (($handle = fopen($tmp_file, 'r')) !== FALSE) {
+                    $first_line = fgets($handle);
+                    rewind($handle);
+                    $delimiters = array(',', ';', "\t", '|');
+                    $delim = ',';
+                    $max_count = 0;
+                    foreach ($delimiters as $d) {
+                        $cnt = substr_count($first_line, $d);
+                        if ($cnt > $max_count) {
+                            $max_count = $cnt;
+                            $delim = $d;
+                        }
+                    }
+                    while (($row = fgetcsv($handle, 0, $delim)) !== FALSE) {
+                        if (empty($sheetData) && isset($row[0])) {
+                            // Strip UTF-8 BOM if present on first heading cell
+                            $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$row[0]);
+                        }
+                        $sheetData[] = $row;
+                    }
+                    fclose($handle);
+                }
+            } else {
+                require_once APPPATH . 'third_party/PHPExcel.php';
+                if ($file_ext === 'xlsx') {
+                    $objReader = PHPExcel_IOFactory::createReader('Excel2007');
+                } else {
+                    $objReader = PHPExcel_IOFactory::createReader('Excel5');
+                }
+                $objPHPExcel = $objReader->load($tmp_file);
+                $sheet = $objPHPExcel->getActiveSheet();
+                $sheetData = $sheet->toArray(null, true, true, false);
+            }
 
             if (empty($sheetData) || count($sheetData) < 2) {
                 $this->session->set_flashdata('error', 'The uploaded file contains no data rows.');
@@ -2380,15 +2475,23 @@ class Masters extends CI_Controller {
                     case 'tierorzone':
                         $col_map['tier_zone'] = $idx;
                         break;
-                    case 'couriermode':
+                    case 'transitmode':
+                    case 'transit':
+                    case 'transitmodecouriercommercial':
+                    case 'transitmodecourierorcommercial':
                     case 'mode':
-                    case 'couriermodes':
-                        $col_map['courier_mode'] = $idx;
+                    case 'shippingmode':
+                        $col_map['transit_mode'] = $idx;
+                        break;
+                    case 'couriermode':
+                        if (!isset($col_map['transit_mode'])) {
+                            $col_map['courier_mode'] = $idx;
+                        }
                         break;
                     case 'commercialmode':
-                    case 'commercial':
-                    case 'commercialmodes':
-                        $col_map['commercial_mode'] = $idx;
+                        if (!isset($col_map['transit_mode'])) {
+                            $col_map['commercial_mode'] = $idx;
+                        }
                         break;
                     case 'nondeliverablelocation':
                     case 'nondeliverable':

@@ -67,14 +67,43 @@
           </button>
           <?php
             $export_params = http_build_query(array_filter($filters));
-            $export_url = site_url('oda-charges/export') . ($export_params ? '?' . $export_params : '');
+            $export_xls_url = site_url('oda-charges/export') . '?' . ($export_params ? $export_params . '&' : '') . 'format=excel';
+            $export_csv_url = site_url('oda-charges/export') . '?' . ($export_params ? $export_params . '&' : '') . 'format=csv';
           ?>
-          <a href="<?php echo $export_url; ?>" class="btn btn-info btn-sm" title="Export current ODA rules to Excel (.xls)" style="border-radius: 3px; font-weight: 600;">
-            <i class="fa fa-file-excel-o"></i> Export to Excel
-          </a>
-          <a href="<?php echo site_url('oda-charges/template'); ?>" class="btn btn-default btn-sm" title="Download Excel template with sample data" style="border-radius: 3px;">
-            <i class="fa fa-download text-green"></i> Sample Template
-          </a>
+          <div class="btn-group">
+            <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 3px; font-weight: 600;">
+              <i class="fa fa-download"></i> Export <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-right">
+              <li>
+                <a href="<?php echo $export_xls_url; ?>" title="Export current filtered rules to Excel">
+                  <i class="fa fa-file-excel-o text-green"></i> Export to Excel (.xls)
+                </a>
+              </li>
+              <li>
+                <a href="<?php echo $export_csv_url; ?>" title="Export current filtered rules to CSV">
+                  <i class="fa fa-file-text-o text-blue"></i> Export to CSV (.csv)
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="btn-group">
+            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 3px; font-weight: 600;">
+              <i class="fa fa-file-text-o text-green"></i> Sample Template <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-right">
+              <li>
+                <a href="<?php echo site_url('oda-charges/template?format=xls'); ?>" title="Download sample template in Excel format">
+                  <i class="fa fa-file-excel-o text-green"></i> Excel Template (.xls)
+                </a>
+              </li>
+              <li>
+                <a href="<?php echo site_url('oda-charges/template?format=csv'); ?>" title="Download sample template in CSV format">
+                  <i class="fa fa-file-text-o text-blue"></i> CSV Template (.csv)
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -139,54 +168,11 @@
           </div>
 
           <div class="col-md-2 col-sm-6 form-group">
-            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Courier Mode</label>
-            <select name="courier_mode" id="filter_courier_mode" class="form-control input-sm select2" style="width: 100%;">
-              <option value="">All Courier Modes</option>
-              <?php 
-                $standard_cmodes = array('Air', 'Surface', 'Sea', 'Express', 'Economy');
-                $raw_cmodes = array();
-                if (!empty($courier_modes)) {
-                  foreach ($courier_modes as $cm) {
-                    $cm_str = is_object($cm) ? (isset($cm->courier_mode) ? $cm->courier_mode : '') : (is_array($cm) ? (isset($cm['courier_mode']) ? $cm['courier_mode'] : '') : (string)$cm);
-                    if ($cm_str !== '') $raw_cmodes[] = $cm_str;
-                  }
-                }
-                $avail_cmodes = array_values(array_unique(array_merge($raw_cmodes, $standard_cmodes)));
-                foreach ($avail_cmodes as $cm_val): 
-              ?>
-                <option value="<?php echo htmlspecialchars($cm_val); ?>" <?php echo (!empty($filters['courier_mode']) && $filters['courier_mode'] == $cm_val) ? 'selected' : ''; ?>>
-                  <?php echo htmlspecialchars($cm_val); ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="col-md-1 col-sm-6 form-group">
-            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Comm. Mode</label>
-            <select name="commercial_mode" id="filter_commercial_mode" class="form-control input-sm">
-              <option value="">All</option>
-              <option value="Commercial" <?php echo (!empty($filters['commercial_mode']) && $filters['commercial_mode'] === 'Commercial') ? 'selected' : ''; ?>>Commercial</option>
-              <option value="Non-Commercial" <?php echo (!empty($filters['commercial_mode']) && $filters['commercial_mode'] === 'Non-Commercial') ? 'selected' : ''; ?>>Non-Comm.</option>
-            </select>
-          </div>
-
-          <div class="col-md-2 col-sm-6 form-group">
-            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Location Type</label>
-            <select name="location_type" id="filter_location_type" class="form-control input-sm">
-              <option value="">All Location Types</option>
-              <option value="pincode" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'pincode') ? 'selected' : ''; ?>>Single Postal Code</option>
-              <option value="pincode_range" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'pincode_range') ? 'selected' : ''; ?>>Postal Code Range</option>
-              <option value="city" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'city') ? 'selected' : ''; ?>>City / Town Name</option>
-            </select>
-          </div>
-
-          <div class="col-md-2 col-sm-6 form-group">
-            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Calculation Type</label>
-            <select name="calculation_type" id="filter_calculation_type" class="form-control input-sm">
-              <option value="">All Calculation Models</option>
-              <option value="higher_of" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'higher_of') ? 'selected' : ''; ?>>Higher Of (Min or Per KG)</option>
-              <option value="flat" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'flat') ? 'selected' : ''; ?>>Flat Surcharge</option>
-              <option value="per_kg" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'per_kg') ? 'selected' : ''; ?>>Per KG Rate</option>
+            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Transit Mode</label>
+            <select name="transit_mode" id="filter_transit_mode" class="form-control input-sm">
+              <option value="">All Transit Modes</option>
+              <option value="courier" <?php echo (!empty($filters['transit_mode']) && $filters['transit_mode'] === 'courier') ? 'selected' : ''; ?>>Courier</option>
+              <option value="commercial" <?php echo (!empty($filters['transit_mode']) && $filters['transit_mode'] === 'commercial') ? 'selected' : ''; ?>>Commercial</option>
             </select>
           </div>
 
@@ -196,6 +182,26 @@
               <option value="">All Locations</option>
               <option value="1" <?php echo (isset($filters['is_non_deliverable']) && $filters['is_non_deliverable'] === '1') ? 'selected' : ''; ?>>Yes (Non-Deliverable)</option>
               <option value="0" <?php echo (isset($filters['is_non_deliverable']) && $filters['is_non_deliverable'] === '0') ? 'selected' : ''; ?>>No (Deliverable)</option>
+            </select>
+          </div>
+
+          <div class="col-md-3 col-sm-6 form-group">
+            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Location Type</label>
+            <select name="location_type" id="filter_location_type" class="form-control input-sm">
+              <option value="">All Location Types</option>
+              <option value="pincode" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'pincode') ? 'selected' : ''; ?>>Single Postal Code</option>
+              <option value="pincode_range" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'pincode_range') ? 'selected' : ''; ?>>Postal Code Range</option>
+              <option value="city" <?php echo (!empty($filters['location_type']) && $filters['location_type'] === 'city') ? 'selected' : ''; ?>>City / Town Name</option>
+            </select>
+          </div>
+
+          <div class="col-md-3 col-sm-6 form-group">
+            <label class="control-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #555;">Calculation Type</label>
+            <select name="calculation_type" id="filter_calculation_type" class="form-control input-sm">
+              <option value="">All Calculation Models</option>
+              <option value="higher_of" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'higher_of') ? 'selected' : ''; ?>>Higher Of (Min or Per KG)</option>
+              <option value="flat" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'flat') ? 'selected' : ''; ?>>Flat Surcharge</option>
+              <option value="per_kg" <?php echo (!empty($filters['calculation_type']) && $filters['calculation_type'] === 'per_kg') ? 'selected' : ''; ?>>Per KG Rate</option>
             </select>
           </div>
 
@@ -234,8 +240,7 @@
               <th>Courier Partner</th>
               <th>Service Type</th>
               <th>Tier / Zone</th>
-              <th>Courier Mode</th>
-              <th>Commercial Mode</th>
+              <th>Transit Mode</th>
               <th style="text-align: center;">Non Deliverable Location</th>
               <th>Type</th>
               <th>Location / Area / Code</th>
@@ -411,7 +416,7 @@
               </div>
 
               <div class="row" style="margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
-                <div class="col-md-4 form-group">
+                <div class="col-md-6 form-group">
                   <label>Tier / Zone</label>
                   <input type="text" name="tier_zone" id="modal_tier_zone" class="form-control" placeholder="e.g. Tier 1, Zone A, Remote Zone" list="tier_zone_suggestions">
                   <datalist id="tier_zone_suggestions">
@@ -427,35 +432,13 @@
                   <small class="text-muted">ODA classification tier or zone.</small>
                 </div>
 
-                <div class="col-md-4 form-group">
-                  <label>Courier Mode</label>
-                  <input type="text" name="courier_mode" id="modal_courier_mode" class="form-control" placeholder="e.g. Air, Surface, Express" list="courier_mode_suggestions">
-                  <datalist id="courier_mode_suggestions">
-                    <option value="Air"></option>
-                    <option value="Surface"></option>
-                    <option value="Sea"></option>
-                    <option value="Express"></option>
-                    <option value="Economy"></option>
-                    <?php if (!empty($courier_modes)): ?>
-                      <?php foreach ($courier_modes as $cm): 
-                        $cm_val = is_object($cm) ? (isset($cm->courier_mode) ? $cm->courier_mode : '') : (is_array($cm) ? (isset($cm['courier_mode']) ? $cm['courier_mode'] : '') : (string)$cm);
-                        if ($cm_val === '' || in_array($cm_val, array('Air', 'Surface', 'Sea', 'Express', 'Economy'))) continue;
-                      ?>
-                        <option value="<?php echo htmlspecialchars($cm_val); ?>"></option>
-                      <?php endforeach; ?>
-                    <?php endif; ?>
-                  </datalist>
-                  <small class="text-muted">Courier transport mode (Air, Surface, Express, etc.).</small>
-                </div>
-
-                <div class="col-md-4 form-group">
-                  <label>Commercial Mode</label>
-                  <select name="commercial_mode" id="modal_commercial_mode" class="form-control">
-                    <option value="All">All / Either</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Non-Commercial">Non-Commercial</option>
+                <div class="col-md-6 form-group">
+                  <label>Transit Mode <span class="text-danger">*</span></label>
+                  <select name="transit_mode" id="modal_transit_mode" class="form-control">
+                    <option value="courier">Courier</option>
+                    <option value="commercial">Commercial</option>
                   </select>
-                  <small class="text-muted">Commercial or Non-Commercial shipment mode.</small>
+                  <small class="text-muted">Transit Mode: Courier or Commercial.</small>
                 </div>
               </div>
 
@@ -595,7 +578,7 @@
             <ul style="padding-left: 20px; margin-bottom: 0;">
               <li>Upload <strong>.xls</strong>, <strong>.xlsx</strong>, or <strong>.csv</strong> files.</li>
               <li>Required column: <strong>Destination Country</strong>.</li>
-              <li>Classification columns: <strong>Tier / Zone</strong>, <strong>Courier Mode</strong>, <strong>Commercial Mode</strong>, <strong>Non Deliverable Location</strong> (Yes/No).</li>
+              <li>Classification columns: <strong>Tier / Zone</strong>, <strong>Transit Mode</strong> (courier / commercial), <strong>Non Deliverable Location</strong> (Yes/No).</li>
               <li>Supports location types: <code>pincode</code>, <code>pincode_range</code>, and <code>city</code>.</li>
               <li>Supports calculation formulas: <code>higher_of</code>, <code>flat</code>, and <code>per_kg</code>.</li>
             </ul>
@@ -623,9 +606,12 @@
             </div>
           </div>
 
-          <div style="border-top: 1px solid #eee; padding-top: 12px;">
-            <a href="<?php echo site_url('oda-charges/template'); ?>" class="btn btn-default btn-sm">
-              <i class="fa fa-download text-green"></i> Download Sample Excel Template
+          <div style="border-top: 1px solid #eee; padding-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="<?php echo site_url('oda-charges/template?format=xls'); ?>" class="btn btn-default btn-sm">
+              <i class="fa fa-file-excel-o text-green"></i> Download Excel Template (.xls)
+            </a>
+            <a href="<?php echo site_url('oda-charges/template?format=csv'); ?>" class="btn btn-default btn-sm">
+              <i class="fa fa-file-text-o text-blue"></i> Download CSV Template (.csv)
             </a>
           </div>
         </div>
@@ -767,8 +753,7 @@
           d.partner             = $('#filter_partner').val();
           d.service_type        = $('#filter_service_type').val();
           d.tier_zone           = $('#filter_tier_zone').val();
-          d.courier_mode        = $('#filter_courier_mode').val();
-          d.commercial_mode     = $('#filter_commercial_mode').val();
+          d.transit_mode        = $('#filter_transit_mode').val();
           d.is_non_deliverable  = $('#filter_is_non_deliverable').val();
           d.location_type       = $('#filter_location_type').val();
           d.calculation_type    = $('#filter_calculation_type').val();
@@ -782,14 +767,13 @@
         { "data": 2, "orderable": true },                             // Courier Partner
         { "data": 3, "orderable": true },                             // Service Type
         { "data": 4, "orderable": true },                             // Tier / Zone
-        { "data": 5, "orderable": true },                             // Courier Mode
-        { "data": 6, "orderable": true },                             // Commercial Mode
-        { "data": 7, "orderable": true, "className": "text-center" }, // Non Deliverable Location
-        { "data": 8, "orderable": true },                             // Loc Type
-        { "data": 9, "orderable": false },                            // Location details (includes geo ID)
-        { "data": 10, "orderable": true },                            // Calculation & charges
-        { "data": 11, "orderable": true, "className": "text-center" },// Status
-        { "data": 12, "orderable": false, "className": "text-center" }// Actions
+        { "data": 5, "orderable": true },                             // Transit Mode
+        { "data": 6, "orderable": true, "className": "text-center" }, // Non Deliverable Location
+        { "data": 7, "orderable": true },                             // Loc Type
+        { "data": 8, "orderable": false },                            // Location details (includes geo ID)
+        { "data": 9, "orderable": true },                             // Calculation & charges
+        { "data": 10, "orderable": true, "className": "text-center" },// Status
+        { "data": 11, "orderable": false, "className": "text-center" }// Actions
       ],
       "order": [[1, "asc"]],
       "pageLength": 10,
@@ -929,8 +913,7 @@
     clearGeoSelection();
 
     $('#modal_tier_zone').val('');
-    $('#modal_courier_mode').val('');
-    $('#modal_commercial_mode').val('All');
+    $('#modal_transit_mode').val('courier');
     $('input[name="is_non_deliverable"][value="0"]').prop('checked', true);
 
     $('#loc_type_pincode').prop('checked', true);
@@ -983,8 +966,7 @@
 
           // Classification fields
           $('#modal_tier_zone').val(r.tier_zone || '');
-          $('#modal_courier_mode').val(r.courier_mode || '');
-          $('#modal_commercial_mode').val(r.commercial_mode || 'All');
+          $('#modal_transit_mode').val(r.transit_mode ? r.transit_mode.toLowerCase() : 'courier');
           $('input[name="is_non_deliverable"][value="' + (r.is_non_deliverable == 1 ? '1' : '0') + '"]').prop('checked', true);
 
           // Location Type

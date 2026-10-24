@@ -171,9 +171,9 @@
                     </div>
                   </div>
 
-                  <!-- Optional Filters: Partner & Service Type -->
+                  <!-- Optional Filters: Partner, Service Type & Transit Mode -->
                   <div class="row">
-                    <div class="col-sm-6 form-group">
+                    <div class="col-sm-12 form-group" style="margin-bottom: 8px;">
                       <label style="font-weight: 600; font-size: 11px; color: #475569; text-transform: uppercase;">Courier Partner</label>
                       <select id="calc_partner" class="form-control input-sm">
                         <option value="0">All Carriers (Compare)</option>
@@ -184,8 +184,9 @@
                         <?php endif; ?>
                       </select>
                     </div>
-
-                    <div class="col-sm-6 form-group">
+                  </div>
+                  <div class="row">
+                    <div class="col-sm-6 col-xs-6 form-group">
                       <label style="font-weight: 600; font-size: 11px; color: #475569; text-transform: uppercase;">Service Type</label>
                       <select id="calc_service" class="form-control input-sm">
                         <option value="All">All Services</option>
@@ -194,6 +195,15 @@
                             <option value="<?php echo htmlspecialchars($st->service_name); ?>"><?php echo htmlspecialchars($st->service_name); ?></option>
                           <?php endforeach; ?>
                         <?php endif; ?>
+                      </select>
+                    </div>
+
+                    <div class="col-sm-6 col-xs-6 form-group">
+                      <label style="font-weight: 600; font-size: 11px; color: #475569; text-transform: uppercase;">Transit Mode</label>
+                      <select id="calc_transit_mode" class="form-control input-sm">
+                        <option value="All">All Modes</option>
+                        <option value="courier">Courier</option>
+                        <option value="commercial">Commercial</option>
                       </select>
                     </div>
                   </div>
@@ -437,7 +447,8 @@
         data: {
           country_id: countryId,
           q: query,
-          type: type
+          type: type,
+          transit_mode: $('#calc_transit_mode').val() || ''
         },
         dataType: 'json',
         success: function(res) {
@@ -476,20 +487,25 @@
         ? [item.city_name, item.state_name].filter(Boolean).join(', ')
         : [item.state_name, (item.display_zip ? 'ZIP: ' + item.display_zip : '')].filter(Boolean).join(' • ');
 
+      var tmBadge = item.transit_mode 
+        ? '<span class="label label-info" style="font-size: 9px; margin-right: 4px; padding: 2px 5px; text-transform: capitalize; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">' + escapeHtml(item.transit_mode) + '</span>'
+        : '';
+
       html += '<div class="oda-sugg-item" ' +
         'data-zip="' + escapeHtml(item.postal_code || item.display_zip || '') + '" ' +
         'data-city="' + escapeHtml(item.city_name || '') + '" ' +
         'data-state="' + escapeHtml(item.state_name || '') + '" ' +
         'data-partner="' + escapeHtml(item.partner_name || '') + '" ' +
         'data-service="' + escapeHtml(item.service_type || '') + '" ' +
+        'data-transit-mode="' + escapeHtml(item.transit_mode || '') + '" ' +
         'data-rate="' + escapeHtml(item.rate_summary || '') + '">' +
         '<div style="display: flex; justify-content: space-between; align-items: center;">' +
           '<span style="font-weight: 700; color: #0f172a; font-size: 12px;"><i class="fa ' + (isZipType ? 'fa-map-pin' : 'fa-building-o') + ' text-primary" style="font-size: 10px; margin-right: 4px;"></i>' + escapeHtml(primary) + '</span>' +
           '<span class="label label-warning" style="font-size: 9px; padding: 2px 5px; font-weight: 700;"><i class="fa fa-exclamation-triangle"></i> ODA</span>' +
         '</div>' +
         '<div style="font-size: 11px; color: #64748b; margin-top: 2px; display: flex; justify-content: space-between; align-items: center; gap: 6px;">' +
-          '<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (secondary ? escapeHtml(secondary) : '<span class="text-muted">General area</span>') + '</span>' +
-          '<span class="label label-default" style="font-size: 9px; flex-shrink: 0; background: #e2e8f0; color: #334155;">' + escapeHtml(item.partner_name) + '</span>' +
+          '<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (secondary ? escapeHtml(secondary) : '<span class="text-muted">ODA area</span>') + '</span>' +
+          '<span>' + tmBadge + '<span class="label label-default" style="font-size: 9px; flex-shrink: 0; background: #e2e8f0; color: #334155;">' + escapeHtml(item.partner_name) + '</span></span>' +
         '</div>' +
         '<div style="font-size: 10px; color: #b45309; margin-top: 2px; font-weight: 600;">' +
           '<i class="fa fa-tag"></i> ' + escapeHtml(item.rate_summary) +
@@ -528,6 +544,7 @@
     var shipmentType = $('input[name="calc_shipment_type"]:checked').val() || 'Documents (Paper / Files)';
     var partnerId = $('#calc_partner').val() || 0;
     var serviceType = $('#calc_service').val() || 'All';
+    var transitMode = $('#calc_transit_mode').val() || 'All';
     var pincode = $('#calc_pincode').val() || '';
     var city = $('#calc_city').val() || '';
 
@@ -546,6 +563,7 @@
       height: h,
       courier_partner_id: partnerId,
       service_type: serviceType,
+      transit_mode: transitMode,
       pincode: pincode,
       city: city
     };
@@ -739,15 +757,33 @@
       var city = $(this).attr('data-city');
       var partner = $(this).attr('data-partner');
       var rate = $(this).attr('data-rate');
+      var tm = $(this).attr('data-transit-mode');
 
       if (zip) $('#calc_pincode').val(zip);
       if (city) $('#calc_city').val(city);
+      if (tm && $('#calc_transit_mode').val() === 'All') {
+        var tmVal = tm.toLowerCase();
+        if ($('#calc_transit_mode option[value="' + tmVal + '"]').length) {
+          $('#calc_transit_mode').val(tmVal);
+        }
+      }
 
-      var hintText = (zip ? 'ZIP ' + zip + ' ' : '') + (city ? '(' + city + ') ' : '') + '• Carrier: ' + partner + ' • ' + rate;
+      var hintText = (zip ? 'ZIP ' + zip + ' ' : '') + (city ? '(' + city + ') ' : '') + (tm ? '• Mode: ' + tm + ' ' : '') + '• Carrier: ' + partner + ' • ' + rate;
       $('#calc_oda_preview_text').text(hintText);
       $('#calc_oda_preview').slideDown();
 
       $('.oda-suggestions-menu').hide();
+    });
+
+    // Re-fetch suggestions when transit mode changes if input is present
+    $('#calc_transit_mode').on('change', function() {
+      var pinVal = $('#calc_pincode').val().trim();
+      var cityVal = $('#calc_city').val().trim();
+      if (pinVal) {
+        fetchOdaSuggestions('zip', pinVal, 'pincode_suggestions_box', 'pincode_spinner');
+      } else if (cityVal) {
+        fetchOdaSuggestions('city', cityVal, 'city_suggestions_box', 'city_spinner');
+      }
     });
 
     // Keyboard navigation (Arrow Down, Arrow Up, Enter, Escape)

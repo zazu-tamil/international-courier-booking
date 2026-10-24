@@ -403,6 +403,7 @@ class Dashboard extends CI_Controller {
         $height        = floatval($this->input->post('height'));
         $partner_id    = intval($this->input->post('courier_partner_id'));
         $service_type  = $this->input->post('service_type') ?: 'All';
+        $transit_mode  = $this->input->post('transit_mode') ?: 'All';
         $pincode       = trim($this->input->post('pincode'));
         $city          = trim($this->input->post('city'));
 
@@ -432,7 +433,8 @@ class Dashboard extends CI_Controller {
             $partner_id,
             $service_type,
             $pincode,
-            $city
+            $city,
+            $transit_mode
         );
 
         if ($result['status'] === 'success') {
@@ -459,9 +461,10 @@ class Dashboard extends CI_Controller {
      * Returns matching ODA postal codes and cities based on destination country and typed characters
      */
     public function oda_suggestions_ajax() {
-        $country_id = intval($this->input->get_post('country_id'));
-        $q          = trim($this->input->get_post('q'));
-        $type       = trim($this->input->get_post('type')) ?: 'all';
+        $country_id   = intval($this->input->get_post('country_id'));
+        $q            = trim($this->input->get_post('q'));
+        $type         = trim($this->input->get_post('type')) ?: 'all';
+        $transit_mode = trim($this->input->get_post('transit_mode')) ?: '';
 
         if (!$country_id) {
             $this->output
@@ -474,7 +477,7 @@ class Dashboard extends CI_Controller {
             return;
         }
 
-        $items = $this->Master_model->search_oda_suggestions($country_id, $q, $type, 30);
+        $items = $this->Master_model->search_oda_suggestions($country_id, $q, $type, 30, $transit_mode);
 
         $this->output
             ->set_content_type('application/json')

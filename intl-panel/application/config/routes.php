@@ -114,6 +114,7 @@ $route['oda-charges/delete/(:num)'] = 'masters/delete_oda_charge/$1';
 $route['oda-charges/toggle-status/(:num)'] = 'masters/toggle_oda_status/$1';
 $route['oda-charges/export'] = 'masters/export_oda_charges';
 $route['oda-charges/template'] = 'masters/download_oda_template';
+$route['oda-charges/template/(:any)'] = 'masters/download_oda_template/$1';
 $route['oda-charges/import'] = 'masters/import_oda_charges';
 $route['oda-charges/geo-search'] = 'masters/geo_search_ajax';
 
