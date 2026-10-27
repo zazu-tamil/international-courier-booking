@@ -67,6 +67,71 @@ class Masters extends CI_Controller {
         redirect('charge-types');
     }
 
+    // --- PRODUCT CATEGORIES (crit_product_category_info) ---
+    public function product_categories() {
+        $data['page_title'] = 'Product Category Master';
+        $data['categories'] = $this->Master_model->get_product_categories();
+        $data['stats']      = $this->Master_model->get_product_category_stats();
+        $data['view_path']  = 'masters/product_category_list';
+        $this->load->view('templates/dashboard_layout', $data);
+    }
+
+    public function get_product_category($id) {
+        $category = $this->Master_model->get_product_categories(intval($id));
+        if ($category && $category->status !== 'Delete') {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('status' => 'success', 'data' => $category)));
+        } else {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('status' => 'error', 'message' => 'Product category not found.')));
+        }
+    }
+
+    public function add_product_category() {
+        $this->form_validation->set_rules('category_name', 'Category Name', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $status = $this->input->post('status');
+            $data = array(
+                'category_name' => trim($this->input->post('category_name')),
+                'extra_charge'  => floatval($this->input->post('extra_charge')),
+                'status'        => in_array($status, array('Active', 'InActive')) ? $status : 'Active'
+            );
+            $this->Master_model->add_product_category($data);
+            $this->session->set_flashdata('success', 'Product Category added successfully.');
+        }
+        redirect('product-categories');
+    }
+
+    public function edit_product_category($id) {
+        $id = intval($id);
+        $this->form_validation->set_rules('category_name', 'Category Name', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+            $this->session->set_flashdata('error', validation_errors());
+        } else {
+            $status = $this->input->post('status');
+            $data = array(
+                'category_name' => trim($this->input->post('category_name')),
+                'extra_charge'  => floatval($this->input->post('extra_charge')),
+                'status'        => in_array($status, array('Active', 'InActive')) ? $status : 'Active'
+            );
+            $this->Master_model->update_product_category($id, $data);
+            $this->session->set_flashdata('success', 'Product Category updated successfully.');
+        }
+        redirect('product-categories');
+    }
+
+    public function delete_product_category($id) {
+        $this->Master_model->delete_product_category(intval($id));
+        $this->session->set_flashdata('success', 'Product Category marked as Deleted successfully.');
+        redirect('product-categories');
+    }
+
     // --- BRANCHES ---
     public function branches() {
         $data['page_title'] = 'Manage Branches';

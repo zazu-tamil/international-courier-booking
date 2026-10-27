@@ -69,6 +69,18 @@ $route['charge-types/add'] = 'masters/add_charge_type';
 $route['charge-types/edit/(:num)'] = 'masters/edit_charge_type/$1';
 $route['charge-types/delete/(:num)'] = 'masters/delete_charge_type/$1';
 
+// Product Categories Master
+$route['product-categories'] = 'masters/product_categories';
+$route['product-categories/add'] = 'masters/add_product_category';
+$route['product-categories/edit/(:num)'] = 'masters/edit_product_category/$1';
+$route['product-categories/delete/(:num)'] = 'masters/delete_product_category/$1';
+$route['product-categories/get/(:num)'] = 'masters/get_product_category/$1';
+$route['domestic/categories'] = 'masters/product_categories';
+$route['domestic/categories/add'] = 'masters/add_product_category';
+$route['domestic/categories/edit/(:num)'] = 'masters/edit_product_category/$1';
+$route['domestic/categories/delete/(:num)'] = 'masters/delete_product_category/$1';
+$route['domestic/categories/get/(:num)'] = 'masters/get_product_category/$1';
+
 $route['movement-stages'] = 'masters/movement_stages';
 $route['movement-stages/add'] = 'masters/add_movement_stage';
 $route['movement-stages/edit/(:num)'] = 'masters/edit_movement_stage/$1';
@@ -117,6 +129,48 @@ $route['oda-charges/template'] = 'masters/download_oda_template';
 $route['oda-charges/template/(:any)'] = 'masters/download_oda_template/$1';
 $route['oda-charges/import'] = 'masters/import_oda_charges';
 $route['oda-charges/geo-search'] = 'masters/geo_search_ajax';
+
+// Domestic Operations Modules
+$route['domestic'] = 'domestic/index';
+$route['domestic/bookings'] = 'domestic/bookings';
+$route['domestic/rates'] = 'domestic/rates';
+$route['domestic/rate-chart'] = 'domestic/rates';
+$route['domestic/rates/get/(:num)'] = 'domestic/get_rate/$1';
+$route['domestic/rates/add'] = 'domestic/add_rate';
+$route['domestic/rates/edit/(:num)'] = 'domestic/edit_rate/$1';
+$route['domestic/rates/delete/(:num)'] = 'domestic/delete_rate/$1';
+$route['domestic/rates/calculate'] = 'domestic/calculate_rate_ajax';
+$route['domestic-rate'] = 'domestic/rates';
+$route['domestic/pincodes'] = 'domestic/pincodes';
+$route['domestic/pincodes/ajax'] = 'domestic/pincodes_ajax';
+$route['domestic/pincodes/add'] = 'domestic/add_pincode';
+$route['domestic/pincodes/edit/(:num)'] = 'domestic/edit_pincode/$1';
+$route['domestic/pincodes/get/(:num)'] = 'domestic/get_pincode/$1';
+$route['domestic/pincodes/delete/(:num)'] = 'domestic/delete_pincode/$1';
+$route['domestic/pincodes/export'] = 'domestic/export_pincodes';
+
+// Convenience Aliases for Pincode List
+$route['pincode-list'] = 'domestic/pincodes';
+$route['pincode-list/ajax'] = 'domestic/pincodes_ajax';
+$route['pincode-list/add'] = 'domestic/add_pincode';
+$route['pincode-list/edit/(:num)'] = 'domestic/edit_pincode/$1';
+$route['pincode-list/get/(:num)'] = 'domestic/get_pincode/$1';
+$route['pincode-list/delete/(:num)'] = 'domestic/delete_pincode/$1';
+
+// Domestic Product Category Master
+$route['domestic/categories'] = 'domestic/categories';
+$route['domestic/categories/add'] = 'domestic/add_category';
+$route['domestic/categories/edit/(:num)'] = 'domestic/edit_category/$1';
+$route['domestic/categories/get/(:num)'] = 'domestic/get_category/$1';
+$route['domestic/categories/delete/(:num)'] = 'domestic/delete_category/$1';
+
+// Product Category Aliases
+$route['product-categories'] = 'domestic/categories';
+$route['product-categories/add'] = 'domestic/add_category';
+$route['product-categories/edit/(:num)'] = 'domestic/edit_category/$1';
+$route['product-categories/get/(:num)'] = 'domestic/get_category/$1';
+$route['product-categories/delete/(:num)'] = 'domestic/delete_category/$1';
+
 
 // Shipment Booking & Handling
 $route['shipment/calculator'] = 'shipment/calculator';

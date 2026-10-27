@@ -165,6 +165,21 @@
               </li>
             <?php endif; ?>
 
+            <?php if ($this->session->userdata('role_id') == 1 || $this->session->userdata('role_id') == 2): // Super Admin or Branch Admin ?>
+            <!-- Domestic Operations Menu -->
+            <li class="treeview <?php echo in_array($this->uri->segment(1), array('domestic', 'pincode-list', 'product-categories')) ? 'active menu-open' : ''; ?>">
+              <a href="#"><i class="fa fa-truck"></i> <span>Domestic</span>
+                <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+              </a>
+              <ul class="treeview-menu">
+                <li class="<?php echo ($this->uri->segment(1) == 'domestic' && $this->uri->segment(2) == 'bookings') ? 'active' : ''; ?>"><a href="<?php echo site_url('domestic/bookings'); ?>"><i class="fa fa-circle-o"></i> Domestic booking list</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'domestic' && ($this->uri->segment(2) == 'rates' || $this->uri->segment(2) == 'rate-chart')) ? 'active' : ''; ?>"><a href="<?php echo site_url('domestic/rates'); ?>"><i class="fa fa-circle-o"></i> Domestic Rate Chart</a></li>
+                <li class="<?php echo (in_array($this->uri->segment(1), array('domestic', 'pincode-list')) && ($this->uri->segment(2) == 'pincodes' || $this->uri->segment(1) == 'pincode-list')) ? 'active' : ''; ?>"><a href="<?php echo site_url('domestic/pincodes'); ?>"><i class="fa fa-circle-o"></i> Pincode List</a></li>
+                <li class="<?php echo ($this->uri->segment(1) == 'domestic' && in_array($this->uri->segment(2), array('categories', 'product-categories'))) || $this->uri->segment(1) == 'product-categories' ? 'active' : ''; ?>"><a href="<?php echo site_url('domestic/categories'); ?>"><i class="fa fa-circle-o"></i> Product Category</a></li>
+              </ul>
+            </li>
+            <?php endif; ?>
+
             <?php if ($this->session->userdata('role_id') == 1): // Only Super Admin ?>
             <li class="treeview <?php echo in_array($this->uri->segment(1), array('branches', 'franchises', 'countries', 'geo-locations', 'partners', 'rates', 'oda-charges', 'terms', 'movement-stages', 'service-types', 'document-types', 'restricted-items', 'charge-types', 'app-settings', 'notification-logs', 'roles')) ? 'active menu-open' : ''; ?>">
               <a href="#"><i class="fa fa-gears"></i> <span>Master Settings</span>
@@ -285,7 +300,7 @@
 
 <script>
   $(document).ready(function() {
-    $('.dataTable').not('#geoLocationsTable, #ratesV2Table').each(function() {
+    $('.dataTable').not('#geoLocationsTable, #ratesV2Table, #pincodesTable').each(function() {
       if (!$.fn.DataTable.isDataTable(this)) {
         $(this).DataTable({
           'paging'      : true,

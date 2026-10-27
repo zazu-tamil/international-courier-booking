@@ -2223,4 +2223,55 @@ class Master_model extends CI_Model {
             'quotes'              => $quotes
         );
     }
+
+    // --- PRODUCT CATEGORIES (crit_product_category_info) ---
+    public function get_product_categories($id = NULL) {
+        if ($id === NULL) {
+            $this->db->where('status !=', 'Delete');
+            $this->db->order_by('category_name', 'ASC');
+            return $this->db->get('crit_product_category_info')->result();
+        }
+        $this->db->where('category_id', intval($id));
+        return $this->db->get('crit_product_category_info')->row();
+    }
+
+    public function add_product_category($data) {
+        $result = $this->db->insert('crit_product_category_info', $data);
+        $insert_id = $this->db->insert_id();
+        if ($result && $this->Audit_model) {
+            $this->Audit_model->log_activity('Add Product Category', 'Category: ' . ($data['category_name'] ?? '') . ', ID: ' . $insert_id);
+        }
+        return $insert_id;
+    }
+
+    public function update_product_category($id, $data) {
+        $this->db->where('category_id', intval($id));
+        $result = $this->db->update('crit_product_category_info', $data);
+        if ($result && $this->Audit_model) {
+            $this->Audit_model->log_activity('Update Product Category', 'Category ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function delete_product_category($id) {
+        $cat = $this->get_product_categories($id);
+        $this->db->where('category_id', intval($id));
+        $result = $this->db->update('crit_product_category_info', array('status' => 'Delete'));
+        if ($result && $this->Audit_model) {
+            $name = $cat ? $cat->category_name : $id;
+            $this->Audit_model->log_activity('Delete Product Category', 'Category: ' . $name . ', ID: ' . $id);
+        }
+        return $result;
+    }
+
+    public function get_product_category_stats() {
+        $sql = "SELECT 
+            COUNT(*) as total_categories,
+            SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END) as active_categories,
+            SUM(CASE WHEN status = 'InActive' THEN 1 ELSE 0 END) as inactive_categories,
+            SUM(CASE WHEN extra_charge > 0 AND status != 'Delete' THEN 1 ELSE 0 END) as extra_charge_categories
+        FROM crit_product_category_info
+        WHERE status != 'Delete'";
+        return $this->db->query($sql)->row();
+    }
 }
