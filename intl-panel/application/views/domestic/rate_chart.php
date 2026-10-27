@@ -458,9 +458,9 @@
 <!-- DOMESTIC RATE CALCULATOR MODAL -->
 <!-- ============================================================== -->
 <div class="modal fade" id="calcRateModal" tabindex="-1" role="dialog" aria-labelledby="calcRateModalLabel">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content" style="border-radius: 6px; overflow: hidden;">
-      <div class="modal-header bg-aqua" style="background-color: #17a2b8; color: #fff; padding: 12px 20px;">
+  <div class="modal-dialog modal-lg" role="document" style="max-width: 720px;">
+    <div class="modal-content" style="border-radius: 6px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.25);">
+      <div class="modal-header bg-aqua" style="background-color: #17a2b8; color: #fff; padding: 14px 20px;">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.9; font-size: 24px; margin-top: -2px;">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -469,10 +469,12 @@
         </h4>
       </div>
       <div class="modal-body" style="padding: 20px 25px;">
+        
+        <!-- Row 1: Mode & Weight -->
         <div class="row">
           <div class="col-md-6">
             <div class="form-group">
-              <label>Courier Mode</label>
+              <label style="font-weight: 700; color: #333;">Courier Mode <span class="text-danger">*</span></label>
               <select id="calc_ctype" class="form-control">
                 <option value="Air">Air Mode</option>
                 <option value="Surface">Surface Mode</option>
@@ -481,48 +483,120 @@
           </div>
           <div class="col-md-6">
             <div class="form-group">
-              <label>Actual / Chargeable Weight</label>
+              <label style="font-weight: 700; color: #333;">Actual / Chargeable Weight <span class="text-danger">*</span></label>
               <div class="input-group">
                 <input type="number" step="0.001" min="0.001" id="calc_weight" class="form-control" placeholder="e.g. 2.500" value="1.000">
-                <span class="input-group-addon">in Kg</span>
+                <span class="input-group-addon" style="font-weight: 600;">in Kg</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Destination Classification</label>
-          <select id="calc_dest_type" class="form-control">
-            <option value="national">National / Rest of India (Default)</option>
-            <option value="metro">Metro City Destination</option>
-            <option value="region">Within Same Region</option>
-            <option value="state">Within Same State</option>
-            <option value="city">Within Same City (Local)</option>
-          </select>
+        <!-- Row 2: Source & Destination Pincodes -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label style="font-weight: 700; color: #333;">Source Pincode (Origin) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-addon" style="background-color: #f4f6f9;"><i class="fa fa-map-marker text-green"></i></span>
+                <input type="text" id="calc_source_pincode" maxlength="6" class="form-control" placeholder="e.g. 600001">
+              </div>
+              <div id="source_pincode_feedback" style="font-size: 11px; margin-top: 4px; min-height: 18px; color: #666;"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label style="font-weight: 700; color: #333;">Destination Pincode <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-addon" style="background-color: #f4f6f9;"><i class="fa fa-map-marker text-red"></i></span>
+                <input type="text" id="calc_dest_pincode" maxlength="6" class="form-control" placeholder="e.g. 110001">
+              </div>
+              <div id="dest_pincode_feedback" style="font-size: 11px; margin-top: 4px; min-height: 18px; color: #666;"></div>
+            </div>
+          </div>
         </div>
 
-        <button type="button" id="btnRunCalc" class="btn btn-info btn-block" style="background-color: #17a2b8; font-weight: 600; margin-top: 15px;">
+        <!-- Row 3: Product Category & Destination Classification -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label style="font-weight: 700; color: #333;">Product Category</label>
+              <select id="calc_category_id" class="form-control">
+                <option value="">-- Standard / General Category (No Surcharge) --</option>
+                <?php if (!empty($categories)): ?>
+                  <?php foreach ($categories as $cat): ?>
+                    <option value="<?php echo $cat->category_id; ?>" data-charge="<?php echo floatval($cat->extra_charge); ?>">
+                      <?php echo htmlspecialchars($cat->category_name); ?>
+                      <?php if (floatval($cat->extra_charge) > 0): ?>
+                        (+&#8377;<?php echo number_format($cat->extra_charge, 2); ?> Surcharge)
+                      <?php endif; ?>
+                    </option>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </select>
+              <small class="text-muted" style="font-size: 11px;">Select category to factor in special handling charges</small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label style="font-weight: 700; color: #333;">
+                Destination Classification
+                <span id="autoDetectBadge" style="display: none; margin-left: 5px;"></span>
+              </label>
+              <select id="calc_dest_type" class="form-control">
+                <option value="national">National / Rest of India (Default)</option>
+                <option value="metro">Metro City Destination</option>
+                <option value="region">Within Same Region / Zone</option>
+                <option value="state">Within Same State</option>
+                <option value="city">Within Same City (Local)</option>
+              </select>
+              <small class="text-muted" style="font-size: 11px;">Auto-detected from pincodes (can be overridden)</small>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="btnRunCalc" class="btn btn-info btn-block" style="background-color: #17a2b8; border-color: #17a2b8; font-weight: 600; font-size: 15px; padding: 10px 15px; margin-top: 10px;">
           <i class="fa fa-calculator"></i> Calculate Freight Charges
         </button>
 
         <!-- Calculation Result Display -->
-        <div id="calcResultBox" style="display: none; margin-top: 20px; border: 1px solid #b8daff; background-color: #e8f4fd; border-radius: 6px; padding: 15px;">
-          <h5 style="font-weight: 700; color: #004085; margin-top: 0; margin-bottom: 10px;">
-            <i class="fa fa-check-circle text-primary"></i> Estimated Tariff Breakdown
-          </h5>
-          <table class="table table-condensed" style="margin-bottom: 0; background: transparent;">
+        <div id="calcResultBox" style="display: none; margin-top: 20px; border: 1px solid #b8daff; background-color: #f7fbff; border-radius: 6px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0056b3; padding-bottom: 8px; margin-bottom: 12px;">
+            <h5 style="font-weight: 700; color: #004085; margin: 0; font-size: 15px;">
+              <i class="fa fa-file-text-o text-primary"></i> Estimated Tariff Breakdown
+            </h5>
+            <span class="label label-primary" id="calc_res_route_badge" style="font-size: 11px; padding: 4px 8px;">Domestic Route</span>
+          </div>
+
+          <!-- Route Info Banner -->
+          <div id="calc_res_route_banner" style="background-color: #e9f4ff; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #004085; display: flex; justify-content: space-between;">
+            <div>
+              <strong>Origin:</strong> <span id="calc_res_source_loc">-</span>
+            </div>
+            <div>
+              <i class="fa fa-arrow-right text-muted" style="margin: 0 6px;"></i>
+            </div>
+            <div>
+              <strong>Destination:</strong> <span id="calc_res_dest_loc">-</span>
+            </div>
+          </div>
+
+          <table class="table table-condensed table-striped" style="margin-bottom: 0; background: transparent; font-size: 13px;">
             <tbody>
               <tr>
-                <td><strong>Matched Slab:</strong></td>
-                <td class="text-right" id="calc_res_slab">-</td>
+                <td style="width: 55%;"><strong>Matched Weight Slab:</strong></td>
+                <td class="text-right" id="calc_res_slab" style="font-weight: 600;">-</td>
               </tr>
               <tr>
-                <td><strong>Initial Base Weight:</strong></td>
-                <td class="text-right" id="calc_res_minwgt">-</td>
+                <td><strong>Applied Classification:</strong></td>
+                <td class="text-right" id="calc_res_class">-</td>
               </tr>
               <tr>
-                <td><strong>Base Freight Charge:</strong></td>
-                <td class="text-right" id="calc_res_base">-</td>
+                <td><strong>Base Freight (Min Weight &amp; Charge):</strong></td>
+                <td class="text-right">
+                  <span id="calc_res_minwgt" class="text-muted" style="margin-right: 5px;">-</span>
+                  <strong id="calc_res_base">-</strong>
+                </td>
               </tr>
               <tr>
                 <td><strong>Additional Weight &amp; Steps:</strong></td>
@@ -530,20 +604,36 @@
               </tr>
               <tr>
                 <td><strong>Additional Weight Charges:</strong></td>
-                <td class="text-right" id="calc_res_extra">-</td>
+                <td class="text-right"><strong id="calc_res_extra">-</strong></td>
               </tr>
-              <tr style="font-size: 16px; border-top: 2px solid #004085; color: #004085;">
-                <td><strong>Total Domestic Freight:</strong></td>
-                <td class="text-right"><strong id="calc_res_total">&#8377;0.00</strong></td>
+              <tr style="background-color: #eef6fd; font-weight: 600;">
+                <td><strong>Freight Subtotal:</strong></td>
+                <td class="text-right" id="calc_res_freight_subtotal">&#8377;0.00</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Product Category Surcharge:</strong><br>
+                  <small id="calc_res_cat_name" class="text-muted">Standard</small>
+                </td>
+                <td class="text-right" style="vertical-align: middle;">
+                  <strong id="calc_res_cat_surcharge" class="text-green">+&#8377;0.00</strong>
+                </td>
+              </tr>
+              <tr style="font-size: 18px; border-top: 2px solid #0056b3; background-color: #d1ecf1; color: #0c5460;">
+                <td style="padding: 10px 8px;"><strong>Total Estimated Tariff:</strong></td>
+                <td class="text-right" style="padding: 10px 8px;"><strong id="calc_res_total">&#8377;0.00</strong></td>
               </tr>
             </tbody>
           </table>
         </div>
+
       </div>
-      <div class="modal-footer" style="background-color: #f9f9f9;">
+      <div class="modal-footer" style="background-color: #f9f9f9; padding: 12px 20px;">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
     </div>
+  </div>
+</div>
   </div>
 </div>
 
@@ -613,25 +703,121 @@ $(document).ready(function() {
     });
   });
 
+  // Live Pincode lookup helper
+  function checkPincodeLookup(inputElem, feedbackElem, callback) {
+    var pin = $(inputElem).val().trim();
+    if (pin.length === 6 && /^\d{6}$/.test(pin)) {
+      $(feedbackElem).html('<i class="fa fa-spinner fa-spin text-muted"></i> Checking pincode...');
+      $.ajax({
+        url: "<?php echo site_url('domestic/pincodes/lookup'); ?>",
+        type: "GET",
+        data: { pincode: pin },
+        dataType: "json",
+        success: function(res) {
+          if (res.status === 'success' && res.data) {
+            var d = res.data;
+            var loc = d.district_name + ', ' + d.state_name;
+            var extra = [];
+            if (d.zone) extra.push('Zone ' + d.zone);
+            if (d.metro === 'Y') extra.push('Metro');
+            var fullText = loc + (extra.length ? ' (' + extra.join(', ') + ')' : '');
+            $(feedbackElem).html('<span class="text-success"><i class="fa fa-check-circle"></i> ' + fullText + '</span>');
+            $(inputElem).data('pincodeData', d);
+          } else {
+            $(feedbackElem).html('<span class="text-warning"><i class="fa fa-info-circle"></i> Pincode not in master (Defaulting to National)</span>');
+            $(inputElem).removeData('pincodeData');
+          }
+          if (typeof callback === 'function') callback();
+        },
+        error: function() {
+          $(feedbackElem).html('<span class="text-muted"><i class="fa fa-question-circle"></i> Lookup offline</span>');
+          $(inputElem).removeData('pincodeData');
+          if (typeof callback === 'function') callback();
+        }
+      });
+    } else if (pin.length === 0) {
+      $(feedbackElem).html('');
+      $(inputElem).removeData('pincodeData');
+      if (typeof callback === 'function') callback();
+    } else {
+      $(feedbackElem).html('<span class="text-muted">Enter 6-digit valid pincode</span>');
+      $(inputElem).removeData('pincodeData');
+    }
+  }
+
+  // Auto-detect destination classification based on Source & Destination Pincodes
+  function autoDetectClassification() {
+    var srcData = $('#calc_source_pincode').data('pincodeData');
+    var dstData = $('#calc_dest_pincode').data('pincodeData');
+
+    if (srcData && dstData) {
+      var srcDist = (srcData.district_name || '').toUpperCase().trim();
+      var dstDist = (dstData.district_name || '').toUpperCase().trim();
+      var srcState = (srcData.state_name || '').toLowerCase().trim();
+      var dstState = (dstData.state_name || '').toLowerCase().trim();
+      var srcZone = (srcData.zone || '').toUpperCase().trim();
+      var dstZone = (dstData.zone || '').toUpperCase().trim();
+      var srcMetro = (srcData.metro || '').toUpperCase().trim();
+      var dstMetro = (dstData.metro || '').toUpperCase().trim();
+
+      var detected = 'national';
+      var reason = 'National / Rest of India';
+
+      if (srcDist && dstDist && srcDist === dstDist) {
+        detected = 'city';
+        reason = 'Same City / Local';
+      } else if (srcState && dstState && srcState === dstState) {
+        detected = 'state';
+        reason = 'Same State';
+      } else if (srcZone && dstZone && srcZone === dstZone) {
+        detected = 'region';
+        reason = 'Same Region (Zone ' + srcZone + ')';
+      } else if (srcMetro === 'Y' && dstMetro === 'Y') {
+        detected = 'metro';
+        reason = 'Metro to Metro';
+      }
+
+      $('#calc_dest_type').val(detected);
+      $('#autoDetectBadge').html('<span class="badge bg-green" style="font-size: 10px; padding: 3px 6px;"><i class="fa fa-magic"></i> Auto: ' + reason + '</span>').show();
+    } else {
+      $('#autoDetectBadge').hide();
+    }
+  }
+
+  $('#calc_source_pincode').on('input blur change', function() {
+    checkPincodeLookup('#calc_source_pincode', '#source_pincode_feedback', autoDetectClassification);
+  });
+
+  $('#calc_dest_pincode').on('input blur change', function() {
+    checkPincodeLookup('#calc_dest_pincode', '#dest_pincode_feedback', autoDetectClassification);
+  });
+
   // Domestic Rate Calculator AJAX
   $('#btnRunCalc').on('click', function() {
-    var c_type = $('#calc_ctype').val();
-    var weight = $('#calc_weight').val();
-    var dest_type = $('#calc_dest_type').val();
+    var c_type         = $('#calc_ctype').val();
+    var weight         = $('#calc_weight').val();
+    var dest_type      = $('#calc_dest_type').val();
+    var source_pincode = $('#calc_source_pincode').val().trim();
+    var dest_pincode   = $('#calc_dest_pincode').val().trim();
+    var category_id    = $('#calc_category_id').val();
 
     if (!weight || parseFloat(weight) <= 0) {
       alert('Please enter a valid weight in Kg.');
+      $('#calc_weight').focus();
       return;
     }
 
     var postData = {};
     postData[csrfTokenName] = csrfTokenHash;
-    postData.c_type = c_type;
-    postData.weight = weight;
-    postData.dest_type = dest_type;
+    postData.c_type         = c_type;
+    postData.weight         = weight;
+    postData.dest_type      = dest_type;
+    postData.source_pincode = source_pincode;
+    postData.dest_pincode   = dest_pincode;
+    postData.category_id    = category_id;
 
     var btn = $(this);
-    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Calculating...');
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Calculating Tariff...');
 
     $.ajax({
       url: "<?php echo site_url('domestic/rates/calculate'); ?>",
@@ -642,12 +828,40 @@ $(document).ready(function() {
         btn.prop('disabled', false).html('<i class="fa fa-calculator"></i> Calculate Freight Charges');
         if (res.status === 'success') {
           var d = res.data;
+          
+          // Route banner
+          $('#calc_res_source_loc').text(d.source_location || 'Origin');
+          $('#calc_res_dest_loc').text(d.dest_location || 'Destination');
+          $('#calc_res_route_badge').text(d.dest_type_label || 'Domestic Tariff');
+
+          // Breakdown details
           $('#calc_res_slab').text(d.c_type + ' (' + parseFloat(d.from_weight).toFixed(3) + ' - ' + parseFloat(d.to_weight).toFixed(3) + ' Kg)');
-          $('#calc_res_minwgt').text(parseFloat(d.min_weight).toFixed(3) + ' Kg');
+          $('#calc_res_class').html('<span class="label label-info" style="font-size: 12px;">' + (d.dest_type_label || d.dest_type) + '</span>');
+          $('#calc_res_minwgt').text('(' + parseFloat(d.min_weight).toFixed(3) + ' Kg Min)');
           $('#calc_res_base').html('&#8377;' + parseFloat(d.min_charges).toFixed(2));
-          $('#calc_res_steps').text(parseFloat(d.excess_weight).toFixed(3) + ' Kg (' + d.extra_steps + ' steps of ' + parseFloat(d.addt_weight).toFixed(3) + ' Kg)');
-          $('#calc_res_extra').html('&#8377;' + parseFloat(d.extra_charge).toFixed(2));
-          $('#calc_res_total').html('&#8377;' + parseFloat(d.total_charge).toFixed(2));
+
+          if (parseFloat(d.excess_weight) > 0) {
+            $('#calc_res_steps').text(parseFloat(d.excess_weight).toFixed(3) + ' Kg (' + d.extra_steps + ' step' + (d.extra_steps > 1 ? 's' : '') + ' of ' + parseFloat(d.addt_weight).toFixed(3) + ' Kg @ &#8377;' + parseFloat(d.addt_charges).toFixed(2) + ')');
+            $('#calc_res_extra').html('&#8377;' + parseFloat(d.extra_charge).toFixed(2));
+          } else {
+            $('#calc_res_steps').text('None (Within min weight)');
+            $('#calc_res_extra').html('&#8377;0.00');
+          }
+
+          // Subtotal
+          $('#calc_res_freight_subtotal').html('&#8377;' + parseFloat(d.freight_subtotal).toFixed(2));
+
+          // Category Surcharge
+          $('#calc_res_cat_name').text(d.category_name || 'Standard');
+          if (parseFloat(d.category_surcharge) > 0) {
+            $('#calc_res_cat_surcharge').html('+&#8377;' + parseFloat(d.category_surcharge).toFixed(2)).removeClass('text-muted').addClass('text-green');
+          } else {
+            $('#calc_res_cat_surcharge').html('&#8377;0.00 (No Surcharge)').removeClass('text-green').addClass('text-muted');
+          }
+
+          // Total
+          $('#calc_res_total').html('&#8377;' + parseFloat(d.total_tariff).toFixed(2));
+          
           $('#calcResultBox').slideDown();
         } else {
           $('#calcResultBox').hide();

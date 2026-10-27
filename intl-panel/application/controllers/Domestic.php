@@ -49,6 +49,7 @@ class Domestic extends CI_Controller {
         $data['selected_type'] = $c_type;
         $data['slabs']         = $this->Domestic_model->get_domestic_rates_grouped($c_type);
         $data['stats']         = $this->Domestic_model->get_domestic_rate_stats();
+        $data['categories']    = $this->Domestic_model->get_product_categories();
         $data['view_path']     = 'domestic/rate_chart';
         $this->load->view('templates/dashboard_layout', $data);
     }
@@ -480,18 +481,59 @@ class Domestic extends CI_Controller {
     }
 
     /**
-     * AJAX Domestic Rate Calculator
+     * AJAX Domestic Rate Calculator with Source/Destination Pincodes & Product Category
      */
     public function calculate_rate_ajax() {
-        $c_type = $this->input->post('c_type');
-        $weight = floatval($this->input->post('weight'));
-        $dest_type = $this->input->post('dest_type');
+        $c_type         = $this->input->post('c_type');
+        $weight         = floatval($this->input->post('weight'));
+        $dest_type      = $this->input->post('dest_type');
+        $source_pincode = trim($this->input->post('source_pincode'));
+        $dest_pincode   = trim($this->input->post('dest_pincode'));
+        $category_id    = $this->input->post('category_id');
 
-        $result = $this->Domestic_model->calculate_domestic_rate($c_type, $weight, $dest_type);
+        $result = $this->Domestic_model->calculate_domestic_rate(
+            $c_type, 
+            $weight, 
+            $dest_type, 
+            $source_pincode, 
+            $dest_pincode, 
+            $category_id
+        );
 
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode($result));
+    }
+
+    /**
+     * AJAX Endpoint: Quick Pincode Details Lookup
+     */
+    public function lookup_pincode_ajax() {
+        $pincode = intval(trim($this->input->get_post('pincode')));
+        $record = $this->Domestic_model->get_pincode_by_number($pincode);
+
+        if ($record) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'status' => 'success',
+                    'data'   => array(
+                        'pincode'       => $record->pincode,
+                        'district_name' => $record->district_name,
+                        'state_name'    => $record->state_name,
+                        'area_name'     => $record->area_name,
+                        'zone'          => $record->zone,
+                        'metro'         => $record->metro
+                    )
+                )));
+        } else {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'status'  => 'error',
+                    'message' => 'Pincode not found.'
+                )));
+        }
     }
 
     // =========================================================================

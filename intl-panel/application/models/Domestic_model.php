@@ -16,6 +16,59 @@ class Domestic_model extends CI_Model {
     }
 
     /**
+     * Get single pincode by 6-digit number
+     */
+    public function get_pincode_by_number($pincode) {
+        $pincode = intval(trim($pincode));
+        if ($pincode <= 0) return null;
+        return $this->db->get_where('crit_pincode_info', array('pincode' => $pincode, 'status !=' => 'Delete'))->row();
+    }
+
+    /**
+     * Auto-detect destination classification based on Source and Destination Pincode details
+     */
+    public function determine_destination_type($source, $dest) {
+        if (!$source || !$dest) {
+            return 'national';
+        }
+
+        $src_dist = strtoupper(trim($source->district_name ?? ''));
+        $dst_dist = strtoupper(trim($dest->district_name ?? ''));
+
+        $src_state = strtolower(trim($source->state_name ?? ''));
+        $dst_state = strtolower(trim($dest->state_name ?? ''));
+
+        $src_zone = strtoupper(trim($source->zone ?? ''));
+        $dst_zone = strtoupper(trim($dest->zone ?? ''));
+
+        $src_metro = strtoupper(trim($source->metro ?? ''));
+        $dst_metro = strtoupper(trim($dest->metro ?? ''));
+
+        // 1. Within Same City (Local)
+        if (!empty($src_dist) && !empty($dst_dist) && $src_dist === $dst_dist) {
+            return 'city';
+        }
+
+        // 2. Within Same State
+        if (!empty($src_state) && !empty($dst_state) && $src_state === $dst_state) {
+            return 'state';
+        }
+
+        // 3. Within Same Region / Zone
+        if (!empty($src_zone) && !empty($dst_zone) && $src_zone === $dst_zone) {
+            return 'region';
+        }
+
+        // 4. Metro
+        if ($src_metro === 'Y' && $dst_metro === 'Y') {
+            return 'metro';
+        }
+
+        // 5. National / Rest of India
+        return 'national';
+    }
+
+    /**
      * Helper to apply filters to crit_pincode_info query
      */
     private function apply_pincode_filters($search = null, $state_filter = null, $zone_filter = null, $metro_filter = null, $status_filter = null) {
@@ -305,12 +358,36 @@ class Domestic_model extends CI_Model {
     }
 
     /**
-     * Calculate Domestic Rate Tariff
+     * Calculate Domestic Rate Tariff with optional Source & Destination Pincodes and Product Category
      */
-    public function calculate_domestic_rate($c_type, $weight, $dest_type) {
+    public function calculate_domestic_rate($c_type, $weight, $dest_type = 'national', $source_pincode = null, $dest_pincode = null, $category_id = null) {
         $weight = floatval($weight);
         if ($weight <= 0) {
             return array('status' => 'error', 'message' => 'Please enter a valid weight in Kg.');
+        }
+
+        $source_obj = null;
+        $dest_obj = null;
+        $auto_detected = false;
+
+        if (!empty($source_pincode)) {
+            $source_obj = $this->get_pincode_by_number($source_pincode);
+        }
+        if (!empty($dest_pincode)) {
+            $dest_obj = $this->get_pincode_by_number($dest_pincode);
+        }
+
+        // If source & destination are both supplied, determine classification
+        if ($source_obj && $dest_obj) {
+            $detected_type = $this->determine_destination_type($source_obj, $dest_obj);
+            if (empty($dest_type) || $dest_type === 'auto') {
+                $dest_type = $detected_type;
+                $auto_detected = true;
+            }
+        }
+
+        if (empty($dest_type)) {
+            $dest_type = 'national';
         }
 
         // Destination flag mapping
@@ -351,7 +428,7 @@ class Domestic_model extends CI_Model {
 
         $rate = $this->db->get('crit_domestic_rate_info_v3')->row();
 
-        // If not found in specific destination flag, fallback to national (all 0)
+        // Fallback to national if specific tier not found
         if (!$rate) {
             $this->db->where('c_type', $c_type);
             $this->db->where('status', 'Active');
@@ -388,24 +465,62 @@ class Domestic_model extends CI_Model {
             $extra_charge = $extra_steps * $addt_charges;
         }
 
-        $total_charge = $base_charge + $extra_charge;
+        $freight_subtotal = $base_charge + $extra_charge;
+
+        // Product Category Surcharge calculation
+        $category_name = 'Standard / General Merchandise';
+        $category_surcharge = 0.00;
+        if (!empty($category_id)) {
+            $cat = $this->get_product_categories(intval($category_id));
+            if ($cat && $cat->status !== 'Delete') {
+                $category_name = $cat->category_name;
+                $category_surcharge = floatval($cat->extra_charge);
+            }
+        }
+
+        $total_tariff = $freight_subtotal + $category_surcharge;
+
+        // Classification labels for display
+        $dest_type_labels = array(
+            'city'     => 'Within Same City (Local)',
+            'state'    => 'Within Same State',
+            'region'   => 'Within Same Region / Zone',
+            'metro'    => 'Metro to Metro Destination',
+            'national' => 'National / Rest of India'
+        );
 
         return array(
             'status'        => 'success',
             'data'          => array(
-                'c_type'         => $rate->c_type,
-                'weight'         => $weight,
-                'from_weight'    => $rate->from_weight,
-                'to_weight'      => $rate->to_weight,
-                'min_weight'     => $min_weight,
-                'min_charges'    => $min_charges,
-                'excess_weight'  => $excess_weight,
-                'addt_weight'    => $addt_weight,
-                'addt_charges'   => $addt_charges,
-                'extra_steps'    => $extra_steps,
-                'extra_charge'   => $extra_charge,
-                'total_charge'   => $total_charge,
-                'rate_id'        => $rate->domestic_rate_id
+                'c_type'              => $rate->c_type,
+                'weight'              => $weight,
+                'source_pincode'      => $source_pincode,
+                'source_location'     => $source_obj ? ($source_obj->district_name . ', ' . $source_obj->state_name . ' (' . $source_obj->pincode . ')') : ($source_pincode ?: '-'),
+                'source_zone'         => $source_obj ? $source_obj->zone : '',
+                'source_metro'        => $source_obj ? $source_obj->metro : '',
+                'dest_pincode'        => $dest_pincode,
+                'dest_location'       => $dest_obj ? ($dest_obj->district_name . ', ' . $dest_obj->state_name . ' (' . $dest_obj->pincode . ')') : ($dest_pincode ?: '-'),
+                'dest_zone'           => $dest_obj ? $dest_obj->zone : '',
+                'dest_metro'          => $dest_obj ? $dest_obj->metro : '',
+                'dest_type'           => $dest_type,
+                'dest_type_label'     => isset($dest_type_labels[$dest_type]) ? $dest_type_labels[$dest_type] : ucfirst($dest_type),
+                'auto_detected'       => $auto_detected,
+                'from_weight'         => $rate->from_weight,
+                'to_weight'           => $rate->to_weight,
+                'min_weight'          => $min_weight,
+                'min_charges'         => $min_charges,
+                'excess_weight'       => $excess_weight,
+                'addt_weight'         => $addt_weight,
+                'addt_charges'        => $addt_charges,
+                'extra_steps'         => $extra_steps,
+                'extra_charge'        => $extra_charge,
+                'freight_subtotal'    => $freight_subtotal,
+                'category_id'         => $category_id,
+                'category_name'       => $category_name,
+                'category_surcharge'  => $category_surcharge,
+                'total_charge'        => $total_tariff,
+                'total_tariff'        => $total_tariff,
+                'rate_id'             => $rate->domestic_rate_id
             )
         );
     }

@@ -148,6 +148,7 @@ $route['domestic/pincodes/edit/(:num)'] = 'domestic/edit_pincode/$1';
 $route['domestic/pincodes/get/(:num)'] = 'domestic/get_pincode/$1';
 $route['domestic/pincodes/delete/(:num)'] = 'domestic/delete_pincode/$1';
 $route['domestic/pincodes/export'] = 'domestic/export_pincodes';
+$route['domestic/pincodes/lookup'] = 'domestic/lookup_pincode_ajax';
 
 // Convenience Aliases for Pincode List
 $route['pincode-list'] = 'domestic/pincodes';
