@@ -119,17 +119,19 @@
                     <?php echo !empty($cat->created_at) ? date('d-M-Y H:i', strtotime($cat->created_at)) : '-'; ?>
                   </td>
                   <td class="text-center" style="vertical-align: middle;">
-                    <div class="btn-group">
+                    <div class="btn-group" style="display: inline-flex; gap: 6px;">
                       <button type="button" class="btn btn-primary btn-xs edit-cat-btn"
                               data-id="<?php echo $cat->category_id; ?>"
                               data-name="<?php echo htmlspecialchars($cat->category_name, ENT_QUOTES); ?>"
                               data-charge="<?php echo floatval($cat->extra_charge); ?>"
                               data-status="<?php echo $cat->status; ?>"
+                              style="border-radius: 4px;"
                               title="Edit Category">
                         <i class="fa fa-pencil"></i> Edit
                       </button>
                       <a href="<?php echo site_url('domestic/categories/delete/' . $cat->category_id); ?>" 
                          class="btn btn-danger btn-xs" 
+                         style="border-radius: 4px; margin-left: 6px;"
                          onclick="return confirm('Are you sure you want to delete product category \'<?php echo addslashes($cat->category_name); ?>\'?');"
                          title="Delete Category">
                         <i class="fa fa-trash"></i> Delete

@@ -1995,9 +1995,9 @@ class Masters extends CI_Controller {
             $status_html = '<a href="javascript:void(0);" onclick="toggleOdaStatus(' . $r->id . ')" class="label ' . $status_class . '" style="cursor:pointer;" title="Click to toggle status">' . $r->status . '</a>';
 
             // Action buttons
-            $actions = '<div class="btn-group">' .
-                '<button type="button" class="btn btn-xs btn-default" onclick="openEditOdaModal(' . $r->id . ')" title="Edit ODA Rule"><i class="fa fa-pencil text-blue"></i></button>' .
-                '<button type="button" class="btn btn-xs btn-default" onclick="confirmDeleteOda(' . $r->id . ')" title="Soft Delete"><i class="fa fa-trash text-danger"></i></button>' .
+            $actions = '<div class="btn-group" style="display:inline-flex; gap:6px;">' .
+                '<button type="button" class="btn btn-xs btn-default" onclick="openEditOdaModal(' . $r->id . ')" title="Edit ODA Rule" style="border-radius:4px;"><i class="fa fa-pencil text-blue"></i></button>' .
+                '<button type="button" class="btn btn-xs btn-default" onclick="confirmDeleteOda(' . $r->id . ')" title="Soft Delete" style="border-radius:4px; margin-left:6px;"><i class="fa fa-trash text-danger"></i></button>' .
             '</div>';
 
             $data[] = array(

@@ -152,11 +152,11 @@ class Domestic extends CI_Controller {
 
             // Actions Buttons
             $actions_html = '
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary btn-xs edit-pincode-btn" data-id="' . $row->pincode_id . '" title="Edit Pincode">
+                <div class="btn-group" style="display: inline-flex; gap: 6px;">
+                    <button type="button" class="btn btn-primary btn-xs edit-pincode-btn" data-id="' . $row->pincode_id . '" title="Edit Pincode" style="border-radius: 4px;">
                         <i class="fa fa-pencil"></i> Edit
                     </button>
-                    <button type="button" class="btn btn-danger btn-xs delete-pincode-btn" data-id="' . $row->pincode_id . '" data-pincode="' . htmlspecialchars($row->pincode) . '" data-area="' . htmlspecialchars($row->area_name ? $row->area_name : '') . '" title="Delete (Mark as Delete)">
+                    <button type="button" class="btn btn-danger btn-xs delete-pincode-btn" data-id="' . $row->pincode_id . '" data-pincode="' . htmlspecialchars($row->pincode) . '" data-area="' . htmlspecialchars($row->area_name ? $row->area_name : '') . '" title="Delete (Mark as Delete)" style="border-radius: 4px; margin-left: 6px;">
                         <i class="fa fa-trash"></i> Delete
                     </button>
                 </div>

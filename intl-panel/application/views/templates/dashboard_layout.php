@@ -70,6 +70,60 @@
     .select2-container--default .select2-results__option--highlighted[aria-selected] {
       background-color: #3c8dbc !important;
     }
+
+    /* ============================================================== */
+    /* Table Action Buttons: Space between Edit & Delete buttons on ALL pages */
+    /* ============================================================== */
+    table td .btn-group,
+    table.dataTable td .btn-group,
+    .table td .btn-group,
+    .dataTable td .btn-group {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      flex-wrap: nowrap !important;
+    }
+
+    table td .btn-group > .btn,
+    table td .btn-group > a.btn,
+    table.dataTable td .btn-group > .btn,
+    table.dataTable td .btn-group > a.btn,
+    .table td .btn-group > .btn,
+    .table td .btn-group > a.btn,
+    .dataTable td .btn-group > .btn,
+    .dataTable td .btn-group > a.btn {
+      float: none !important;
+      margin: 0 !important;
+      border-radius: 4px !important;
+      white-space: nowrap !important;
+    }
+
+    /* Spacing between adjacent buttons in any table cell */
+    table td .btn + .btn,
+    table td .btn + a.btn,
+    table td a.btn + .btn,
+    table td a.btn + a.btn,
+    table.dataTable td .btn + .btn,
+    table.dataTable td .btn + a.btn,
+    table.dataTable td a.btn + .btn,
+    table.dataTable td a.btn + a.btn,
+    .table td .btn + .btn,
+    .table td .btn + a.btn,
+    .table td a.btn + .btn,
+    .table td a.btn + a.btn {
+      margin-left: 6px !important;
+    }
+
+    /* Keep individual button radius rounded */
+    table td .btn,
+    table td a.btn,
+    table.dataTable td .btn,
+    table.dataTable td a.btn,
+    .table td .btn,
+    .table td a.btn {
+      border-radius: 4px !important;
+    }
   </style>
 
   <!-- jQuery must load in head for some modules -->
